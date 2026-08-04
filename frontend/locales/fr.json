@@ -2061,7 +2061,8 @@
         "project": "Projet",
         "documents": "Documents",
         "user": "Utilisateur",
-        "created": "Créé le"
+        "created": "Créé le",
+        "access": "Accès"
       },
       "load_failed": "Échec du chargement des projets.",
       "workflow": {
@@ -2084,6 +2085,36 @@
       "discard_message": "Vos modifications du nom et de la description du projet seront perdues.",
       "discard_confirm": "Abandonner",
       "discard_cancel": "Continuer la modification"
+    },
+    "share": {
+      "title": "Partage",
+      "add": "Ajouter",
+      "email_label": "Adresse e-mail",
+      "email_placeholder": "collegue@exemple.fr",
+      "email_hint": "La personne doit déjà avoir un compte. Le projet apparaîtra dans sa liste de projets.",
+      "permission_label": "Niveau d'accès",
+      "permission": {
+        "owner": "Propriétaire",
+        "read": "Peut consulter",
+        "write": "Peut modifier"
+      },
+      "loading": "Chargement des personnes…",
+      "empty": "Pas encore partagé avec quelqu'un.",
+      "unknown_user": "Utilisateur inconnu",
+      "remove": "Retirer l'accès",
+      "remove_title": "Retirer l'accès ?",
+      "remove_message": "{name} ne pourra plus ouvrir ce projet.",
+      "add_success": "Projet partagé",
+      "add_error": "Impossible de partager le projet",
+      "update_success": "Niveau d'accès mis à jour",
+      "update_error": "Impossible de mettre à jour le niveau d'accès",
+      "remove_success": "Accès retiré",
+      "remove_error": "Impossible de retirer l'accès",
+      "load_error": "Impossible de charger les personnes ayant accès",
+      "read_only_title": "Accès en lecture seule",
+      "read_only_body": "Ce projet vous a été partagé en consultation. Vous pouvez tout parcourir mais rien modifier.",
+      "shared_badge": "Partagé",
+      "shared_with_me": "Partagé avec moi"
     }
   },
   "schema": {

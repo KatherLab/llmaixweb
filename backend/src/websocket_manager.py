@@ -2,6 +2,7 @@
 """WebSocket connection manager for real-time task updates."""
 
 import logging
+from collections.abc import Iterable
 from typing import Dict, Set
 
 from fastapi import WebSocket
@@ -136,23 +137,33 @@ class ConnectionManager:
         for ws, uid in disconnected:
             self.disconnect(ws, uid)
 
-    async def broadcast_to_project(self, owner_id: int | None, message: dict):
-        """Send a project-scoped message to its owner and all admins.
+    async def broadcast_to_project(
+        self, recipient_ids: "int | None | Iterable[int]", message: dict
+    ):
+        """Send a project-scoped message to its members and all admins.
 
         Task/trial update payloads include a ``project_id`` but the WebSocket
         layer previously broadcast them to *every* connected user, relying on
         the frontend to filter — a client that didn't filter could see other
         users' task progress. This filters server-side: the message is
-        delivered only to the project owner's connections and to admin
-        connections. Only admins with cross-user project access
-        (``ADMIN_ALL_PROJECT_ACCESS``) join the admin bucket, so by default an
-        admin sees just their own projects' updates. ``owner_id`` is resolved
-        by the caller from the
-        payload's ``project_id``; when it can't be resolved (e.g. project
-        deleted), only admins receive the message.
+        delivered only to the connections of the project's members (its owner
+        plus anyone it is shared with) and to admin connections. Only admins
+        with cross-user project access (``ADMIN_ALL_PROJECT_ACCESS``) join the
+        admin bucket, so by default an admin sees just their own projects'
+        updates. ``recipient_ids`` is resolved by the caller from the payload's
+        ``project_id``; when it is empty (e.g. project deleted), only admins
+        receive the message. A bare int is accepted for callers that only have
+        an owner id.
         """
+        if recipient_ids is None:
+            recipients: set[int] = set()
+        elif isinstance(recipient_ids, int):
+            recipients = {recipient_ids}
+        else:
+            recipients = set(recipient_ids)
+
         disconnected = []
-        # A socket that is both an admin connection and the owner's connection
+        # A socket that is both an admin connection and a member's connection
         # must receive the message once, not twice.
         sent: set = set()
 
@@ -165,17 +176,17 @@ class ConnectionManager:
                 logger.warning(f"Failed to send to admin: {e}")
                 disconnected.append((websocket, None))
 
-        # The owner's connections (if any) receive their own project's updates.
-        if owner_id is not None and owner_id in self._active_connections:
-            for websocket in list(self._active_connections[owner_id]):
+        # Members' connections (if any) receive their project's updates.
+        for user_id in recipients:
+            for websocket in list(self._active_connections.get(user_id, ())):
                 if websocket in sent:
                     continue
                 try:
                     await websocket.send_json(message)
                     sent.add(websocket)
                 except Exception as e:
-                    logger.warning(f"Failed to send to user {owner_id}: {e}")
-                    disconnected.append((websocket, owner_id))
+                    logger.warning(f"Failed to send to user {user_id}: {e}")
+                    disconnected.append((websocket, user_id))
 
         for ws, uid in disconnected:
             if uid is not None:

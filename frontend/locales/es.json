@@ -2061,7 +2061,8 @@
         "project": "Proyecto",
         "documents": "Documentos",
         "user": "Usuario",
-        "created": "Creado"
+        "created": "Creado",
+        "access": "Acceso"
       },
       "load_failed": "No se pudieron cargar los proyectos.",
       "workflow": {
@@ -2084,6 +2085,36 @@
       "discard_message": "Se perderán sus cambios en el nombre y la descripción del proyecto.",
       "discard_confirm": "Descartar",
       "discard_cancel": "Seguir editando"
+    },
+    "share": {
+      "title": "Compartir",
+      "add": "Añadir",
+      "email_label": "Dirección de correo",
+      "email_placeholder": "colega@ejemplo.es",
+      "email_hint": "La persona ya debe tener una cuenta. El proyecto aparecerá en su lista de proyectos.",
+      "permission_label": "Nivel de acceso",
+      "permission": {
+        "owner": "Propietario",
+        "read": "Puede ver",
+        "write": "Puede editar"
+      },
+      "loading": "Cargando personas…",
+      "empty": "Aún no se ha compartido con nadie.",
+      "unknown_user": "Usuario desconocido",
+      "remove": "Quitar acceso",
+      "remove_title": "¿Quitar acceso?",
+      "remove_message": "{name} ya no podrá abrir este proyecto.",
+      "add_success": "Proyecto compartido",
+      "add_error": "No se pudo compartir el proyecto",
+      "update_success": "Nivel de acceso actualizado",
+      "update_error": "No se pudo actualizar el nivel de acceso",
+      "remove_success": "Acceso retirado",
+      "remove_error": "No se pudo retirar el acceso",
+      "load_error": "No se pudieron cargar las personas con acceso",
+      "read_only_title": "Acceso de solo lectura",
+      "read_only_body": "Este proyecto se compartió contigo para consulta. Puedes ver todo pero no realizar cambios.",
+      "shared_badge": "Compartido",
+      "shared_with_me": "Compartido conmigo"
     }
   },
   "schema": {

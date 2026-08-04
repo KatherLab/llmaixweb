@@ -47,6 +47,9 @@ test_local_storage/
 # MkDocs local build output
 /site/
 
+# Local backend test DB (backend/.env.localtest → sqlite:///./test_llmaixweb.db)
+/test_llmaixweb.db
+
 # Playwright e2e (ephemeral backend state + reports)
 /e2e_test.db
 /e2e_test.db-wal

@@ -17,6 +17,7 @@ Files → Preprocessing → Documents → Schemas + Prompts → Extraction Runs 
 | **[Extraction runs](trials.md)** | Run LLM extraction and inspect the results. |
 | **[Ground truth](ground-truth.md)** | Upload known-correct values and map them to schema fields. |
 | **[Evaluation](evaluation.md)** | Compare an extraction run against ground truth and read the metrics. |
+| **[Sharing projects](sharing.md)** | Give other users view-only or full access to a project. |
 | **[Account settings](account.md)** | Manage your profile, password, and connected accounts. |
 
 !!! note "Administrators"

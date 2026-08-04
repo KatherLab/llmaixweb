@@ -36,7 +36,7 @@ router = APIRouter()
 
 
 def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+    project_id: int, current_user: models.User, db: Session, permission: str = "write"
 ) -> models.Project:
     """Check if user has access to project."""
     project = db.execute(
@@ -108,7 +108,7 @@ def get_documents(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaginatedDocuments:
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     D = models.Document
     F = models.File
@@ -265,7 +265,7 @@ def get_document(
     ).scalar_one_or_none()
     if not project:
         raise api_error("documents.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "documents.project_documents_forbidden",
             403,
@@ -306,7 +306,7 @@ def restore_document_version(
     No OCR/LLM work runs, so the restored content is exactly the archived
     version's content. Users can still run "Reprocess Document" afterwards.
     """
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     target: models.Document | None = db.execute(
         select(models.Document).where(
@@ -472,7 +472,7 @@ def get_document_dependencies(
     Used by the batch-delete confirmation to preview the impact (how many trials,
     groups, extraction results and evaluation metrics would be deleted).
     """
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="read")
     summary = compute_document_dependencies(db, project_id, payload.document_ids)
     return schemas.DocumentDependencies(**summary)
 
@@ -499,7 +499,7 @@ def delete_document(
     ``cascade=true``, those referencing trials and groups (and their evaluations)
     are deleted first so the document can be removed.
     """
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     document = db.execute(
         select(models.Document).where(
@@ -646,7 +646,7 @@ def create_document_set(
     if not project:
         raise api_error("documents.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "documents.create_set_forbidden",
             403,
@@ -731,7 +731,7 @@ def get_document_sets(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaginatedDocumentSets:
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     DS = models.DocumentSet
 
@@ -818,7 +818,7 @@ def get_document_set(
     db: Session = Depends(get_db),
 ) -> schemas.DocumentSetSummary:
     """Fetch a single document set's summary (used to deep-link the group viewer)."""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     DS = models.DocumentSet
     doc_set = db.execute(
@@ -861,7 +861,7 @@ def update_document_set(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.DocumentSet:
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     doc_set = db.execute(
         select(models.DocumentSet).where(
@@ -937,7 +937,7 @@ def delete_document_set(
     document sets will not be deleted (errors are logged but don't prevent set deletion).
     """
     # 1. Permission check
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     # 2. Fetch the document set. Members are loaded as lightweight column rows
     # below — selectinload(documents) would hydrate every document's full text.
@@ -1150,7 +1150,7 @@ def download_all_documents(
     db: Session = Depends(get_db),
 ):
     """Download all documents in a set as a (streamed) ZIP file"""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     doc_set = db.execute(
         select(models.DocumentSet).where(
@@ -1212,7 +1212,7 @@ def get_document_set_stats(
     db: Session = Depends(get_db),
 ) -> schemas.DocumentSetStats:
     """Get usage statistics for a document set"""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     doc_set = db.execute(
         select(models.DocumentSet).where(
@@ -1282,7 +1282,7 @@ def create_document_set_from_trial(
     db: Session = Depends(get_db),
 ) -> schemas.DocumentSet:
     """Create a named document set from a trial's documents"""
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     # Get trial
     trial = db.execute(

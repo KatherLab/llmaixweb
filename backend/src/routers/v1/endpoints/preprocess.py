@@ -28,7 +28,7 @@ _REMOTE_OCR_ENGINES = {"mistral_ocr", "llm_vision"}
 
 
 def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+    project_id: int, current_user: models.User, db: Session, permission: str = "write"
 ) -> models.Project:
     """Check if user has access to project."""
     project = db.execute(
@@ -68,7 +68,7 @@ async def preview_preprocessing_duplicates(
     - files_with_duplicates: All files with any existing documents (regardless of config)
     - pdfs_with_embedded_text: PDFs where embedded text was detected (OCR may not affect result)
     """
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     if not preprocessing_task.inline_config:
         raise api_error(
@@ -348,7 +348,7 @@ async def preprocess_project_data(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Start preprocessing with advanced duplicate detection and progress tracking."""
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     if not preprocessing_task.inline_config:
         raise api_error(
@@ -867,7 +867,7 @@ def get_preprocessing_tasks(
     db: Session = Depends(get_db),
 ) -> List[schemas.PreprocessingTask]:
     """Get preprocessing tasks for a project."""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     query = (
         select(models.PreprocessingTask)
@@ -908,7 +908,7 @@ def get_preprocessing_task(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed information about a preprocessing task."""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     task = db.execute(
         select(models.PreprocessingTask)
@@ -944,7 +944,7 @@ def cancel_preprocessing_task(
 ) -> schemas.PreprocessingTask:
     """Cancel a preprocessing task with option to keep or rollback processed files."""
 
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     # Load task with file_tasks relationship
     task = (
@@ -1095,7 +1095,7 @@ def get_preprocessing_progress(
     db: Session = Depends(get_db),
 ) -> schemas.PreprocessingTask:
     """Get detailed progress of a preprocessing task."""
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     task = db.execute(
         select(models.PreprocessingTask).where(
@@ -1146,7 +1146,7 @@ def retry_failed_files(
     commits, and dispatches Celery work. A GET would be unsafe — browser
     prefetch/link prefetch or crawlers could silently trigger retries.
     """
-    check_project_access(project_id, current_user, db, "write")
+    check_project_access(project_id, current_user, db, permission="write")
 
     original_task = db.execute(
         select(models.PreprocessingTask)

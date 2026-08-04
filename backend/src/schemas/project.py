@@ -20,6 +20,7 @@ from ..utils.enums import (
     FieldType,
     FileCreator,
     PreprocessingStrategy,
+    ProjectPermission,
 )
 from .other import UTCModel
 
@@ -42,9 +43,42 @@ class ProjectUpdate(ProjectBase):
     name: str = Field(..., max_length=100)
 
 
+class ProjectShare(UTCModel):
+    """A collaborator's standing grant on a project."""
+
+    id: int
+    project_id: int
+    user: UserPublic
+    permission: ProjectPermission
+    created_by: UserPublic | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectShareCreate(BaseModel):
+    """Grant access to an existing user, addressed by email.
+
+    Email rather than a user id because non-admins cannot list the user
+    directory — see the sharing endpoints in ``routers/v1/endpoints/shares.py``.
+    """
+
+    email: str = Field(..., max_length=254)
+    permission: ProjectPermission = ProjectPermission.READ
+
+
+class ProjectShareUpdate(BaseModel):
+    permission: ProjectPermission
+
+
 class Project(ProjectBase):
     id: int
     owner: UserPublic | None = None
+    # What the *requesting* user may do with this project: "owner", "write"
+    # (shared with full access) or "read" (shared view-only). Drives which
+    # actions the frontend offers; the backend gates independently.
+    access_level: str = "owner"
+    # Number of collaborators the project is shared with (owner excluded).
+    share_count: int = 0
     documents: list[Document] = Field(default_factory=list)
     document_count: int = 0
     # Aggregate counts used to drive the project workflow progression cue

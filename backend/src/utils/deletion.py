@@ -396,4 +396,7 @@ def cascade_delete_project(db: Session, project_id: int) -> dict[str, int]:
             models.PreprocessingConfiguration.project_id == project_id
         )
     ).rowcount
+    counts["shares"] = db.execute(
+        delete(models.ProjectShare).where(models.ProjectShare.project_id == project_id)
+    ).rowcount
     return counts

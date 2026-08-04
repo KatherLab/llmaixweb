@@ -9,7 +9,7 @@ from ..db.base import Base
 from ..utils.enums import UserRole
 
 if TYPE_CHECKING:
-    from .project import Project
+    from .project import Project, ProjectShare
     from .sso import UserIdentity
 
 
@@ -32,6 +32,14 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
     projects: Mapped[list["Project"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
+    )  # noqa: F821
+    # Projects shared *with* this user (not the ones they own). Deleting the
+    # user revokes their grants; `foreign_keys` disambiguates from the
+    # ProjectShare.created_by_id FK, which also points at users.
+    project_shares: Mapped[list["ProjectShare"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="ProjectShare.user_id",
     )  # noqa: F821
 
     reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(

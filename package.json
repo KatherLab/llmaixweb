@@ -1,6 +1,6 @@
 {
   "name": "llmaixwebui",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "LLMAIx Web frontend — extract structured JSON from unstructured medical/lab documents with LLMs.",
   "license": "AGPL-3.0-or-later",

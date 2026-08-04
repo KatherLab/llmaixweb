@@ -96,7 +96,7 @@ def _to_int(value) -> int:
 
 
 def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+    project_id: int, current_user: models.User, db: Session, permission: str = "write"
 ) -> models.Project:
     """Check if user has access to project."""
     project = db.execute(
@@ -129,7 +129,7 @@ def create_trial(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "trials.not_authorized_create",
             403,
@@ -641,7 +641,7 @@ def get_trials(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> schemas.PaginatedTrials:
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     T = models.Trial
     TR = models.TrialResult
@@ -809,7 +809,7 @@ def get_trial(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "trials.not_authorized_access",
             403,
@@ -866,7 +866,7 @@ def list_trial_results(
 
     Replaces the load-all + N+1 pattern of embedding every result in `GET /{trial_id}`.
     """
-    check_project_access(project_id, current_user, db, "read")
+    check_project_access(project_id, current_user, db, permission="read")
 
     # Verify the trial exists in this project (404 otherwise).
     trial = db.execute(
@@ -985,7 +985,7 @@ def update_trial(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "trials.not_authorized_update",
             403,
@@ -1032,7 +1032,7 @@ def cancel_trial(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="write")
     trial = db.get(models.Trial, trial_id)
     if not trial or trial.project_id != project_id:
         raise api_error("trials.trial_not_found", 404, "Trial not found")
@@ -1069,7 +1069,7 @@ def delete_trial(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "trials.not_authorized_delete",
             403,
@@ -1146,7 +1146,7 @@ def download_trial_results(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "trials.not_authorized_access",
             403,
@@ -1606,7 +1606,7 @@ def evaluate_trial(
     ).scalar_one_or_none()
     if not project:
         raise api_error("trials.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "trials.not_authorized_evaluate",
             403,

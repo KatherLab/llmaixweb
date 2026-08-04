@@ -20,31 +20,6 @@ from ....utils.schema_validation import raise_for_schema_problems
 router = APIRouter()
 
 
-def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
-) -> models.Project:
-    """Check if user has access to project."""
-    project = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise api_error(
-            "schemas.project_not_found",
-            status.HTTP_404_NOT_FOUND,
-            "Project not found",
-        )
-
-    if not can_access_project(current_user, project, permission=permission):
-        raise api_error(
-            "schemas.not_authorized_project",
-            status.HTTP_403_FORBIDDEN,
-            f"Not authorized to {permission} this project",
-            permission=permission,
-        )
-    return project
-
-
 @router.post("", response_model=schemas.Schema)
 def create_schema(
     project_id: int,
@@ -61,7 +36,7 @@ def create_schema(
             status.HTTP_404_NOT_FOUND,
             "Project not found",
         )
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "schemas.not_authorized_create",
             status.HTTP_403_FORBIDDEN,
@@ -105,7 +80,7 @@ def get_schemas(
             status.HTTP_404_NOT_FOUND,
             "Project not found",
         )
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "schemas.not_authorized_access",
             status.HTTP_403_FORBIDDEN,
@@ -142,7 +117,7 @@ def get_schema(
             status.HTTP_404_NOT_FOUND,
             "Project not found",
         )
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "schemas.not_authorized_access",
             status.HTTP_403_FORBIDDEN,
@@ -180,7 +155,7 @@ def update_schema(
             status.HTTP_404_NOT_FOUND,
             "Project not found",
         )
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "schemas.not_authorized_update",
             status.HTTP_403_FORBIDDEN,
@@ -240,7 +215,7 @@ def delete_schema(
             status.HTTP_404_NOT_FOUND,
             "Project not found",
         )
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "schemas.not_authorized_delete",
             status.HTTP_403_FORBIDDEN,
@@ -304,7 +279,7 @@ def get_schema_field_types(
             "Project not found",
         )
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "schemas.not_authorized_access",
             status.HTTP_403_FORBIDDEN,

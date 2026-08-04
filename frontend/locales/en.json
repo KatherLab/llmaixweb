@@ -2061,7 +2061,8 @@
         "project": "Project",
         "documents": "Documents",
         "user": "User",
-        "created": "Created"
+        "created": "Created",
+        "access": "Access"
       },
       "load_failed": "Failed to load projects.",
       "workflow": {
@@ -2084,6 +2085,36 @@
       "discard_message": "Your changes to the project name and description will be lost.",
       "discard_confirm": "Discard",
       "discard_cancel": "Keep editing"
+    },
+    "share": {
+      "title": "Sharing",
+      "add": "Add",
+      "email_label": "Email address",
+      "email_placeholder": "colleague@example.com",
+      "email_hint": "The person must already have an account. They will see this project in their project list.",
+      "permission_label": "Access level",
+      "permission": {
+        "owner": "Owner",
+        "read": "Can view",
+        "write": "Can edit"
+      },
+      "loading": "Loading people…",
+      "empty": "Not shared with anyone yet.",
+      "unknown_user": "Unknown user",
+      "remove": "Remove access",
+      "remove_title": "Remove access?",
+      "remove_message": "{name} will no longer be able to open this project.",
+      "add_success": "Project shared",
+      "add_error": "Could not share the project",
+      "update_success": "Access level updated",
+      "update_error": "Could not update the access level",
+      "remove_success": "Access removed",
+      "remove_error": "Could not remove access",
+      "load_error": "Could not load the people with access",
+      "read_only_title": "View-only access",
+      "read_only_body": "This project was shared with you for viewing. You can browse everything but cannot make changes.",
+      "shared_badge": "Shared",
+      "shared_with_me": "Shared with me"
     }
   },
   "schema": {

@@ -88,6 +88,7 @@ nav:
       - Extraction runs: user-guide/trials.md
       - Ground truth: user-guide/ground-truth.md
       - Evaluation: user-guide/evaluation.md
+      - Sharing projects: user-guide/sharing.md
       - Account settings: user-guide/account.md
   - Administration:
       - Overview: admin/index.md

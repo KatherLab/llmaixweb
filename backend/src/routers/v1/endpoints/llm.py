@@ -158,7 +158,7 @@ def test_model_with_schema_endpoint(
     ).scalar_one_or_none()
     if not project:
         raise api_error("core.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error("core.not_authorized", 403, "Not authorized")
 
     schema = db.execute(

@@ -36,6 +36,7 @@
       >
         <template #actions>
           <BaseButton
+            v-if="canEdit"
             variant="primary"
             :disabled="loadingStates.groundTruthFiles"
             @click="showUploadModal = true"
@@ -66,7 +67,7 @@
         v-else-if="groundTruthFiles.length === 0"
         :title="$t('evaluation.view.empty_gt_title')"
         :description="$t('evaluation.view.empty_gt_description')"
-        :action-text="$t('evaluation.view.upload_ground_truth')"
+        :action-text="canEdit ? $t('evaluation.view.upload_ground_truth') : ''"
         @action="showUploadModal = true"
       >
         <template #icon>
@@ -392,6 +393,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { useRoute, useRouter } from 'vue-router'
 import { BarChart3, ClipboardList, Download, HelpCircle, Upload, X } from '@lucide/vue'
 import { trialsApi } from '@/services/trialsApi'
@@ -456,6 +458,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 // Client-side pagination state for the evaluations list (the API returns all
 // evaluations for the selected ground truth in one shot).

@@ -2061,7 +2061,8 @@
         "project": "Projekt",
         "documents": "Dokumente",
         "user": "Benutzer",
-        "created": "Erstellt"
+        "created": "Erstellt",
+        "access": "Zugriff"
       },
       "load_failed": "Projekte konnten nicht geladen werden.",
       "workflow": {
@@ -2084,6 +2085,36 @@
       "discard_message": "Ihre Änderungen an Projektname und -beschreibung gehen verloren.",
       "discard_confirm": "Verwerfen",
       "discard_cancel": "Weiter bearbeiten"
+    },
+    "share": {
+      "title": "Freigabe",
+      "add": "Hinzufügen",
+      "email_label": "E-Mail-Adresse",
+      "email_placeholder": "kollege@beispiel.de",
+      "email_hint": "Die Person muss bereits ein Konto haben. Das Projekt erscheint dann in ihrer Projektliste.",
+      "permission_label": "Zugriffsebene",
+      "permission": {
+        "owner": "Eigentümer",
+        "read": "Kann ansehen",
+        "write": "Kann bearbeiten"
+      },
+      "loading": "Personen werden geladen…",
+      "empty": "Noch für niemanden freigegeben.",
+      "unknown_user": "Unbekannte:r Nutzer:in",
+      "remove": "Zugriff entziehen",
+      "remove_title": "Zugriff entziehen?",
+      "remove_message": "{name} kann dieses Projekt dann nicht mehr öffnen.",
+      "add_success": "Projekt freigegeben",
+      "add_error": "Projekt konnte nicht freigegeben werden",
+      "update_success": "Zugriffsebene aktualisiert",
+      "update_error": "Zugriffsebene konnte nicht aktualisiert werden",
+      "remove_success": "Zugriff entzogen",
+      "remove_error": "Zugriff konnte nicht entzogen werden",
+      "load_error": "Personen mit Zugriff konnten nicht geladen werden",
+      "read_only_title": "Nur-Lese-Zugriff",
+      "read_only_body": "Dieses Projekt wurde Ihnen zum Ansehen freigegeben. Sie können alles einsehen, aber nichts ändern.",
+      "shared_badge": "Freigegeben",
+      "shared_with_me": "Für mich freigegeben"
     }
   },
   "schema": {

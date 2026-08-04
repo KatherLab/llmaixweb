@@ -13,6 +13,19 @@ class UserRole(str, Enum):
     user = "user"
 
 
+class ProjectPermission(str, Enum):
+    """What a collaborator may do with a project shared with them.
+
+    ``READ`` is view-only: every GET-shaped route, no mutations and no LLM/OCR
+    egress. ``WRITE`` adds every mutation an owner can perform *except*
+    deleting the project and managing its shares — those stay owner-only so a
+    project always has exactly one accountable owner.
+    """
+
+    READ = "read"
+    WRITE = "write"
+
+
 class FieldType(str, Enum):
     STRING = "string"
     NUMBER = "number"
@@ -122,6 +135,14 @@ class AuditAction(str, enum.Enum):
     # ── Egress (PHI leaves to an external service) ──
     LLM_EXTRACTION_CALL = "llm_extraction_call"
     OCR_EXTERNAL_CALL = "ocr_external_call"
+
+    # ── Sharing ──
+    # A project owner granted, changed, or revoked another user's access to a
+    # project. Kept distinct from CREATE/UPDATE/DELETE because a share change
+    # widens who can reach PHI, which reviewers need to be able to filter for.
+    PROJECT_SHARE = "project_share"
+    PROJECT_SHARE_UPDATE = "project_share_update"
+    PROJECT_UNSHARE = "project_unshare"
 
     # ── Administration ──
     SETTING_CHANGE = "setting_change"

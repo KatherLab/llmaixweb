@@ -54,12 +54,17 @@ do about each.
    sub-processor. Every such egress is recorded in the audit log.
 3. **No built-in data-retention automation.** Deletion is on-demand. See
    [DATA_RETENTION.md](./DATA_RETENTION.md) for the manual/operational process.
-4. **Access model is per-owner.** A project is visible only to its owner by
-   default — **including admins**, who are scoped to their own projects like any
-   other user. Set `ADMIN_ALL_PROJECT_ACCESS=true` (env-only, not togglable from
-   the UI) to grant admins read/write access to all users' projects and their
-   live task updates. There is no per-field or per-cohort access control; scope
-   projects accordingly.
+4. **Access model is per-owner, plus explicit shares.** A project is visible
+   only to its owner by default — **including admins**, who are scoped to their
+   own projects like any other user. The owner may
+   [share it](./user-guide/sharing.md) with named users at `read` (view-only) or
+   `write` (everything except deleting the project and managing its shares).
+   Sharing is owner-driven and grants access to the project's *entire* contents,
+   including source files and extracted text; there is no per-field or
+   per-cohort access control, so scope projects accordingly. Set
+   `ADMIN_ALL_PROJECT_ACCESS=true` (env-only, not togglable from the UI) to
+   grant admins read/write access to all users' projects and their live task
+   updates.
 
 ## Hardening quick wins for production
 

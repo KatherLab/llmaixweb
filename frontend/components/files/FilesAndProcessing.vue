@@ -8,7 +8,7 @@
       class="mb-6"
     >
       <template #actions>
-        <BaseButton variant="primary" @click="showUploadModal = true">
+        <BaseButton v-if="canEdit" variant="primary" @click="showUploadModal = true">
           <Upload class="w-5 h-5" />
           {{ $t('files.actions.upload_files') }}
         </BaseButton>
@@ -53,7 +53,12 @@
           </li>
         </ol>
       </Callout>
-      <FileDropzone v-model:dragging="isDragging" @drop="uploadFiles" @select="uploadFiles" />
+      <FileDropzone
+        v-if="canEdit"
+        v-model:dragging="isDragging"
+        @drop="uploadFiles"
+        @select="uploadFiles"
+      />
     </template>
 
     <!-- Filters & Search (only when there are files, or active filters to show/clear) -->
@@ -306,6 +311,7 @@
       <!-- With unconfigured CSV/XLSX in the selection this button opens the
            import-config flow (chained per file) rather than being a dead end. -->
       <BaseButton
+        v-if="canEdit"
         @click="unconfiguredCsvXlsxFiles.length > 0 ? startConfigureChain() : openProcessingPanel()"
       >
         <Settings v-if="unconfiguredCsvXlsxFiles.length === 0" class="w-4 h-4" />
@@ -316,7 +322,7 @@
             : $t('files.actions.configure_preprocessing')
         }}
       </BaseButton>
-      <BaseButton variant="danger" @click="confirmDeleteSelected">
+      <BaseButton v-if="canEdit" variant="danger" @click="confirmDeleteSelected">
         <Trash2 class="w-4 h-4" />
         {{ $t('files.actions.delete') }}
       </BaseButton>
@@ -420,6 +426,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { AlertTriangle, Search, Settings, Trash2, Upload, X } from '@lucide/vue'
 import { filesApi } from '@/services/filesApi'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { preprocessingApi } from '@/services/preprocessingApi'
 import { authApi } from '@/services/authApi'
 import { useToast } from '@/composables/useToast'
@@ -464,6 +471,7 @@ const emit = defineEmits<{
   'files-changed': []
 }>()
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const toast = useToast()
 const route = useRoute()
 const router = useRouter()

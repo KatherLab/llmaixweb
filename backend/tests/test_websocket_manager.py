@@ -318,11 +318,40 @@ class TestBroadcastToProject:
         connect(mgr, stranger, user_id=3)
 
         msg = {"type": "task", "project_id": 42}
-        asyncio.run(mgr.broadcast_to_project(owner_id=1, message=msg))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=1, message=msg))
 
         owner.send_json.assert_awaited_once_with(msg)
         admin.send_json.assert_awaited_once_with(msg)
         stranger.send_json.assert_not_awaited()
+
+    def test_collaborators_receive_shared_project_updates(self):
+        mgr = ConnectionManager()
+        owner = make_ws()
+        collaborator = make_ws()
+        stranger = make_ws()
+        connect(mgr, owner, user_id=1)
+        connect(mgr, collaborator, user_id=2)
+        connect(mgr, stranger, user_id=3)
+
+        msg = {"type": "task", "project_id": 42}
+        # The caller resolves owner + shares into one recipient set.
+        asyncio.run(mgr.broadcast_to_project(recipient_ids={1, 2}, message=msg))
+
+        owner.send_json.assert_awaited_once_with(msg)
+        collaborator.send_json.assert_awaited_once_with(msg)
+        stranger.send_json.assert_not_awaited()
+
+    def test_empty_recipient_set_only_admins_receive(self):
+        mgr = ConnectionManager()
+        admin = make_ws()
+        plain = make_ws()
+        connect(mgr, admin, user_id=2, is_admin=True)
+        connect(mgr, plain, user_id=3)
+
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=set(), message={"a": 1}))
+
+        admin.send_json.assert_awaited_once()
+        plain.send_json.assert_not_awaited()
 
     def test_unresolved_owner_only_admins_receive(self):
         mgr = ConnectionManager()
@@ -332,7 +361,7 @@ class TestBroadcastToProject:
         connect(mgr, plain, user_id=3)
 
         # owner_id=None (e.g. project deleted): only admins get it.
-        asyncio.run(mgr.broadcast_to_project(owner_id=None, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=None, message={"a": 1}))
 
         admin.send_json.assert_awaited_once()
         plain.send_json.assert_not_awaited()
@@ -342,7 +371,7 @@ class TestBroadcastToProject:
         owner = make_ws()
         connect(mgr, owner, user_id=1)
 
-        asyncio.run(mgr.broadcast_to_project(owner_id=1, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=1, message={"a": 1}))
 
         owner.send_json.assert_awaited_once()
 
@@ -351,7 +380,7 @@ class TestBroadcastToProject:
         plain = make_ws()
         connect(mgr, plain, user_id=3)
 
-        asyncio.run(mgr.broadcast_to_project(owner_id=99, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=99, message={"a": 1}))
 
         plain.send_json.assert_not_awaited()
 
@@ -361,7 +390,7 @@ class TestBroadcastToProject:
         owner.send_json.side_effect = RuntimeError("boom")
         connect(mgr, owner, user_id=1)
 
-        asyncio.run(mgr.broadcast_to_project(owner_id=1, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=1, message={"a": 1}))
 
         assert 1 not in mgr._active_connections
 
@@ -371,7 +400,7 @@ class TestBroadcastToProject:
         admin.send_json.side_effect = RuntimeError("boom")
         connect(mgr, admin, user_id=5, is_admin=True)
 
-        asyncio.run(mgr.broadcast_to_project(owner_id=None, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=None, message={"a": 1}))
 
         assert admin not in mgr._admin_connections
         assert 5 not in mgr._active_connections
@@ -382,7 +411,7 @@ class TestBroadcastToProject:
         admin_owner = make_ws()
         connect(mgr, admin_owner, user_id=1, is_admin=True)
 
-        asyncio.run(mgr.broadcast_to_project(owner_id=1, message={"a": 1}))
+        asyncio.run(mgr.broadcast_to_project(recipient_ids=1, message={"a": 1}))
 
         # Deduplicated to a single send (the `sent` set guards the owner loop).
         assert admin_owner.send_json.await_count == 1

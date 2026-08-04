@@ -146,6 +146,41 @@ Users can upload **GroundTruth** files (CSV/XLSX with correct extraction values)
 
 ---
 
+### 7. Sharing
+
+A project belongs to `Project.owner_id`. The owner may grant other users access
+via `ProjectShare` rows (`project_shares`): one per (project, collaborator) with
+a `ProjectPermission` of `read` or `write`.
+
+**Authorization is centralized in `core/security.py`:**
+- `project_access_level(user, project) -> "owner" | "write" | "read" | None` —
+  owner (or admin with `ADMIN_ALL_PROJECT_ACCESS`) → `owner`, otherwise the
+  share's permission. Reads `Project.shares`, which is `lazy="selectin"` so the
+  ~85 gates cost no extra query.
+- `can_access_project(user, project, *, permission="write")` — the gate every
+  project route calls. **`permission` defaults to `write` on purpose:** a gate
+  that forgets to declare itself read-only denies a viewer (visible, trivially
+  fixed) rather than silently letting them mutate. Unknown values are treated as
+  `owner`, the strictest level.
+
+**When you add a project-scoped endpoint, pass an explicit `permission`:**
+`"read"` for GET-shaped routes (including POST-shaped previews/exports such as
+`/check-duplicates`, `/download-zip`, `/dependencies`, `/match-preview`),
+`"write"` for anything that mutates or triggers LLM/OCR egress, and `"owner"`
+for deleting the project or managing its shares. Every gate in
+`routers/v1/endpoints/` carries one — keep it that way.
+
+Other places sharing touches: `projects.py` `visible_projects_filter()` (list +
+activity feeds), the `access_level`/`share_count` fields on the `Project`
+response (built by hand in four places in `projects.py`), `shares.py` (the
+`/project/{id}/share` CRUD), `main.py` `_resolve_project_recipients` +
+`websocket_manager.broadcast_to_project` (live updates fan out to all members,
+not just the owner), and `utils/deletion.py` `cascade_delete_project`.
+
+On the frontend, `ProjectDetail.vue` provides `projectCanEdit` /
+`projectAccessLevel`; descendants read them through
+`composables/useProjectAccess.ts` rather than threading props.
+
 ## Backend Architecture
 
 ### API Structure
@@ -165,7 +200,7 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 |------|---------|
 | `main.py` | FastAPI app, lifespan (DB init + Celery worker spawn), CORS, middleware wiring (security headers, request-context, error handlers), rate limiter, audit router, Redis subscriber (task updates + settings-cache invalidation) |
 | `core/config.py` | Pydantic `Settings` class with lazy init, all env vars, runtime validation |
-| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard, refresh-token create/verify/revoke, account lockout |
+| `core/security.py` | JWT token create/verify, password hashing, OAuth2 scheme, admin guard, refresh-token create/verify/revoke, account lockout, **project authorization** (`project_access_level` / `can_access_project`) |
 | `core/dynamic_settings.py` | DB-backed runtime settings override (cached via `lru_cache`) |
 | `core/rate_limit.py` | Shared slowapi `Limiter` (Redis-backed when broker is Redis); gated by `DISABLE_RATE_LIMIT` |
 | `middleware/security_headers.py` | `SecurityHeadersMiddleware` (X-Frame-Options, CSP, Referrer-Policy, conditional HSTS, etc.) |

@@ -36,28 +36,69 @@ def admin_has_global_project_access(user: User) -> bool:
     return user.role == "admin" and settings.ADMIN_ALL_PROJECT_ACCESS
 
 
+# Access levels, weakest → strongest. A caller names the level an endpoint
+# *requires*; the user's own level must rank at least that high.
+#   read  — every GET-shaped route (viewing documents, results, evaluations)
+#   write — every mutation, including LLM/OCR egress and project rename
+#   owner — deleting the project and managing who it is shared with
+ACCESS_READ = "read"
+ACCESS_WRITE = "write"
+ACCESS_OWNER = "owner"
+
+_ACCESS_RANK = {ACCESS_READ: 1, ACCESS_WRITE: 2, ACCESS_OWNER: 3}
+
+
+def project_access_level(user: User, project) -> str | None:
+    """The strongest access *user* holds on *project*, or None for no access.
+
+    Returns one of ``"owner"`` / ``"write"`` / ``"read"``. Ownership is the
+    ``projects.owner_id`` column; an admin with ``ADMIN_ALL_PROJECT_ACCESS``
+    is treated as an owner of every project. Everything else comes from a
+    ``project_shares`` row, which is eager-loaded on ``Project.shares`` so this
+    costs no extra query at the ~85 authorization gates that call it.
+    """
+    if getattr(project, "owner_id", None) == user.id:
+        return ACCESS_OWNER
+    if admin_has_global_project_access(user):
+        return ACCESS_OWNER
+    for share in getattr(project, "shares", None) or ():
+        if share.user_id == user.id:
+            permission = share.permission
+            return getattr(permission, "value", permission)
+    return None
+
+
 def can_access_project(
     user: User,
     project,
     *,
     audit: bool = True,
-    permission: str | None = None,
+    permission: str = ACCESS_WRITE,
 ) -> bool:
-    """Whether *user* may read/modify *project*.
+    """Whether *user* may perform a *permission*-level action on *project*.
 
-    True for the project owner, or for an admin when cross-user project access
-    is enabled via ``ADMIN_ALL_PROJECT_ACCESS``.
+    True for the project owner, for an admin when cross-user project access is
+    enabled via ``ADMIN_ALL_PROJECT_ACCESS``, and for a collaborator whose
+    ``project_shares`` grant ranks at least as high as *permission*.
+
+    ``permission`` defaults to ``"write"`` deliberately: a gate that forgets to
+    declare itself read-only denies a read-only collaborator (visibly annoying,
+    trivially fixable) rather than silently letting them mutate the project.
+    Unrecognised values are treated as ``"owner"``, the strictest level, for the
+    same reason.
 
     **Side effect:** a False result writes an ``ACCESS_DENIED`` audit row. Every
     caller uses this as a gate that raises 403 on False, so a False *is* a
-    denial — auditing here covers all of them at one point instead of at ~55
+    denial — auditing here covers all of them at one point instead of at ~85
     call sites. Pass ``audit=False`` if you ever need the bare predicate (for
     filtering a list, say), so the trail doesn't fill with non-events.
-
-    ``permission`` ("read"/"write"/…) is recorded on the denial row when the
-    caller distinguishes the kind of access it was gating.
     """
-    if project.owner_id == user.id or admin_has_global_project_access(user):
+    level = project_access_level(user, project)
+    required = _ACCESS_RANK.get(permission, _ACCESS_RANK[ACCESS_OWNER])
+    # `.get(..., 0)` on the granted side too: an unrecognised level (a stray
+    # value in project_shares.permission) must deny, not raise — a KeyError here
+    # would surface as a 500 on an authorization gate.
+    if level is not None and _ACCESS_RANK.get(level, 0) >= required:
         return True
     if audit:
         record_denial(
@@ -65,8 +106,12 @@ def can_access_project(
             resource_type="project",
             resource_id=getattr(project, "id", None),
             project_id=getattr(project, "id", None),
-            reason="not_project_owner",
-            detail={"permission": permission} if permission else None,
+            # Distinguishing the two makes the trail readable: "stranger probing
+            # a project" vs. "viewer bumping into the read-only boundary".
+            reason="not_project_member"
+            if level is None
+            else "insufficient_project_permission",
+            detail={"permission": permission, "granted": level},
         )
     return False
 

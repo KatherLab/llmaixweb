@@ -94,7 +94,7 @@ async def upload_groundtruth(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_upload",
             403,
@@ -231,7 +231,7 @@ def get_groundtruth(
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "groundtruth.not_authorized_access",
             403,
@@ -267,7 +267,7 @@ def delete_groundtruth(
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_delete",
             403,
@@ -344,7 +344,7 @@ def get_groundtruth_files(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "groundtruth.not_authorized_access_files",
             403,
@@ -381,7 +381,7 @@ def update_groundtruth(
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_update",
             403,
@@ -474,7 +474,7 @@ def update_ground_truth_id_column(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_update_project",
             403,
@@ -534,7 +534,7 @@ def preview_groundtruth(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error("groundtruth.not_authorized", 403, "Not authorized")
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -679,7 +679,7 @@ def preview_groundtruth_document_matches(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error("groundtruth.not_authorized", 403, "Not authorized")
 
     groundtruth: models.GroundTruth | None = db.execute(
@@ -790,7 +790,7 @@ def configure_field_mapping(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_configure_mappings",
             403,
@@ -891,7 +891,7 @@ def get_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "groundtruth.not_authorized_access_mappings",
             403,
@@ -951,7 +951,7 @@ def delete_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_delete_mappings",
             403,
@@ -1023,7 +1023,7 @@ def suggest_field_mappings(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "groundtruth.not_authorized_access_project",
             403,
@@ -1189,7 +1189,7 @@ def validate_json_ground_truth(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error("groundtruth.not_authorized", 403, "Not authorized")
 
     # Fetch by (id, project_id) — a bare-PK lookup would let a caller pass
@@ -1285,7 +1285,7 @@ def auto_map_fields(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_access_project",
             403,
@@ -1401,7 +1401,7 @@ def check_mapping_status(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "groundtruth.not_authorized_access_project",
             403,
@@ -1469,7 +1469,7 @@ def configure_field_mapping_legacy(
     ).scalar_one_or_none()
     if not project:
         raise api_error("groundtruth.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "groundtruth.not_authorized_configure_gt_mappings",
             403,

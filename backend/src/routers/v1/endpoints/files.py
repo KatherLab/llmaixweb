@@ -56,7 +56,7 @@ router = APIRouter()
 
 
 def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
+    project_id: int, current_user: models.User, db: Session, permission: str = "write"
 ) -> models.Project:
     """Check if user has access to project."""
     project = db.execute(
@@ -133,7 +133,7 @@ def get_project_files(
     current_user: models.User = Depends(get_current_user),
 ) -> schemas.PaginatedFiles:
     """Get project files with advanced filtering, pagination, and sorting"""
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     # Build base query with left join to get latest preprocessing task
     # Subquery to get the latest task created_at per file
@@ -303,7 +303,7 @@ def get_file_stats(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Get file statistics for the project"""
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     # Base query (shared by the aggregate and per-type stats below).
     # NB: previously the aggregate rebuilt its own WHERE with a buggy
@@ -380,7 +380,7 @@ def get_project_file(
     if not project:
         raise api_error("files.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "files.project_forbidden",
             403,
@@ -416,7 +416,7 @@ def get_project_file_content(
     if not project:
         raise api_error("files.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "files.project_forbidden",
             403,
@@ -741,7 +741,7 @@ def validate_id_column(
     Called by the import-config modal before saving so duplicate IDs are caught
     up-front (with the offending values) instead of failing at preprocessing.
     """
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     file = db.execute(
         select(models.File).where(
@@ -835,7 +835,7 @@ def preview_structured_file(
       - Very long cells (clipped in preview)
       - Legacy XLS explicitly unsupported for preview
     """
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     file = db.execute(
         select(models.File).where(
@@ -1163,7 +1163,7 @@ def check_duplicates(
     current_user: models.User = Depends(get_current_user),
 ) -> list[dict]:
     """Check for duplicate files before uploading"""
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     # Batch-load all matching files in one query (previously one SELECT per
     # file in the request body — N+1).
@@ -1218,7 +1218,7 @@ def get_file_dependencies(
     downstream impact (trials, groups, extraction results, evaluation metrics)
     as the document preview, plus the document count.
     """
-    check_project_access(project_id, current_user, db, permission="write")
+    check_project_access(project_id, current_user, db, permission="read")
     if not payload.file_ids:
         return schemas.FileDependencies()
 
@@ -1522,7 +1522,7 @@ def download_files_as_zip(
     is synchronous), which would otherwise block the event loop for the entire
     request.
     """
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     # Cap the number of files to bound memory/time for ZIP assembly.
     max_files = 200
@@ -1836,7 +1836,7 @@ def check_file_links(
     current_user: models.User = Depends(get_current_user),
 ) -> dict:
     """Check if a file has any linked resources"""
-    check_project_access(project_id, current_user, db)
+    check_project_access(project_id, current_user, db, permission="read")
 
     file = db.execute(
         select(models.File)

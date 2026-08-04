@@ -8,6 +8,9 @@ import type {
   PreprocessingTask,
   Project,
   ProjectCreate,
+  ProjectShare,
+  ProjectShareCreate,
+  ProjectShareUpdate,
   ProjectUpdate,
   TrialSummary,
 } from '@/types'
@@ -27,6 +30,23 @@ export const projectsApi = {
   },
   delete(projectId: number | string) {
     return api.delete(`/project/${projectId}`) as Promise<ApiBody<unknown>>
+  },
+
+  // Sharing. Reading the collaborator list needs only read access; every
+  // mutation is owner-only, except removing your own share ("leave project").
+  listShares(projectId: number | string) {
+    return api.get(`/project/${projectId}/share`) as Promise<ApiBody<ProjectShare[]>>
+  },
+  addShare(projectId: number | string, payload: ProjectShareCreate) {
+    return api.post(`/project/${projectId}/share`, payload) as Promise<ApiBody<ProjectShare>>
+  },
+  updateShare(projectId: number | string, shareId: number, payload: ProjectShareUpdate) {
+    return api.patch(`/project/${projectId}/share/${shareId}`, payload) as Promise<
+      ApiBody<ProjectShare>
+    >
+  },
+  removeShare(projectId: number | string, shareId: number) {
+    return api.delete(`/project/${projectId}/share/${shareId}`) as Promise<ApiBody<unknown>>
   },
 
   // Recent activity feed (admin ActivityBell)

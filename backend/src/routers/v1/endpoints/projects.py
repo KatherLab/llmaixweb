@@ -11,6 +11,7 @@ from ....core.security import (
     admin_has_global_project_access,
     can_access_project,
     get_current_user,
+    project_access_level,
 )
 from ....dependencies import get_db, remove_file
 from ....utils.api_errors import api_error
@@ -25,11 +26,29 @@ from .llm import router as llm_router
 from .preprocess import router as preprocess_router
 from .prompts import router as prompts_router
 from .schemas import router as schemas_router
+from .shares import router as shares_router
 from .trials import router as trials_router
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def visible_projects_filter(current_user: models.User):
+    """SQL predicate for the projects *current_user* may see at all.
+
+    Projects they own, plus projects shared with them via ``project_shares``.
+    Admins with ``ADMIN_ALL_PROJECT_ACCESS`` bypass this entirely (callers
+    check ``admin_has_global_project_access`` first).
+    """
+    return or_(
+        models.Project.owner_id == current_user.id,
+        models.Project.id.in_(
+            select(models.ProjectShare.project_id).where(
+                models.ProjectShare.user_id == current_user.id
+            )
+        ),
+    )
 
 
 # IMPORTANT: Activity endpoint must be registered BEFORE /{project_id} routes
@@ -56,8 +75,9 @@ def get_recent_preprocessing_tasks(
     project_query = select(models.Project.id)
 
     if not admin_has_global_project_access(current_user):
-        # Users without global access only see their own projects
-        project_query = project_query.where(models.Project.owner_id == current_user.id)
+        # Users without global access see their own projects and those shared
+        # with them.
+        project_query = project_query.where(visible_projects_filter(current_user))
 
     project_ids = db.execute(project_query).scalars().all()
 
@@ -124,8 +144,9 @@ def get_recent_trials(
     project_query = select(models.Project.id)
 
     if not admin_has_global_project_access(current_user):
-        # Users without global access only see their own projects
-        project_query = project_query.where(models.Project.owner_id == current_user.id)
+        # Users without global access see their own projects and those shared
+        # with them.
+        project_query = project_query.where(visible_projects_filter(current_user))
 
     project_ids = db.execute(project_query).scalars().all()
 
@@ -242,28 +263,8 @@ router.include_router(schemas_router, prefix="/{project_id}/schema", tags=["sche
 router.include_router(trials_router, prefix="/{project_id}/trial", tags=["trials"])
 router.include_router(groundtruth_router, prefix="/{project_id}", tags=["groundtruth"])
 router.include_router(evaluations_router, prefix="/{project_id}", tags=["evaluations"])
+router.include_router(shares_router, prefix="/{project_id}/share", tags=["shares"])
 router.include_router(llm_router, prefix="/llm", tags=["llm"])
-
-
-def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
-) -> models.Project:
-    """Check if user has access to project."""
-    project = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise api_error("projects.not_found", 404, "Project not found")
-
-    if not can_access_project(current_user, project, permission=permission):
-        raise api_error(
-            "projects.not_authorized",
-            403,
-            f"Not authorized to {permission} this project",
-            permission=permission,
-        )
-    return project
 
 
 @router.get(
@@ -280,9 +281,9 @@ def get_projects(
 
     if admin_has_global_project_access(current_user):
         if not all:
-            stmt = stmt.where(models.Project.owner_id == current_user.id)
+            stmt = stmt.where(visible_projects_filter(current_user))
     else:
-        stmt = stmt.where(models.Project.owner_id == current_user.id)
+        stmt = stmt.where(visible_projects_filter(current_user))
 
     # Subquery to count documents per project
     doc_count_subq = (
@@ -367,6 +368,8 @@ def get_projects(
             "status": project.status,
             "owner_id": project.owner_id,
             "owner": project.owner,
+            "access_level": project_access_level(current_user, project) or "read",
+            "share_count": len(project.shares),
             "document_count": doc_count or 0,
             "file_count": file_count or 0,
             "schema_count": schema_count or 0,
@@ -463,7 +466,7 @@ def get_project(
         eval_count,
     ) = row
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "projects.not_authorized",
             403,
@@ -478,6 +481,8 @@ def get_project(
         "status": project.status,
         "owner_id": project.owner_id,
         "owner": project.owner,
+        "access_level": project_access_level(current_user, project) or "read",
+        "share_count": len(project.shares),
         "document_count": doc_count or 0,
         "file_count": file_count or 0,
         "schema_count": schema_count or 0,
@@ -519,7 +524,9 @@ def create_project(
         resource_id=new_project.id,
         project_id=new_project.id,
     )
-    return schemas.Project.model_validate(new_project)
+    response = schemas.Project.model_validate(new_project)
+    response.access_level = project_access_level(current_user, new_project) or "read"
+    return response
 
 
 @router.put("/{project_id}", response_model=schemas.Project)
@@ -537,7 +544,7 @@ def update_project(
     if not existing_project:
         raise api_error("projects.not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, existing_project):
+    if not can_access_project(current_user, existing_project, permission="write"):
         raise api_error(
             "projects.not_authorized",
             403,
@@ -566,7 +573,12 @@ def update_project(
         project_id=project_id,
         detail={"fields": sorted(update_data.keys())},
     )
-    return schemas.Project.model_validate(existing_project)
+    response = schemas.Project.model_validate(existing_project)
+    response.access_level = (
+        project_access_level(current_user, existing_project) or "read"
+    )
+    response.share_count = len(existing_project.shares)
+    return response
 
 
 @router.delete("/{project_id}", response_model=schemas.Project)
@@ -583,7 +595,7 @@ def delete_project(
     if not existing_project:
         raise api_error("projects.not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, existing_project):
+    if not can_access_project(current_user, existing_project, permission="owner"):
         raise api_error(
             "projects.not_authorized",
             403,
@@ -622,6 +634,7 @@ def delete_project(
         owner=schemas.UserPublic.model_validate(existing_project.owner)
         if existing_project.owner
         else None,
+        access_level="owner",
         created_at=existing_project.created_at,
         updated_at=existing_project.updated_at,
     )

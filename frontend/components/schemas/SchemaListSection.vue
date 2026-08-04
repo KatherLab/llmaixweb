@@ -7,7 +7,7 @@
           {{ $t('schema.list.subtitle') }}
         </p>
       </div>
-      <BaseButton data-testid="create-schema-open" @click="emit('create')">
+      <BaseButton v-if="canEdit" data-testid="create-schema-open" @click="emit('create')">
         <Plus class="h-5 w-5" />
         {{ $t('schema.list.create') }}
       </BaseButton>
@@ -19,8 +19,8 @@
       v-else-if="schemas.length === 0"
       :title="$t('schema.list.empty_title')"
       :description="$t('schema.list.empty_description')"
-      :action-text="$t('schema.list.create')"
-      :secondary-action-text="$t('schema.list.start_from_template')"
+      :action-text="canEdit ? $t('schema.list.create') : ''"
+      :secondary-action-text="canEdit ? $t('schema.list.start_from_template') : ''"
       @action="emit('create')"
       @secondary-action="emit('createFromTemplate')"
     />
@@ -69,6 +69,7 @@
             <Eye class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
           <BaseButton
+            v-if="canEdit"
             variant="icon"
             tone="gray"
             :title="$t('schema.list.edit')"
@@ -78,6 +79,7 @@
             <Pencil class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
           <BaseButton
+            v-if="canEdit"
             variant="icon"
             tone="red"
             :title="$t('schema.list.delete')"
@@ -101,6 +103,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatDate } from '@/utils/formatters'
 import { summarizeSchema } from '@/utils/schemaFieldList'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
@@ -130,6 +133,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 const expandedKeys = ref<number[]>([])
 const searchQuery = ref('')

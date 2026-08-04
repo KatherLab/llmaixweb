@@ -16,6 +16,17 @@ that point forward.
 
 ### Added
 
+- **Project sharing.** A project owner can now give other users access to a
+  project from *Project Settings → Sharing*, at one of two levels: **Can view**
+  (read-only) or **Can edit** (everything except deleting the project and
+  managing its shares, which stay owner-only). Collaborators are added by email
+  address and must already have an account. Shared projects appear in the
+  collaborator's project list with their access level, view-only users get a
+  banner and no editing controls, and live preprocessing/extraction progress is
+  delivered to every member of a project. Every share, permission change, and
+  revocation is audited (`project_share`, `project_share_update`,
+  `project_unshare`). See
+  [Sharing projects](https://katherlab.github.io/llmaixweb/user-guide/sharing/).
 - Audit log now records denied access: an authenticated user refused a project
   they don't own, or a non-admin hitting an admin route, is written as
   `access_denied` (outcome `denied`) with the attempted method and path.

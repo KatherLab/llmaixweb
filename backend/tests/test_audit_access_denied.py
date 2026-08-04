@@ -64,7 +64,9 @@ def test_cross_user_project_access_is_audited(
     # The row records *what* was probed, not just which resource was refused.
     assert row["detail"]["method"] == "GET"
     assert row["detail"]["path"] == f"/api/v1/project/{project['id']}"
-    assert row["detail"]["reason"] == "not_project_owner"
+    # "not a member at all", as opposed to "a member, but read-only" — see
+    # core.security.can_access_project.
+    assert row["detail"]["reason"] == "not_project_member"
 
 
 def test_owner_access_writes_no_denial(

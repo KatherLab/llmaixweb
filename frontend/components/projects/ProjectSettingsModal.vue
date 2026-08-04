@@ -24,6 +24,7 @@
           maxlength="100"
           required
           autofocus
+          :disabled="!canEdit"
           :aria-invalid="!!nameError"
         />
         <p v-if="nameError" class="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -36,11 +37,22 @@
         rows="3"
         maxlength="500"
         :placeholder="$t('projects.settings.description_placeholder')"
+        :disabled="!canEdit"
       ></textarea>
     </div>
 
-    <!-- Danger Zone Section -->
-    <div class="border-t border-default pt-6 mt-6">
+    <!-- Sharing Section -->
+    <div v-if="projectId" class="border-t border-default pt-6 mt-6">
+      <ProjectSharingSection
+        :project-id="projectId"
+        :owner="owner"
+        :can-manage="isOwner"
+        :open="open"
+      />
+    </div>
+
+    <!-- Danger Zone Section — owner-only, like sharing itself. -->
+    <div v-if="isOwner" class="border-t border-default pt-6 mt-6">
       <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide mb-3">
         {{ $t('projects.settings.danger_zone') }}
       </h3>
@@ -55,9 +67,9 @@
 
     <template #footer>
       <BaseButton variant="secondary" @click="emitClose">
-        {{ $t('projects.actions.cancel') }}
+        {{ canEdit ? $t('projects.actions.cancel') : $t('common.close') }}
       </BaseButton>
-      <BaseButton :loading="isSaving" :disabled="isSaving" @click="onSave">
+      <BaseButton v-if="canEdit" :loading="isSaving" :disabled="isSaving" @click="onSave">
         {{ $t('projects.actions.save_changes') }}
       </BaseButton>
     </template>
@@ -84,21 +96,33 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
+import ProjectSharingSection from '@/components/projects/ProjectSharingSection.vue'
 import { inputClass, textareaClass } from '@/utils/formStyles'
-import type { ProjectUpdate } from '@/types'
+import type { ProjectAccessLevel, ProjectUpdate, UserPublic } from '@/types'
 
 interface Props {
   open: boolean
   initialName?: string
   initialDescription?: string
   isSaving?: boolean
+  /** Omitted only while the project is still loading; hides the share list. */
+  projectId?: number | string | null
+  owner?: UserPublic | null
+  accessLevel?: ProjectAccessLevel
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialName: '',
   initialDescription: '',
   isSaving: false,
+  projectId: null,
+  owner: null,
+  accessLevel: 'owner',
 })
+
+// Renaming needs write access; deleting and managing shares need ownership.
+const canEdit = computed(() => props.accessLevel !== 'read')
+const isOwner = computed(() => props.accessLevel === 'owner')
 
 const emit = defineEmits<{
   save: [payload: ProjectUpdate]

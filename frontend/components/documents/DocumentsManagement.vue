@@ -125,15 +125,20 @@
         count-key="documents.batch.selected_count"
         @clear="selectedDocuments = []"
       >
-        <BaseButton variant="secondary" size="sm" @click="createGroupFromSelection">
+        <BaseButton v-if="canEdit" variant="secondary" size="sm" @click="createGroupFromSelection">
           <FolderPlus class="w-4 h-4" />
           {{ $t('documents.actions.create_group') }}
         </BaseButton>
-        <BaseButton variant="secondary" size="sm" @click="performBatchAction('reprocess')">
+        <BaseButton
+          v-if="canEdit"
+          variant="secondary"
+          size="sm"
+          @click="performBatchAction('reprocess')"
+        >
           <RefreshCw class="w-4 h-4" />
           {{ $t('documents.actions.reprocess') }}
         </BaseButton>
-        <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
+        <BaseButton v-if="canEdit" variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
           {{ $t('documents.actions.delete') }}
         </BaseButton>
@@ -206,6 +211,7 @@ import { setEngineLabels } from '@/utils/ocrLabels'
 import { getDateRangeBounds } from '@/utils/dateRange'
 import SkeletonTable from '@/components/common/SkeletonTable.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
@@ -236,6 +242,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()

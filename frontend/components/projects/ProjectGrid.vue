@@ -119,6 +119,19 @@
             </div>
           </template>
 
+          <template #cell-access_level="{ row: project }">
+            <span
+              v-if="project.access_level !== 'owner'"
+              class="px-2.5 py-1 inline-flex items-center gap-1 text-xs leading-4 font-medium rounded-full bg-surface-muted text-content-muted border border-default"
+            >
+              <Users class="w-3 h-3" aria-hidden="true" />
+              {{ $t(`projects.share.permission.${project.access_level}`) }}
+            </span>
+            <span v-else class="text-sm text-content-subtle">
+              {{ $t('projects.share.permission.owner') }}
+            </span>
+          </template>
+
           <template #cell-created_at="{ row: project }">
             <span class="text-sm text-content-subtle">
               {{ project.created_at ? formatDate(project.created_at) : '' }}
@@ -143,7 +156,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type ComputedRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FolderPlus, FileUp, FileText, Braces, FlaskConical, ClipboardCheck } from '@lucide/vue'
+import {
+  FolderPlus,
+  FileUp,
+  FileText,
+  Braces,
+  FlaskConical,
+  ClipboardCheck,
+  Users,
+} from '@lucide/vue'
 import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -317,9 +338,18 @@ const columns: ComputedRef<TableColumn[]> = computed(() => {
   if (isAdmin.value) {
     cols.push({ key: 'user', label: t('projects.grid.columns.user'), sortable: true })
   }
+  // Only worth a column once at least one row isn't simply "yours" — on a
+  // single-user install this would otherwise be a column of identical values.
+  if (hasSharedProjects.value) {
+    cols.push({ key: 'access_level', label: t('projects.grid.columns.access'), sortable: true })
+  }
   cols.push({ key: 'created_at', label: t('projects.grid.columns.created'), sortable: true })
   return cols
 })
+
+const hasSharedProjects = computed(() =>
+  projects.value.some((project) => project.access_level !== 'owner'),
+)
 
 function goToProject(project: ProjectRow): void {
   router.push(`/projects/${project.id}`)

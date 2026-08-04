@@ -7,7 +7,7 @@
           {{ $t('prompt.list.subtitle') }}
         </p>
       </div>
-      <BaseButton data-testid="create-prompt-open" @click="emit('create')">
+      <BaseButton v-if="canEdit" data-testid="create-prompt-open" @click="emit('create')">
         <Plus class="h-5 w-5" />
         {{ $t('prompt.list.create') }}
       </BaseButton>
@@ -21,7 +21,7 @@
       v-else-if="prompts.length === 0"
       :title="$t('prompt.list.empty_title')"
       :description="$t('prompt.list.empty_description')"
-      :action-text="$t('prompt.list.create')"
+      :action-text="canEdit ? $t('prompt.list.create') : ''"
       @action="emit('create')"
     />
 
@@ -87,6 +87,7 @@
             <Eye class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
           <BaseButton
+            v-if="canEdit"
             variant="icon"
             tone="gray"
             :title="$t('prompt.list.edit')"
@@ -96,6 +97,7 @@
             <Pencil class="w-5 h-5" aria-hidden="true" />
           </BaseButton>
           <BaseButton
+            v-if="canEdit"
             variant="icon"
             tone="red"
             :title="$t('prompt.list.delete')"
@@ -150,6 +152,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatDate, truncateText } from '@/utils/formatters'
 import { Eye, Pencil, Plus, Trash2 } from '@lucide/vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -178,6 +181,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 
 const expandedKeys = ref<number[]>([])
 const searchQuery = ref('')

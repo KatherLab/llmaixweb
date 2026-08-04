@@ -7,7 +7,7 @@
       :sticky="false"
       class="mb-6"
     >
-      <template #actions>
+      <template v-if="canEdit" #actions>
         <Tooltip v-if="trialDisabled" :text="trialDisabledReason">
           <BaseButton
             variant="primary"
@@ -55,7 +55,7 @@
       v-else-if="trials.length === 0 && !hasActiveFilters"
       :title="$t('trials.empty.none_title')"
       :description="$t('trials.empty.none_description')"
-      :action-text="$t('trials.empty.none_action')"
+      :action-text="canEdit ? $t('trials.empty.none_action') : ''"
       :disabled="trialDisabled"
       :disabled-reason="trialDisabledReason"
       @action="openCreateTrialModal"
@@ -117,7 +117,7 @@
         count-key="trials.batch.selected_count"
         @clear="selectedTrials = []"
       >
-        <BaseButton variant="danger" size="sm" @click="performBatchAction('delete')">
+        <BaseButton v-if="canEdit" variant="danger" size="sm" @click="performBatchAction('delete')">
           <Trash2 class="w-4 h-4" />
           {{ $t('trials.actions.delete') }}
         </BaseButton>
@@ -237,6 +237,7 @@ import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Tooltip from '@/components/common/Tooltip.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { useProjectAccess } from '@/composables/useProjectAccess'
 import BatchActionBar from '@/components/common/BatchActionBar.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import { extractErrorMessage } from '@/utils/errors'
@@ -289,6 +290,7 @@ const props = defineProps({
 
 const toast = useToast()
 const { t } = useI18n({ useScope: 'global' })
+const { canEdit } = useProjectAccess()
 const route = useRoute()
 const router = useRouter()
 

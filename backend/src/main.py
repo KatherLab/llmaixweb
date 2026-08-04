@@ -47,35 +47,48 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
-def _resolve_project_owner(data: dict) -> int | None:
-    """Resolve the owner user id for a task-update payload's project.
+def _resolve_project_recipients(data: dict) -> set[int]:
+    """Resolve which user ids may receive a task-update payload.
 
-    Returns the ``Project.owner_id`` for the payload's ``project_id``, or
-    ``None`` if the payload has no project id, the project was deleted, or the
-    DB is unavailable. ``None`` means the update is delivered to admins only
-    (never to a non-owner), so a missing/unknown project never leaks an update
-    to the wrong user. The query is a single point lookup by project id.
+    The project's owner plus every user it is shared with (any permission — a
+    read-only collaborator watching a preprocessing run needs the progress
+    events just as much as the person who started it).
+
+    Returns an empty set if the payload has no project id, the project was
+    deleted, or the DB is unavailable. Empty means the update is delivered to
+    admins only (never to a non-member), so a missing/unknown project never
+    leaks an update to the wrong user.
     """
     project_id = data.get("project_id")
     if project_id is None:
-        return None
+        return set()
     try:
         from sqlalchemy import select
 
         from .db.session import SessionLocal
-        from .models.project import Project
+        from .models.project import Project, ProjectShare
 
         db = SessionLocal()
         try:
-            owner_id = db.execute(
-                select(Project.owner_id).where(Project.id == project_id)
-            ).scalar_one_or_none()
-            return owner_id
+            recipients = set(
+                db.execute(
+                    select(Project.owner_id).where(Project.id == project_id)
+                ).scalars()
+            )
+            recipients.update(
+                db.execute(
+                    select(ProjectShare.user_id).where(
+                        ProjectShare.project_id == project_id
+                    )
+                ).scalars()
+            )
+            recipients.discard(None)
+            return recipients
         finally:
             db.close()
     except Exception as e:
-        logger.debug(f"Could not resolve owner for project {project_id}: {e}")
-        return None
+        logger.debug(f"Could not resolve recipients for project {project_id}: {e}")
+        return set()
 
 
 def _resolve_celery_pool(pool: str) -> str:
@@ -209,13 +222,15 @@ async def _redis_subscriber_task():
 
                         await asyncio.to_thread(reload_settings_cache, broadcast=False)
                         continue
-                    # Filter server-side by project ownership: deliver only to
-                    # the project owner + admins. Previously this was broadcast
-                    # to every connected user and the frontend was trusted to
-                    # filter — a client that didn't filter could observe other
-                    # users' task progress/metadata.
-                    owner_id = await asyncio.to_thread(_resolve_project_owner, data)
-                    await manager.broadcast_to_project(owner_id, data)
+                    # Filter server-side by project membership: deliver only to
+                    # the project owner, its collaborators, and admins.
+                    # Previously this was broadcast to every connected user and
+                    # the frontend was trusted to filter — a client that didn't
+                    # filter could observe other users' task progress/metadata.
+                    recipients = await asyncio.to_thread(
+                        _resolve_project_recipients, data
+                    )
+                    await manager.broadcast_to_project(recipients, data)
             except Exception as e:
                 logger.error(f"Redis message processing error: {e}", exc_info=True)
     except asyncio.CancelledError:

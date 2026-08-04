@@ -19,27 +19,6 @@ from ....utils.helpers import validate_prompt
 router = APIRouter()
 
 
-def check_project_access(
-    project_id: int, current_user: models.User, db: Session, permission: str = "read"
-) -> models.Project:
-    """Check if user has access to project."""
-    project = db.execute(
-        select(models.Project).where(models.Project.id == project_id)
-    ).scalar_one_or_none()
-
-    if not project:
-        raise api_error("prompts.project_not_found", 404, "Project not found")
-
-    if not can_access_project(current_user, project, permission=permission):
-        raise api_error(
-            "prompts.project_forbidden",
-            403,
-            f"Not authorized to {permission} this project",
-            permission=permission,
-        )
-    return project
-
-
 @router.post("", response_model=schemas.Prompt)
 def create_prompt(
     project_id: int,
@@ -52,7 +31,7 @@ def create_prompt(
     ).scalar_one_or_none()
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "prompts.create_forbidden",
             403,
@@ -91,7 +70,7 @@ def get_prompts(
     ).scalar_one_or_none()
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "prompts.access_forbidden",
             403,
@@ -124,7 +103,7 @@ def get_prompt(
     ).scalar_one_or_none()
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "prompts.access_forbidden",
             403,
@@ -154,7 +133,7 @@ def update_prompt(
     ).scalar_one_or_none()
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "prompts.update_forbidden",
             403,
@@ -209,7 +188,7 @@ def delete_prompt(
     ).scalar_one_or_none()
     if not project:
         raise api_error("prompts.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "prompts.delete_forbidden",
             403,

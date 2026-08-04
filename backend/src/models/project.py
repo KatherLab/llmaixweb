@@ -32,6 +32,7 @@ from ..utils.enums import (
     FileType,
     PreprocessingStatus,
     PreprocessingStrategy,
+    ProjectPermission,
     TrialResultStatus,
 )
 
@@ -91,6 +92,61 @@ class Project(Base):
     preprocessing_configurations: Mapped[list["PreprocessingConfiguration"]] = (
         relationship(back_populates="project", cascade="all, delete-orphan")
     )
+    shares: Mapped[list["ProjectShare"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        # Eager-loaded because every project authorization check consults it
+        # (see core.security.project_access_level); a lazy load there would add
+        # a query to each of the ~85 gates.
+        lazy="selectin",
+    )
+
+
+class ProjectShare(Base):
+    """A grant of access to a project for a user who does not own it.
+
+    One row per (project, collaborator). The project owner is *not* represented
+    here — ownership stays on ``Project.owner_id``, and only the owner (or an
+    admin with ``ADMIN_ALL_PROJECT_ACCESS``) may create, change, or revoke
+    shares.
+    """
+
+    __tablename__ = "project_shares"
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_share_project_user"),
+        Index("ix_project_shares_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[ProjectPermission] = mapped_column(
+        Enum(ProjectPermission, native_enum=False, length=10),
+        default=ProjectPermission.READ,
+        nullable=False,
+    )
+    # Who granted the share. SET NULL (not CASCADE) so revoking a share is not
+    # a side effect of deleting the granting admin — the audit trail keeps the
+    # actor, this column is only a convenience for the sharing UI.
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    project: Mapped["Project"] = relationship(back_populates="shares")
+    user: Mapped["User"] = relationship(
+        foreign_keys=[user_id], back_populates="project_shares"
+    )
+    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
 
 
 preprocessing_task_file_association = Table(

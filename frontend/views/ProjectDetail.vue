@@ -11,6 +11,18 @@
 
       <!-- Workspace with glassmorphism -->
       <GlassCard v-else padding="lg" rounded="modal" class="mb-20">
+        <!-- Shared read-only project: say so once, up front, rather than
+             letting the user discover it by finding buttons missing. -->
+        <Callout
+          v-if="accessLevel === 'read'"
+          variant="info"
+          :title="$t('projects.share.read_only_title')"
+          class="mb-4"
+        >
+          <p class="mt-1">
+            {{ $t('projects.share.read_only_body', { owner: project.owner?.full_name || '' }) }}
+          </p>
+        </Callout>
         <!-- Per-step prerequisite hint: shown when the current tab's inputs
              aren't ready yet, with a deep-link to the prior step. -->
         <Callout
@@ -68,6 +80,9 @@
       :initial-name="project.name || undefined"
       :initial-description="project.description || undefined"
       :is-saving="isSaving"
+      :project-id="project.id"
+      :owner="project.owner"
+      :access-level="accessLevel"
       @save="saveProjectEdits"
       @close="showSettingsModal = false"
       @delete="showDeleteConfirmation = true"
@@ -90,7 +105,7 @@ import { ref, computed, onMounted, onUnmounted, provide, watch, defineAsyncCompo
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi } from '@/services/projectsApi'
-import type { Project, ProjectUpdate } from '@/types'
+import type { Project, ProjectAccessLevel, ProjectUpdate } from '@/types'
 import { setNavContext, clearNavContext } from '@/composables/useNavContext'
 // Tab components are lazy-loaded so each workflow step is code-split into its
 // own chunk (only one tab is rendered at a time, see the v-if chain below).
@@ -131,6 +146,15 @@ const error = ref<string>('')
 const isSaving = ref<boolean>(false)
 const showSettingsModal = ref<boolean>(false)
 const showDeleteConfirmation = ref<boolean>(false)
+
+// What this user may do here. Defaults to 'read' until the project loads, so a
+// slow response never flashes editing affordances a viewer can't use. The
+// backend gates every route independently — this only shapes the UI.
+const accessLevel = computed<ProjectAccessLevel>(() => project.value.access_level ?? 'read')
+const canEdit = computed<boolean>(() => accessLevel.value !== 'read')
+// Tab components read this to hide upload/run/delete affordances for viewers.
+provide('projectCanEdit', canEdit)
+provide('projectAccessLevel', accessLevel)
 
 // Workflow step management with tab workspace
 const validSteps = ['files', 'documents', 'schemas', 'trials', 'evaluation']

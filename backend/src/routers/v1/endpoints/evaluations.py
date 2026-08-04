@@ -137,7 +137,7 @@ def get_evaluations(
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
@@ -226,7 +226,7 @@ def compare_evaluations(
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
@@ -347,7 +347,7 @@ def get_evaluation_detail(
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
@@ -414,7 +414,7 @@ def delete_evaluation(
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "evaluations.not_authorized_delete",
             403,
@@ -473,7 +473,7 @@ def get_document_evaluation(
     ).scalar_one_or_none()
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
@@ -600,7 +600,7 @@ def download_evaluations_report(
     ).scalar_one_or_none()
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
@@ -976,7 +976,7 @@ def batch_evaluate_trials(
     ).scalar_one_or_none()
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="write"):
         raise api_error(
             "evaluations.not_authorized_evaluate",
             403,
@@ -1062,7 +1062,7 @@ def get_evaluation_errors(
     if not project:
         raise api_error("evaluations.project_not_found", 404, "Project not found")
 
-    if not can_access_project(current_user, project):
+    if not can_access_project(current_user, project, permission="read"):
         raise api_error(
             "evaluations.not_authorized_access",
             403,
