@@ -100,204 +100,241 @@
       </div>
     </template>
 
-    <!-- Loading -->
-    <div v-if="isLoading" class="flex flex-col items-center justify-center h-full py-16">
-      <LoadingSpinner size="medium" inline label="" />
-      <span class="mt-2 text-content-muted">{{ $t('trials.results.loading') }}</span>
-    </div>
-    <!-- Error -->
-    <div v-else-if="error" class="p-6">
-      <ErrorBanner :message="error" class="rounded-card" />
-    </div>
-
-    <!-- Trial not found -->
-    <div v-else-if="!trial" class="flex flex-col items-center justify-center h-full py-16">
-      <Frown class="h-14 w-14 text-content-subtle" />
-      <span class="text-content-muted mt-3">{{ $t('trials.results.not_found') }}</span>
-      <BaseButton variant="secondary" class="mt-6" @click="$emit('close')">
-        {{ $t('trials.results.return') }}
-      </BaseButton>
-    </div>
-
-    <!-- No results yet (only when no filters are active — a genuinely empty
-         trial. When filters yield nothing, fall through to the 2-pane layout
-         so the rail (with its reset affordance) stays visible.) -->
-    <div
-      v-else-if="results.length === 0 && !resultsLoading && !hasActiveFilters"
-      class="flex flex-col items-center justify-center h-full py-16"
-    >
-      <EmptyState :title="$t('trials.results.no_results_title')">
-        <p
-          v-if="trial.status === 'processing' || trial.status === 'pending'"
-          class="mt-1 text-sm text-content-subtle"
-        >
-          {{ $t('trials.results.wait') }}
-        </p>
-      </EmptyState>
-    </div>
-
-    <!-- Main 2-pane layout: doc list + viewer -->
-    <div v-else class="flex h-full min-h-0">
-      <!-- Left rail: document list -->
-      <aside
-        :class="[
-          'flex flex-col border-r border-default bg-surface-muted/40 shrink-0',
-          leftRailOpen ? 'w-64' : 'w-0 -ml-px overflow-hidden',
-        ]"
-      >
-        <div v-show="leftRailOpen" class="flex flex-col h-full min-h-0">
-          <!-- Search + status filter -->
-          <div class="p-3 border-b border-default space-y-2 shrink-0">
-            <SearchInput
-              v-model="search"
-              :placeholder="$t('trials.results.search_placeholder')"
-              @input="debouncedFetchResults"
-            />
-            <select
-              v-model="statusFilter"
-              :class="[selectClass, 'px-2 py-1.5 text-xs w-full']"
-              @change="handleFilterChange"
-            >
-              <option value="">{{ $t('trials.results.all_statuses') }}</option>
-              <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </option>
-            </select>
+    <div class="flex flex-col h-full min-h-0">
+      <!-- Live progress strip (run still executing) — mirrors TrialDetailPanel -->
+      <div v-if="isTrialActive" class="px-6 py-3 border-b border-default bg-surface shrink-0">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2 text-xs" aria-live="polite">
+            <span class="font-medium text-content">{{ $t('trials.results.running') }}</span>
+            <span class="font-medium text-primary">{{
+              $t('trials.detail.docs_progress', { done: docsDone, total: progressTotalDocs })
+            }}</span>
+            <span class="text-content-muted">{{
+              $t('trials.detail.elapsed', { duration: formatDuration(elapsedSeconds) })
+            }}</span>
+            <span v-if="etaSeconds && etaSeconds > 0" class="text-content-muted">{{
+              $t('trials.detail.eta', { duration: formatDuration(etaSeconds) })
+            }}</span>
           </div>
-
-          <!-- Document list -->
-          <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
-            <button
-              v-for="(r, i) in results"
-              :key="r.id"
-              type="button"
-              :class="[
-                'w-full text-left px-3 py-2 rounded-card border-l-2 transition-colors',
-                i === activeIndex
-                  ? 'bg-primary-soft border-primary'
-                  : 'border-transparent hover:bg-surface',
-              ]"
-              @click="selectIndex(i)"
-            >
-              <div class="flex items-center gap-2 min-w-0">
-                <span
-                  :class="['h-1.5 w-1.5 rounded-full shrink-0', statusDotClass(r.status as string)]"
-                />
-                <span class="text-sm text-content truncate flex-1">{{
-                  r.document_name ||
-                  r.original_file_name ||
-                  $t('trials.results.doc_fallback', { id: r.document_id })
-                }}</span>
-              </div>
-              <div class="flex items-center gap-2 mt-0.5 pl-3.5">
-                <span class="text-[10px] uppercase tracking-wide text-content-subtle">
-                  {{ statusLabel(r.status as string) }}
-                </span>
-                <span
-                  v-if="
-                    r.additional_content?.finish_reason &&
-                    r.additional_content.finish_reason !== 'stop'
-                  "
-                  class="text-[10px] text-content-subtle"
-                >
-                  · {{ r.additional_content.finish_reason }}
-                </span>
-              </div>
-            </button>
-            <div v-if="resultsLoading" class="flex justify-center py-4">
-              <LoadingSpinner size="small" inline label="" />
-            </div>
-            <div
-              v-else-if="results.length === 0"
-              class="flex flex-col items-center justify-center py-8 px-3 text-center"
-            >
-              <p class="text-xs text-content-subtle">{{ $t('trials.results.no_match') }}</p>
-              <button
-                type="button"
-                class="mt-2 text-xs font-medium text-primary hover:underline"
-                @click="resetFilters"
-              >
-                {{ $t('trials.results.reset_filters') }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Compact pagination -->
-          <div class="p-2 border-t border-default flex items-center justify-between gap-1 shrink-0">
-            <BaseButton
-              variant="ghost"
-              size="sm"
-              :disabled="currentPage <= 1"
-              :aria-label="$t('common.pagination.previous')"
-              :title="$t('common.pagination.previous')"
-              @click="handlePageChange(currentPage - 1)"
-            >
-              <ChevronLeft class="h-4 w-4" />
-            </BaseButton>
-            <span class="text-xs text-content-muted tabular-nums">
-              {{ currentPage }} / {{ totalPages }}
-            </span>
-            <BaseButton
-              variant="ghost"
-              size="sm"
-              :disabled="currentPage >= totalPages"
-              :aria-label="$t('common.pagination.next')"
-              :title="$t('common.pagination.next')"
-              @click="handlePageChange(currentPage + 1)"
-            >
-              <ChevronRight class="h-4 w-4" />
-            </BaseButton>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Center: main viewer -->
-      <div class="flex-1 min-w-0 flex flex-col">
-        <!-- Rail toggle (for narrow viewports / power users) -->
-        <div
-          class="flex items-center justify-between px-2 py-1 border-b border-default bg-surface shrink-0"
-        >
-          <BaseButton
-            variant="ghost"
-            size="sm"
-            :title="leftRailOpen ? $t('trials.results.hide_list') : $t('trials.results.show_list')"
-            @click="leftRailOpen = !leftRailOpen"
-          >
-            <PanelLeft class="h-4 w-4" />
-          </BaseButton>
-        </div>
-
-        <div class="flex-1 min-h-0">
-          <TrialResultViewer
-            v-if="activeResult"
-            :result="activeResult"
-            :project-id="props.projectId"
-          />
           <div
-            v-else
-            class="flex flex-col items-center justify-center h-full py-16 text-content-subtle"
+            class="w-full h-1 bg-surface-sunken rounded-full overflow-hidden"
+            role="progressbar"
+            :aria-label="$t('trials.detail.progress_aria')"
+            :aria-valuenow="progressPercent"
+            aria-valuemin="0"
+            aria-valuemax="100"
           >
-            <FileText class="h-10 w-10 mb-2 opacity-40" />
-            <p class="text-sm">
-              {{
-                hasActiveFilters ? $t('trials.results.no_match') : $t('trials.results.select_doc')
-              }}
-            </p>
+            <div
+              class="h-full bg-primary transition-all duration-500"
+              :style="{ width: progressPercent + '%' }"
+            ></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Collapsible error list (toggled from header) -->
-    <div
-      v-if="hasFailures && showErrors"
-      class="border-t border-default bg-surface-muted px-6 py-4"
-    >
-      <TrialDocumentErrors
-        :failures="trialFailures"
-        :document-names="failureDocumentNames"
-        @select="selectFailureDocument"
-      />
+      <!-- Loading -->
+      <div v-if="isLoading" class="flex flex-col items-center justify-center flex-1 py-16">
+        <LoadingSpinner size="medium" inline label="" />
+        <span class="mt-2 text-content-muted">{{ $t('trials.results.loading') }}</span>
+      </div>
+      <!-- Error -->
+      <div v-else-if="error" class="p-6">
+        <ErrorBanner :message="error" class="rounded-card" />
+      </div>
+
+      <!-- Trial not found -->
+      <div v-else-if="!trial" class="flex flex-col items-center justify-center flex-1 py-16">
+        <Frown class="h-14 w-14 text-content-subtle" />
+        <span class="text-content-muted mt-3">{{ $t('trials.results.not_found') }}</span>
+        <BaseButton variant="secondary" class="mt-6" @click="$emit('close')">
+          {{ $t('trials.results.return') }}
+        </BaseButton>
+      </div>
+
+      <!-- No results yet (only when no filters are active — a genuinely empty
+           trial. When filters yield nothing, fall through to the 2-pane layout
+           so the rail (with its reset affordance) stays visible.) -->
+      <div
+        v-else-if="results.length === 0 && !resultsLoading && !hasActiveFilters"
+        class="flex flex-col items-center justify-center flex-1 py-16"
+      >
+        <EmptyState :title="$t('trials.results.no_results_title')">
+          <p v-if="isTrialActive" class="mt-1 text-sm text-content-subtle">
+            {{ $t('trials.results.wait') }}
+          </p>
+        </EmptyState>
+      </div>
+
+      <!-- Main 2-pane layout: doc list + viewer -->
+      <div v-else class="flex flex-1 min-h-0">
+        <!-- Left rail: document list -->
+        <aside
+          :class="[
+            'flex flex-col border-r border-default bg-surface-muted/40 shrink-0',
+            leftRailOpen ? 'w-64' : 'w-0 -ml-px overflow-hidden',
+          ]"
+        >
+          <div v-show="leftRailOpen" class="flex flex-col h-full min-h-0">
+            <!-- Search + status filter -->
+            <div class="p-3 border-b border-default space-y-2 shrink-0">
+              <SearchInput
+                v-model="search"
+                :placeholder="$t('trials.results.search_placeholder')"
+                @input="debouncedFetchResults"
+              />
+              <select
+                v-model="statusFilter"
+                :class="[selectClass, 'px-2 py-1.5 text-xs w-full']"
+                @change="handleFilterChange"
+              >
+                <option value="">{{ $t('trials.results.all_statuses') }}</option>
+                <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Document list -->
+            <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+              <button
+                v-for="(r, i) in results"
+                :key="r.id"
+                type="button"
+                :class="[
+                  'w-full text-left px-3 py-2 rounded-card border-l-2 transition-colors',
+                  i === activeIndex
+                    ? 'bg-primary-soft border-primary'
+                    : 'border-transparent hover:bg-surface',
+                ]"
+                @click="selectIndex(i)"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <span
+                    :class="[
+                      'h-1.5 w-1.5 rounded-full shrink-0',
+                      statusDotClass(r.status as string),
+                    ]"
+                  />
+                  <span class="text-sm text-content truncate flex-1">{{
+                    r.document_name ||
+                    r.original_file_name ||
+                    $t('trials.results.doc_fallback', { id: r.document_id })
+                  }}</span>
+                </div>
+                <div class="flex items-center gap-2 mt-0.5 pl-3.5">
+                  <span class="text-[10px] uppercase tracking-wide text-content-subtle">
+                    {{ statusLabel(r.status as string) }}
+                  </span>
+                  <span
+                    v-if="
+                      r.additional_content?.finish_reason &&
+                      r.additional_content.finish_reason !== 'stop'
+                    "
+                    class="text-[10px] text-content-subtle"
+                  >
+                    · {{ r.additional_content.finish_reason }}
+                  </span>
+                </div>
+              </button>
+              <div v-if="resultsLoading" class="flex justify-center py-4">
+                <LoadingSpinner size="small" inline label="" />
+              </div>
+              <div
+                v-else-if="results.length === 0"
+                class="flex flex-col items-center justify-center py-8 px-3 text-center"
+              >
+                <p class="text-xs text-content-subtle">{{ $t('trials.results.no_match') }}</p>
+                <button
+                  type="button"
+                  class="mt-2 text-xs font-medium text-primary hover:underline"
+                  @click="resetFilters"
+                >
+                  {{ $t('trials.results.reset_filters') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Compact pagination -->
+            <div
+              class="p-2 border-t border-default flex items-center justify-between gap-1 shrink-0"
+            >
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                :disabled="currentPage <= 1"
+                :aria-label="$t('common.pagination.previous')"
+                :title="$t('common.pagination.previous')"
+                @click="handlePageChange(currentPage - 1)"
+              >
+                <ChevronLeft class="h-4 w-4" />
+              </BaseButton>
+              <span class="text-xs text-content-muted tabular-nums">
+                {{ currentPage }} / {{ totalPages }}
+              </span>
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                :disabled="currentPage >= totalPages"
+                :aria-label="$t('common.pagination.next')"
+                :title="$t('common.pagination.next')"
+                @click="handlePageChange(currentPage + 1)"
+              >
+                <ChevronRight class="h-4 w-4" />
+              </BaseButton>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Center: main viewer -->
+        <div class="flex-1 min-w-0 flex flex-col">
+          <!-- Rail toggle (for narrow viewports / power users) -->
+          <div
+            class="flex items-center justify-between px-2 py-1 border-b border-default bg-surface shrink-0"
+          >
+            <BaseButton
+              variant="ghost"
+              size="sm"
+              :title="
+                leftRailOpen ? $t('trials.results.hide_list') : $t('trials.results.show_list')
+              "
+              @click="leftRailOpen = !leftRailOpen"
+            >
+              <PanelLeft class="h-4 w-4" />
+            </BaseButton>
+          </div>
+
+          <div class="flex-1 min-h-0">
+            <TrialResultViewer
+              v-if="activeResult"
+              :result="activeResult"
+              :project-id="props.projectId"
+            />
+            <div
+              v-else
+              class="flex flex-col items-center justify-center h-full py-16 text-content-subtle"
+            >
+              <FileText class="h-10 w-10 mb-2 opacity-40" />
+              <p class="text-sm">
+                {{
+                  hasActiveFilters ? $t('trials.results.no_match') : $t('trials.results.select_doc')
+                }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible error list (toggled from header) -->
+      <div
+        v-if="hasFailures && showErrors"
+        class="border-t border-default bg-surface-muted px-6 py-4 shrink-0"
+      >
+        <TrialDocumentErrors
+          :failures="trialFailures"
+          :document-names="failureDocumentNames"
+          @select="selectFailureDocument"
+        />
+      </div>
     </div>
 
     <template #footer>
@@ -340,6 +377,8 @@ import { ChevronLeft, ChevronRight, FileText, Frown, PanelLeft, X } from '@lucid
 import { trialsApi } from '@/services/trialsApi'
 import { schemasApi } from '@/services/schemasApi'
 import { useToast } from '@/composables/useToast'
+import { websocketService } from '@/services/websocket'
+import { isForProject, mergeWsEntity } from '@/composables/useWsEntityUpdates'
 import TrialResultViewer from './TrialResultViewer.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
@@ -352,9 +391,10 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import { extractErrorMessage } from '@/utils/errors'
+import { formatDuration } from '@/utils/formatters'
 import { selectClass } from '@/utils/formStyles'
 import { trialLabel } from '@/utils/trialLabel'
-import type { Trial, TrialResultItem, Schema, Prompt } from '@/types'
+import type { Trial, TrialResultItem, Schema, Prompt, WsTrialUpdate, WsMessage } from '@/types'
 
 interface TokenUsage {
   prompt_tokens?: number
@@ -507,8 +547,10 @@ const fetchTrial = async (): Promise<void> => {
   }
 }
 
-const fetchResults = async (): Promise<void> => {
-  resultsLoading.value = true
+// `silent` (live WS-driven refreshes) skips the loading flag so background
+// refetches don't flicker the empty state / rail spinner.
+const fetchResults = async (silent = false): Promise<void> => {
+  if (!silent) resultsLoading.value = true
   try {
     const params: Record<string, unknown> = {
       limit: pageSize.value,
@@ -524,7 +566,7 @@ const fetchResults = async (): Promise<void> => {
     const tp = Math.max(1, Math.ceil(totalCount.value / pageSize.value))
     if (currentPage.value > tp) {
       currentPage.value = tp
-      await fetchResults()
+      await fetchResults(silent)
       return
     }
     if (activeIndex.value > results.value.length - 1) {
@@ -535,8 +577,138 @@ const fetchResults = async (): Promise<void> => {
     results.value = []
     totalCount.value = 0
   } finally {
-    resultsLoading.value = false
+    if (!silent) resultsLoading.value = false
   }
+}
+
+// --- Live updates (run still executing) ---
+
+const TERMINAL_STATES = ['completed', 'failed', 'cancelled']
+// Throttle WS-driven refetches so a fast run doesn't hammer the API.
+const LIVE_REFRESH_MS = 2500
+
+const isTrialActive = computed(
+  () => !!trial.value && !TERMINAL_STATES.includes(String(trial.value.status)),
+)
+
+// Total docs from the WS payload (len(document_ids); 0 for set-based trials).
+const wsDocsTotal = ref(0)
+
+// Mirrors TrialDetailPanel's progress presentation.
+const progressTotalDocs = computed(() => {
+  const t = trial.value
+  if (!t) return 0
+  if (t.document_ids?.length) return t.document_ids.length
+  if (wsDocsTotal.value) return wsDocsTotal.value
+  // Set-based trials: estimate from progress, else fall back to results so far.
+  if (t.docs_done != null && t.progress) return Math.round(t.docs_done / t.progress)
+  return totalCount.value
+})
+const docsDone = computed(() => {
+  const t = trial.value
+  if (!t) return 0
+  if (t.docs_done != null) return t.docs_done
+  if (t.progress != null) return Math.round((t.progress || 0) * progressTotalDocs.value)
+  return 0
+})
+const progressPercent = computed(() =>
+  trial.value?.progress != null ? Math.round((trial.value.progress || 0) * 100) : 0,
+)
+// Re-evaluates on each WS tick (trial.value is reassigned), like TrialDetailPanel.
+const elapsedSeconds = computed(() =>
+  trial.value?.started_at ? (Date.now() - Date.parse(trial.value.started_at)) / 1000 : 0,
+)
+const etaSeconds = computed(() => trial.value?.meta?.eta_seconds ?? 0)
+
+let wsTrialUnsubscribe: (() => void) | null = null
+let wsConnectedUnsubscribe: (() => void) | null = null
+let liveRefreshTimer: ReturnType<typeof setTimeout> | null = null
+let lastLiveRefreshAt = 0
+
+// Leading+trailing throttle: refetch at most once per LIVE_REFRESH_MS.
+// Preserves currentPage/activeIndex, so the open result isn't yanked away —
+// new results simply appear in the rail/pagination.
+function refreshResultsThrottled(): void {
+  if (liveRefreshTimer) return
+  const wait = Math.max(0, lastLiveRefreshAt + LIVE_REFRESH_MS - Date.now())
+  liveRefreshTimer = setTimeout(() => {
+    liveRefreshTimer = null
+    lastLiveRefreshAt = Date.now()
+    fetchResults(true)
+  }, wait)
+}
+
+function stopLiveRefresh(): void {
+  if (liveRefreshTimer) {
+    clearTimeout(liveRefreshTimer)
+    liveRefreshTimer = null
+  }
+}
+
+// Silent re-fetch of the trial (no full-screen spinner) for authoritative
+// status/meta on terminal states and after a WS reconnect.
+async function refreshTrialSilently(): Promise<void> {
+  try {
+    const res = await trialsApi.get(props.projectId, trialId.value, { include_results: false })
+    trial.value = res.data
+  } catch (err) {
+    console.error('Error refreshing trial:', err)
+  }
+}
+
+function handleTrialUpdate(data: WsMessage): void {
+  const update = data as WsTrialUpdate
+  if (!isForProject(update, props.projectId)) return
+  if (String(update.trial_id) !== String(trialId.value)) return
+
+  if (typeof update.documents_count === 'number' && update.documents_count > 0) {
+    wsDocsTotal.value = update.documents_count
+  }
+
+  // Merge progress/status into the loaded trial so the header badge and the
+  // progress strip update live.
+  if (trial.value) {
+    trial.value = mergeWsEntity(
+      trial.value as unknown as Record<string, unknown>,
+      update as Record<string, unknown>,
+      trial.value.id,
+      'trial_id',
+    ) as unknown as Trial
+  }
+
+  const isTerminal =
+    TERMINAL_STATES.includes(String(update.event || '')) ||
+    TERMINAL_STATES.includes(String(update.status || '').toLowerCase())
+  if (isTerminal) {
+    // Final refetch: authoritative trial (status, failures map) + full results.
+    stopLiveRefresh()
+    refreshTrialSilently()
+    fetchResults(true)
+  } else {
+    refreshResultsThrottled()
+  }
+}
+
+function startLiveUpdates(): void {
+  wsTrialUnsubscribe = websocketService.onTrialUpdate(handleTrialUpdate)
+  // Resync after a WS reconnect — updates emitted while disconnected were missed.
+  wsConnectedUnsubscribe = websocketService.subscribe('connected', () => {
+    if (!isTrialActive.value) return
+    refreshTrialSilently()
+    fetchResults(true)
+  })
+}
+
+function stopLiveUpdates(): void {
+  if (wsTrialUnsubscribe) {
+    wsTrialUnsubscribe()
+    wsTrialUnsubscribe = null
+  }
+  if (wsConnectedUnsubscribe) {
+    wsConnectedUnsubscribe()
+    wsConnectedUnsubscribe = null
+  }
+  stopLiveRefresh()
 }
 
 const debouncedFetchResults = debounce(() => {
@@ -638,11 +810,13 @@ function openPromptModal(): void {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
+  startLiveUpdates()
   await fetchTrial()
   if (trial.value) await fetchResults()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
+  stopLiveUpdates()
 })
 </script>

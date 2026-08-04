@@ -2849,7 +2849,8 @@
       },
       "errors": {
         "load_trial": "Failed to load extraction run data"
-      }
+      },
+      "running": "Extraction run in progress"
     },
     "viewer": {
       "tokens_label": "Tokens:",

@@ -2849,7 +2849,8 @@
       },
       "errors": {
         "load_trial": "Échec du chargement des données de l'exécution"
-      }
+      },
+      "running": "Exécution d'extraction en cours"
     },
     "viewer": {
       "tokens_label": "Tokens :",
