@@ -1,40 +1,40 @@
 # Evaluation
 
-An **evaluation** compares a completed trial's results against
+An **evaluation** compares a completed extraction run's results against
 [ground truth](ground-truth.md) and computes accuracy metrics. This is how you
 measure and debug extraction quality.
 
 ## Creating an evaluation
 
-An evaluation is the combination of **a trial + a ground-truth file + field
+An evaluation is the combination of **an extraction run + a ground-truth file + field
 mappings**. From the Evaluation dashboard:
 
 1. Select a ground-truth file that has **field mappings** configured.
-2. Click **Evaluate Trial** and pick a **completed** trial from the list.
+2. Click **Evaluate Extraction Run** and pick a **completed** run from the list.
 
-Trials without mappings for their schema (or with no results) are greyed out.
-Already-evaluated trials are marked, and re-evaluating asks for confirmation.
+Runs without mappings for their schema (or with no results) are greyed out.
+Already-evaluated runs are marked, and re-evaluating asks for confirmation.
 
 <figure markdown>
   ![Evaluation dashboard with ground truth files, an evaluations table, and a "How evaluation works" callout](../assets/screenshots/evaluation-overview.png){ width="820" }
-  <figcaption>The Evaluation dashboard: the ground-truth file list, the evaluations table (trial, model, overall accuracy, documents, status, and Analysis/Delete), the Upload Ground Truth / Export Results buttons, and the "How evaluation works" explainer.</figcaption>
+  <figcaption>The Evaluation dashboard: the ground-truth file list, the evaluations table (extraction run, model, overall accuracy, documents, status, and Analysis/Delete), the Upload Ground Truth / Export Results buttons, and the "How evaluation works" explainer.</figcaption>
 </figure>
 
 !!! note "Only matched documents are scored"
     Documents whose identifier can't be matched to a ground-truth entry are
-    reported separately and **excluded** from the accuracy figure. If a trial has
+    reported separately and **excluded** from the accuracy figure. If a run has
     a low match rate you'll get a warning listing the unmatched documents. A
     match rate below 80% (or below 50%) is surfaced as a warning, but evaluation
     still runs on the documents that did match.
 
 Evaluations are **auto-invalidated** and recomputed when their inputs change —
 editing the ground-truth file, its ID column, or the field mappings, or
-re-running the trial. A cached evaluation is reused only while the trial's
+re-running the extraction. A cached evaluation is reused only while the run's
 results haven't changed since it was computed.
 
 ## The evaluations table
 
-Each row shows the trial, model, **overall accuracy** (with a colored bar:
+Each row shows the extraction run, model, **overall accuracy** (with a colored bar:
 **green ≥90%**, **yellow 50–90%**, **red <50%**), the document count (and how many
 matched, with an unmatched-count tooltip when some are excluded), and a status
 (**Scored** or **Has Errors**). Rows have **Analysis** and **Delete**.
@@ -43,7 +43,7 @@ The **"How evaluation works"** callout stays visible until mappings exist, to
 guide first-time setup.
 
 !!! note
-    Deleting an evaluation keeps the trial and ground truth — you can re-evaluate
+    Deleting an evaluation keeps the extraction run and ground truth — you can re-evaluate
     anytime.
 
 ## Metrics explained

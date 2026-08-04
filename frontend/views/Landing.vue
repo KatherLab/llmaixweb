@@ -11,16 +11,21 @@
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex h-14 items-center justify-between">
         <AppBrand />
         <div class="flex items-center gap-3">
+          <LanguageSwitcher />
           <router-link
-            v-if="!isAuthenticated"
+            v-if="!isAuthenticated && registrationOpen"
             to="/login"
             class="text-sm font-medium text-content-muted hover:text-content transition-colors"
           >
             {{ $t('landing.nav.sign_in') }}
           </router-link>
-          <BaseButton v-if="!isAuthenticated" to="/register" size="sm">{{
-            $t('landing.nav.get_started')
-          }}</BaseButton>
+          <BaseButton
+            v-if="!isAuthenticated"
+            :to="registrationOpen ? '/register' : '/login'"
+            size="sm"
+          >
+            {{ registrationOpen ? $t('landing.nav.get_started') : $t('landing.nav.sign_in') }}
+          </BaseButton>
           <BaseButton v-else to="/projects" size="sm">{{ $t('landing.nav.go_to_app') }}</BaseButton>
         </div>
       </div>
@@ -41,7 +46,7 @@
       <FeatureGrid />
 
       <!-- CTA Section -->
-      <LandingCta />
+      <LandingCta :registration-open="registrationOpen" />
     </div>
   </div>
 </template>
@@ -56,15 +61,22 @@ import FeatureGrid from '@/components/landing/FeatureGrid.vue'
 import LandingCta from '@/components/landing/LandingCta.vue'
 import AppBrand from '@/components/common/AppBrand.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import { useAuthStore } from '@/stores/auth'
+import { usePublicSettingsStore } from '@/stores/publicSettings'
 
 const authStore = useAuthStore()
+const publicSettingsStore = usePublicSettingsStore()
 const authReady = ref(false)
 onMounted(async () => {
-  await authStore.initialize()
+  await Promise.all([authStore.initialize(), publicSettingsStore.fetch()])
   authReady.value = true
 })
 const isAuthenticated = computed(() => authReady.value && authStore.isAuthenticated)
+// Default deployments are invitation-only — only advertise "Get started"
+// (→ /register) once the backend confirms open registration; otherwise the
+// CTAs point to sign-in so visitors never dead-end on a closed register page.
+const registrationOpen = computed(() => publicSettingsStore.settings?.require_invitation === false)
 </script>
 
 <style scoped>

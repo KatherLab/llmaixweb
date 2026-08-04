@@ -50,7 +50,7 @@ npm run test:e2e
 ```
 
 The e2e smoke boots a fake LLM, a broker-free backend, and the dev server, then
-drives login → project → upload → preprocess → trial → evaluation. See
+drives login → project → upload → preprocess → extraction run → evaluation. See
 [`e2e/README.md`](https://github.com/KatherLab/llmaixweb/blob/main/e2e/README.md)
 for details and prerequisites.
 

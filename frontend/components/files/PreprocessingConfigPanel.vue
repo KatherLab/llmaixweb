@@ -10,6 +10,11 @@
   >
     <!-- Panel Content -->
     <div class="space-y-6">
+      <!-- One-line orientation: what preprocessing actually does. -->
+      <p class="text-sm text-content-muted">
+        {{ $t('files.config.what_happens') }}
+      </p>
+
       <!-- Selected Files -->
       <div>
         <h4 class="text-sm font-medium text-content-muted mb-3">
@@ -79,7 +84,7 @@
                     {{ getEngineLabel('docling_tesseract') }}
                   </p>
                   <p class="text-xs text-content-muted">
-                    {{ getEngineSubtitle('docling_tesseract') }}
+                    {{ engineDescription('docling_tesseract') }}
                   </p>
                 </div>
               </div>
@@ -103,7 +108,7 @@
                     {{ getEngineLabel('mistral_ocr') }}
                   </p>
                   <p class="text-xs text-content-muted">
-                    {{ getEngineSubtitle('mistral_ocr') }}
+                    {{ engineDescription('mistral_ocr') }}
                   </p>
                 </div>
               </div>
@@ -127,7 +132,7 @@
                     {{ getEngineLabel('llm_vision') }}
                   </p>
                   <p class="text-xs text-content-muted">
-                    {{ getEngineSubtitle('llm_vision') }}
+                    {{ engineDescription('llm_vision') }}
                   </p>
                 </div>
               </div>
@@ -309,6 +314,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronRight, CircleCheckBig, Eye, X, Zap } from '@lucide/vue'
 import { getEngineLabel, getEngineSubtitle } from '@/utils/ocrLabels'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -320,6 +326,23 @@ import { textareaClass, selectClass, labelClass } from '@/utils/formStyles'
 import type { File, PreprocessingTaskCreate } from '@/types'
 
 type OcrEngine = 'docling_tesseract' | 'mistral_ocr' | 'llm_vision' | null
+
+const { t } = useI18n({ useScope: 'global' })
+
+// Decision-oriented engine descriptions for the selection cards. Admins can
+// still override the subtitle via ocrLabels.setEngineLabels (Admin Settings):
+// when getEngineSubtitle returns something other than the stock default we show
+// the admin's copy, otherwise the localized decision-criteria line below.
+const STOCK_ENGINE_SUBTITLES: Record<string, string> = {
+  docling_tesseract: 'Docling / Tesseract',
+  mistral_ocr: 'Best for complex layouts',
+  llm_vision: 'Best for complex documents',
+}
+const engineDescription = (engineKey: string): string => {
+  const subtitle = getEngineSubtitle(engineKey)
+  if (subtitle && subtitle !== STOCK_ENGINE_SUBTITLES[engineKey]) return subtitle
+  return t(`files.config.engine_desc.${engineKey}`)
+}
 
 interface Props {
   open: boolean

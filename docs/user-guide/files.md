@@ -204,14 +204,14 @@ Delete a single file with its trash action, or several at once via the
 **Delete** button in the batch bar (up to 200 at a time).
 
 Before deleting, the dialog shows an **impact preview** — how many documents,
-trials, groups, extraction results, and evaluation metrics depend on the file —
+extraction runs, groups, extraction results, and evaluation metrics depend on the file —
 and a cascade checkbox.
 
 !!! danger "Cascading deletes"
     - A file that is **currently being preprocessed** cannot be deleted; cancel
       the preprocessing run first.
     - A file **linked to documents** requires confirming the cascade, which also
-      removes dependent trials, groups, and evaluation data. This is
+      removes dependent extraction runs, groups, and evaluation data. This is
       irreversible — take a [backup](../operations/backup-restore.md) if unsure.
 
 ## Batch actions

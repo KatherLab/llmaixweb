@@ -2,7 +2,7 @@
   <div class="w-full max-w-md mx-auto">
     <div class="mb-8 text-center">
       <h1 class="text-4xl font-extrabold text-content tracking-tight">
-        <AppBrand :as-link="false" size="md" />
+        <AppBrand size="md" />
       </h1>
       <p class="text-base text-content-muted mt-2">
         {{ $t('auth.tagline') }}
@@ -13,7 +13,14 @@
       v-if="!allowRegister && !isLoadingSettings"
       class="p-8 bg-surface border border-default rounded-modal text-center text-content-muted"
     >
-      {{ $t('auth.register.closed') }}
+      <p>{{ $t('auth.register.closed') }}</p>
+      <p class="mt-2 text-sm">{{ $t('auth.register.closed_hint') }}</p>
+      <router-link
+        to="/login"
+        class="inline-block mt-4 text-sm font-semibold text-primary hover:underline transition"
+      >
+        {{ $t('auth.actions.back_to_login') }}
+      </router-link>
     </div>
 
     <!-- Registration Form -->

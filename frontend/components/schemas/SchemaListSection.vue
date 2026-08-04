@@ -20,7 +20,9 @@
       :title="$t('schema.list.empty_title')"
       :description="$t('schema.list.empty_description')"
       :action-text="$t('schema.list.create')"
+      :secondary-action-text="$t('schema.list.start_from_template')"
       @action="emit('create')"
+      @secondary-action="emit('createFromTemplate')"
     />
 
     <template v-else>
@@ -121,6 +123,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   create: []
+  createFromTemplate: []
   view: [schema: Schema]
   edit: [schema: Schema]
   delete: [schema: Schema]

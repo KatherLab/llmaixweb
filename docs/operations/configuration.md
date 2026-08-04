@@ -23,8 +23,8 @@ At minimum, configure your LLM provider and a secret key.
 
 !!! note
     \* The app **starts without an LLM key** (the shipped `.env.example` sets
-    `OPENAI_NO_API_CHECK=true`). A key is only needed to run extraction trials,
-    and can be provided here, in the admin panel, or per-trial. `SECRET_KEY` is
+    `OPENAI_NO_API_CHECK=true`). A key is only needed to run extractions,
+    and can be provided here, in the admin panel, or per extraction run. `SECRET_KEY` is
     the only truly mandatory value — the backend refuses to start without it.
 
 ## Storage

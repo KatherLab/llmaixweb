@@ -30,7 +30,7 @@ def test_get_projects(client, api_url, user_headers):
 
 
 # Test Get Project
-def test_get_project(client, api_url, user_headers):
+def test_get_project(client, api_url, user_headers, upload_file):
     project_data = {
         "name": "Test Project",
         "description": "This is a test project",
@@ -42,7 +42,20 @@ def test_get_project(client, api_url, user_headers):
     project_id = response.json()["id"]
     response = client.get(f"{api_url}/project/{project_id}", headers=user_headers)
     assert response.status_code == 200
-    assert response.json()["name"] == project_data["name"]
+    body = response.json()
+    assert body["name"] == project_data["name"]
+    # A brand-new project has no files or documents.
+    assert body["file_count"] == 0
+    assert body["document_count"] == 0
+
+    # Uploading a file bumps file_count while document_count stays 0 until
+    # preprocessing runs (the Files workflow step completes on upload).
+    upload_file(user_headers, project_id, content=b"hello", name="hello.txt")
+    response = client.get(f"{api_url}/project/{project_id}", headers=user_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["file_count"] == 1
+    assert body["document_count"] == 0
 
     response = client.get(f"{api_url}/project/372849078", headers=user_headers)
     assert response.status_code == 404

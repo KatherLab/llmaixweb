@@ -9,7 +9,7 @@ secures per its own standards.
 
 ## Assets
 
-- **PHI**: uploaded files, extracted document text, trial results, ground truth.
+- **PHI**: uploaded files, extracted document text, extraction-run results, ground truth.
 - **Credentials/secrets**: `SECRET_KEY`, DB credentials, LLM/OCR API keys, SSO
   client secrets, user passwords, refresh tokens.
 - **Accountability data**: the audit trail and error log.

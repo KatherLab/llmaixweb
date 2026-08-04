@@ -139,9 +139,9 @@
       "dismiss_task": "Dismiss task",
       "processing": "Processing...",
       "preprocessing_progress": "Preprocessing progress",
-      "trials_count": "Trials ({count})",
-      "view_trial": "View trial {name}",
-      "dismiss_trial": "Dismiss trial",
+      "trials_count": "Extraction Runs ({count})",
+      "view_trial": "View extraction run {name}",
+      "dismiss_trial": "Dismiss extraction run",
       "docs_progress": "{done}/{total} docs",
       "view_all": "View all activity",
       "files_processing": "{completed}/{total} files processed",
@@ -265,7 +265,7 @@
       "permanently_delete": "Permanently Delete",
       "delete_invitation_title": "Delete Invitation",
       "delete": "Delete",
-      "delete_user_message": "This will permanently delete the user account and all associated data, including all projects owned by this user (files, documents, schemas, prompts, trials, evaluations) and uploaded files removed from storage.\n\nAre you sure you want to delete this user?\n{name} ({email})",
+      "delete_user_message": "This will permanently delete the user account and all associated data, including all projects owned by this user (files, documents, schemas, prompts, extraction runs, evaluations) and uploaded files removed from storage.\n\nAre you sure you want to delete this user?\n{name} ({email})",
       "delete_invitation_message": "Are you sure you want to delete this invitation? This action cannot be undone.\n{email}",
       "toast": {
         "user_deleted": "User \"{name}\" deleted successfully.",
@@ -498,7 +498,8 @@
       "create_account": "Create Account",
       "have_account": "Already have an account?",
       "sign_in_here": "Sign in here",
-      "success_toast": "Registration successful! Logging you in..."
+      "success_toast": "Registration successful! Logging you in...",
+      "closed_hint": "Registration is invitation-only — ask an administrator for an invitation link."
     },
     "first_admin": {
       "welcome_to": "Welcome to",
@@ -690,15 +691,15 @@
       "count": "no groups | one group | {count} groups",
       "empty_title": "No document groups",
       "empty_search": "Try adjusting your search",
-      "empty_description": "A group is a named set of documents you can run a trial against. Create one to run an extraction on a specific selection of documents.",
+      "empty_description": "A group is a named set of documents you can start an extraction run against. Create one to run an extraction on a specific selection of documents.",
       "item_label": "groups",
       "auto": "Auto",
       "auto_generated_tooltip": "Auto-generated during preprocessing",
       "mixed": "Mixed",
       "type_auto": "Auto-generated",
       "type_manual": "Manual",
-      "cannot_delete_tooltip": "Cannot delete — this group is used by a trial",
-      "cannot_delete_aria": "Cannot delete - used by trial",
+      "cannot_delete_tooltip": "Cannot delete — this group is used by an extraction run",
+      "cannot_delete_aria": "Cannot delete - used by an extraction run",
       "delete_title": "Delete Document Group",
       "also_delete_documents": "Also delete all documents in this group (if not referenced elsewhere)",
       "col_name": "Group Name",
@@ -713,7 +714,7 @@
     "group_form": {
       "edit_title": "Edit Document Group",
       "create_title": "Create Document Group",
-      "purpose_hint": "A group is a named set of documents you can run a trial against — use it to run an extraction on a specific selection of documents.",
+      "purpose_hint": "A group is a named set of documents you can start an extraction run against — use it to run an extraction on a specific selection of documents.",
       "name_label": "Group Name",
       "name_placeholder": "e.g., Q4 Financial Reports",
       "description_label": "Description",
@@ -837,7 +838,7 @@
     },
     "batch": {
       "entity_document": "document | documents",
-      "entity_trial": "trial | trials",
+      "entity_trial": "extraction run | extraction runs",
       "entity_file": "file | files",
       "selected": "{count} {entity} selected",
       "force_reprocess": "Force reprocess (ignore existing results)",
@@ -867,13 +868,13 @@
       "button_export": "Export",
       "button_delete": "Delete {entity}",
       "button_confirm": "Confirm",
-      "cascade_files": "Also delete produced documents and their trials and extraction results, and remove them from groups",
-      "cascade_default": "Also delete related trials and extraction results, and remove the documents from groups",
-      "warn_trials": "The selected trials and their results will be permanently deleted.",
+      "cascade_files": "Also delete produced documents and their extraction runs and results, and remove them from groups",
+      "cascade_default": "Also delete related extraction runs and results, and remove the documents from groups",
+      "warn_trials": "The selected extraction runs and their results will be permanently deleted.",
       "warn_files": "The selected files and their preprocessing results will be permanently deleted.",
       "warn_documents": "The selected documents and their preprocessing results will be permanently deleted.",
       "impact_document": "{count} document | {count} documents",
-      "impact_trial": "{count} trial | {count} trials",
+      "impact_trial": "{count} extraction run | {count} extraction runs",
       "impact_group_membership": "{count} group membership | {count} group memberships",
       "impact_extraction_result": "{count} extraction result | {count} extraction results",
       "impact_evaluation_metric": "{count} evaluation metric | {count} evaluation metrics",
@@ -904,7 +905,7 @@
       "start_reprocessing_failed": "Failed to start reprocessing",
       "load_documents_failed": "Failed to load documents",
       "load_groups_failed": "Failed to load document groups",
-      "cannot_delete_group": "Cannot delete group - it is used by a trial",
+      "cannot_delete_group": "Cannot delete group - it is used by an extraction run",
       "group_and_docs_deleted": "Group and {count} document deleted | Group and {count} documents deleted",
       "group_deleted_docs_referenced": "Group deleted, but documents could not be deleted (referenced elsewhere).",
       "group_deleted": "Document group deleted",
@@ -918,12 +919,12 @@
       "retrying": "Retrying...",
       "retry": "Retry",
       "title": "Evaluation",
-      "subtitle": "Compare trial results against ground truth data",
+      "subtitle": "Compare extraction run results against ground truth data",
       "upload_ground_truth": "Upload Ground Truth",
       "export_results": "Export Results",
       "loading_ground_truth": "Loading ground truth files...",
       "empty_gt_title": "No ground truth files yet",
-      "empty_gt_description": "Upload ground truth data to evaluate your trial results",
+      "empty_gt_description": "Upload ground truth data to evaluate your extraction run results",
       "ground_truth_files": "Ground Truth Files",
       "manage": "Manage",
       "ground_truth_number": "Ground Truth #{number}",
@@ -935,18 +936,18 @@
       "show_explainer": "Show how evaluation works",
       "hide_help": "Hide help",
       "how_it_works": "How it works",
-      "evaluate_trial": "Evaluate Trial",
+      "evaluate_trial": "Evaluate Extraction Run",
       "edit_mappings": "Edit mappings",
       "configure_mappings": "Configure mappings",
       "hide": "Hide",
       "setup_required": "Setup Required",
-      "no_evaluations": "No evaluations yet. Select a trial to evaluate.",
+      "no_evaluations": "No evaluations yet. Select an extraction run to evaluate.",
       "item_label": "evaluations"
     },
     "concepts": {
       "title": "How evaluation works",
       "ground_truth_term": "Ground truth",
-      "ground_truth_desc": "— a file with the correct extracted values to compare trial results against.",
+      "ground_truth_desc": "— a file with the correct extracted values to compare extraction run results against.",
       "field_mapping_term": "Field mapping",
       "field_mapping_desc": "— links each ground-truth column to the matching schema field so values can be compared.",
       "id_field_term": "ID field",
@@ -966,11 +967,11 @@
     },
     "delete": {
       "title": "Delete evaluation?",
-      "message": "This removes the computed metrics for {trial}. The trial and its results are kept; you can re-evaluate anytime.",
+      "message": "This removes the computed metrics for {trial}. The extraction run and its results are kept; you can re-evaluate anytime.",
       "confirm": "Delete"
     },
     "columns": {
-      "trial": "Trial",
+      "trial": "Run",
       "model": "Model",
       "overall_accuracy": "Overall Accuracy",
       "documents": "Documents",
@@ -1002,7 +1003,7 @@
     },
     "analysis": {
       "back": "Back to evaluations",
-      "trial_number": "Trial #{number}",
+      "trial_number": "Run #{number}",
       "export": "Export",
       "overall_metrics": "Overall Metrics",
       "matched_only_tooltip": "Accuracy is computed over matched documents only. Unmatched documents are listed in the table below.",
@@ -1208,7 +1209,13 @@
       "select_different": "Select different files",
       "start_processing": "Start Processing",
       "tesseract_language": "Tesseract Language",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "what_happens": "Preprocessing turns your files into plain text the AI can read. PDFs with embedded text are read directly; scans and images need OCR.",
+      "engine_desc": {
+        "docling_tesseract": "Runs on this server — free, keeps your data local, best for clean scans",
+        "mistral_ocr": "Sends pages to an external OCR API — better on complex layouts and handwriting",
+        "llm_vision": "Sends page images to a vision AI model — most flexible, best for difficult documents"
+      }
     },
     "dropzone": {
       "aria_label": "Upload files — drop files here or activate to browse",
@@ -1460,14 +1467,20 @@
       "succeeded": "{count} succeeded",
       "title": "Upload Files",
       "uploading_file": "Uploading file {current} of {total}"
+    },
+    "first_run": {
+      "title": "How this project works",
+      "step_upload": "Upload your documents (PDFs, scans, spreadsheets)",
+      "step_preprocess": "Preprocess them to extract their text",
+      "step_review": "Review the resulting documents, then define what to extract"
     }
   },
   "groundtruth": {
     "manager": {
       "title": "Manage Ground Truth Files",
-      "subtitle": "Ground truth files contain the correct extracted values you compare trial results against. Configure field mappings to link each ground-truth column to a schema field.",
+      "subtitle": "Ground truth files contain the correct extracted values you compare extraction run results against. Configure field mappings to link each ground-truth column to a schema field.",
       "empty_title": "No ground truth files uploaded yet",
-      "empty_description": "Upload a file with the correct values (CSV, XLSX, or JSON) to start evaluating trial accuracy.",
+      "empty_description": "Upload a file with the correct values (CSV, XLSX, or JSON) to start evaluating extraction accuracy.",
       "default_name": "Ground Truth #{number}",
       "mappings_count": "{count} mapping | {count} mappings",
       "created": "Created: {date}",
@@ -1607,7 +1620,15 @@
       "use_filename": "Use document filename",
       "use_field": "Use field:",
       "select_field": "Select field...",
-      "match_hint": "Controls how documents are matched to trial results for evaluation."
+      "match_hint": "Controls how documents are matched to extraction run results for evaluation."
+    },
+    "match_check": {
+      "button": "Check matching",
+      "success": "{matched} of {total} ground-truth rows match a document",
+      "partial": "{matched} of {total} ground-truth rows match a document. Unmatched examples:",
+      "none": "None of the {total} ground-truth rows match a document.",
+      "hint": "Check that this column's values match your document names or IDs.",
+      "failed": "Match check failed: {error}"
     }
   },
   "landing": {
@@ -1618,11 +1639,11 @@
     },
     "hero": {
       "badge": "Document-to-JSON Extraction Platform",
-      "description": "Turn unstructured medical and lab documents into validated structured JSON. Define your schema, run LLM extraction trials, and measure accuracy against ground-truth data — with any OpenAI-compatible model, local or hosted."
+      "description": "Turn unstructured medical and lab documents into validated structured JSON. Define your schema, run LLM extractions, and measure accuracy against ground-truth data — with any OpenAI-compatible model, local or hosted."
     },
     "cta": {
       "title": "Start extracting structured data",
-      "subtitle": "Upload your documents, define a schema, and run your first extraction trial.",
+      "subtitle": "Upload your documents, define a schema, and start your first extraction run.",
       "go_to_projects": "Go to Projects",
       "get_started": "Get Started",
       "login": "Login",
@@ -1647,12 +1668,12 @@
         "description": "Compare extracted values to a ground-truth file field by field, with per-field and per-document metrics and confusion matrices."
       },
       "trials": {
-        "title": "Reproducible Trials",
+        "title": "Reproducible Runs",
         "description": "Run extraction across document sets with configurable prompts, schemas, models, temperature, and token limits. Compare runs side by side."
       },
       "api": {
         "title": "OpenAI-Compatible APIs",
-        "description": "Point trials at any OpenAI-compatible endpoint — OpenAI, Mistral, vLLM, Ollama, or llama.cpp. Mix and match per trial."
+        "description": "Point extraction runs at any OpenAI-compatible endpoint — OpenAI, Mistral, vLLM, Ollama, or llama.cpp. Mix and match per run."
       }
     },
     "pipeline": {
@@ -1675,7 +1696,7 @@
           "subtitle": "Define structure"
         },
         "trials": {
-          "title": "Run Trials",
+          "title": "Run Extractions",
           "subtitle": "LLM extraction"
         },
         "evaluation": {
@@ -1731,8 +1752,8 @@
       "step3": {
         "title": "Document Management",
         "organization": "Organization",
-        "selection_for_trials": "Selection for Trials",
-        "choose_documents": "Choose documents for a trial in two ways:",
+        "selection_for_trials": "Selection for Extraction Runs",
+        "choose_documents": "Choose documents for an extraction run in two ways:",
         "document_features": {
           "sets": "Group documents into reusable sets",
           "filter": "Filter and search by metadata",
@@ -1742,11 +1763,11 @@
         "selection_options": {
           "sets": {
             "name": "Document Sets",
-            "description": "Run a trial against an entire group at once"
+            "description": "Run an extraction against an entire group at once"
           },
           "individual": {
             "name": "Individual Selection",
-            "description": "Hand-pick specific documents for a trial"
+            "description": "Hand-pick specific documents for an extraction run"
           }
         }
       },
@@ -1765,7 +1786,7 @@
       "step5": {
         "title": "LLM-Powered Extraction",
         "compatible_providers": "Compatible Providers",
-        "trial_configuration": "Trial Configuration",
+        "trial_configuration": "Run Configuration",
         "flow": {
           "document": "Document",
           "prompt": "Prompt",
@@ -1791,7 +1812,7 @@
           "limits": "Set temperature and token limits",
           "sets": "Run across full document sets",
           "compare": "Compare prompts, schemas, and models",
-          "tokens": "Track token usage per trial"
+          "tokens": "Track token usage per extraction run"
         }
       },
       "step6": {
@@ -1856,17 +1877,17 @@
       "files": "Files & Preprocessing",
       "documents": "Documents",
       "schemas": "Schemas & Prompts",
-      "trials": "Run Trials",
+      "trials": "Extraction Runs",
       "evaluation": "Evaluation"
     },
     "hints": {
       "no_documents": {
         "title": "No documents yet",
-        "body": "Preprocess your uploaded files to generate documents. Documents are the extracted text the LLM reads during a trial."
+        "body": "Preprocess your uploaded files to generate documents. Documents are the extracted text the LLM reads during an extraction run."
       },
       "no_trial_documents": {
-        "title": "No documents to run a trial on",
-        "body": "A trial extracts structured data from your documents. Preprocess files first to generate documents."
+        "title": "No documents to run an extraction on",
+        "body": "An extraction run extracts structured data from your documents. Preprocess files first to generate documents."
       },
       "no_schema": {
         "title": "No schema yet"
@@ -1875,11 +1896,11 @@
         "title": "No prompt yet"
       },
       "schema_prompt": {
-        "body": "A trial needs a schema (the fields to extract) and a prompt (extraction instructions). Create both before running a trial."
+        "body": "An extraction run needs a schema (the fields to extract) and a prompt (extraction instructions). Create both before starting a run."
       },
       "no_trials": {
-        "title": "No trials to evaluate",
-        "body": "Evaluation compares trial results against ground-truth data. Run a trial first to produce results to evaluate."
+        "title": "No extraction runs to evaluate",
+        "body": "Evaluation compares extraction results against ground-truth data. Run an extraction first to produce results to evaluate."
       }
     },
     "create": {
@@ -1910,7 +1931,7 @@
       "impact_document": "{count} document | {count} documents",
       "impact_schema": "{count} schema | {count} schemas",
       "impact_prompt": "{count} prompt | {count} prompts",
-      "impact_trial": "{count} trial | {count} trials",
+      "impact_trial": "{count} extraction run | {count} extraction runs",
       "impact_evaluation": "{count} evaluation | {count} evaluations"
     },
     "grid": {
@@ -1934,12 +1955,11 @@
       },
       "load_failed": "Failed to load projects.",
       "workflow": {
-        "upload": "Upload files",
-        "preprocess": "Preprocess",
-        "documents": "Documents",
-        "schemas": "Schemas",
-        "trials": "Run trials",
-        "evaluate": "Evaluate"
+        "files_desc": "Upload PDFs, scans, and spreadsheets, then turn them into readable text",
+        "documents_desc": "Review the extracted text before running extraction",
+        "schemas_desc": "Define the fields to extract and the instructions for the AI",
+        "trials_desc": "Run the extraction on your documents with an LLM",
+        "evaluation_desc": "Compare results against ground truth to measure accuracy"
       }
     },
     "settings": {
@@ -1991,11 +2011,12 @@
       "delete": "Delete Schema",
       "col_name": "Name",
       "col_created": "Created",
-      "search_chip": "Search: \"{query}\""
+      "search_chip": "Search: \"{query}\"",
+      "start_from_template": "Start from a template"
     },
     "view": {
       "snapshot": "Snapshot",
-      "snapshot_title": "Frozen copy of the schema as it was when the trial ran",
+      "snapshot_title": "Frozen copy of the schema as it was when the extraction run started",
       "copy": "Copy",
       "close": "Close",
       "copied": "Schema copied"
@@ -2079,7 +2100,7 @@
       "item_label": "prompts",
       "search_placeholder": "Search prompts...",
       "no_match": "No prompts match your search",
-      "auto_injected_tooltip": "No {ph} placeholder — the document text is appended automatically when the trial runs.",
+      "auto_injected_tooltip": "No {ph} placeholder — the document text is appended automatically when the extraction runs.",
       "auto_injected": "Auto-injected",
       "view": "View Prompt",
       "edit": "Edit Prompt",
@@ -2091,7 +2112,7 @@
     },
     "view": {
       "snapshot": "Snapshot",
-      "snapshot_title": "Frozen copy of the prompt as it was when the trial ran",
+      "snapshot_title": "Frozen copy of the prompt as it was when the extraction run started",
       "copy": "Copy",
       "close": "Close",
       "copied": "Prompt copied"
@@ -2108,12 +2129,12 @@
       "description_placeholder": "Describe what this prompt is designed to extract...",
       "instruction_label": "Extraction Instruction",
       "instruction_placeholder": "Based on the document content, extract these fields:",
-      "instruction_help": "This will be used as the user prompt. The document text and the selected schema are appended automatically when the trial runs.",
+      "instruction_help": "This will be used as the user prompt. The document text and the selected schema are appended automatically when the extraction runs.",
       "system_from_advanced": "This prompt has a system prompt from Advanced mode. It is kept while you edit, but will not be saved while Simple mode is selected.",
       "hide": "Hide",
       "preview": "Preview",
       "preview_with_sample": "Preview with Sample Document",
-      "simple_preview_help": "In Simple mode no system message is sent — your instruction becomes the user message, with the document and the trial's schema appended:",
+      "simple_preview_help": "In Simple mode no system message is sent — your instruction becomes the user message, with the document and the extraction run's schema appended:",
       "user_message_preview": "User Message Preview",
       "system_message_preview": "System Message Preview",
       "callout_title": "How prompts work",
@@ -2123,7 +2144,7 @@
       "callout_user_text": "— per-document instructions, where",
       "callout_replaced": "is replaced with the document text.",
       "callout_schema_label": "The selected schema is automatically included",
-      "callout_schema_text": "when the trial runs, so the model knows which fields to extract. You don't need to paste the schema JSON into your prompt — doing so would duplicate it.",
+      "callout_schema_text": "when the extraction runs, so the model knows which fields to extract. You don't need to paste the schema JSON into your prompt — doing so would duplicate it.",
       "insert_placeholder_title": "Insert {ph} at cursor",
       "insert_placeholder": "+ Insert {ph}",
       "system_placeholder": "You are an AI assistant specialized in extracting structured information from documents...",
@@ -2363,22 +2384,22 @@
     }
   },
   "trials": {
-    "title": "Trials",
-    "subtitle": "Run an AI model over your documents to extract structured data, then compare results across trials.",
-    "count": "{count} trial | {count} trials",
+    "title": "Extraction Runs",
+    "subtitle": "Run an AI model over your documents to extract structured data, then compare results across extraction runs.",
+    "count": "{count} extraction run | {count} extraction runs",
     "actions": {
-      "start_new": "Start New Trial",
+      "start_new": "Start Extraction Run",
       "delete": "Delete"
     },
     "batch": {
-      "item_label": "trial"
+      "item_label": "extraction run"
     },
     "empty": {
-      "none_title": "No trials yet",
-      "none_description": "Run your first extraction trial to see results here.",
-      "none_action": "Start a Trial",
-      "no_match_title": "No trials match your filters",
-      "no_match_description": "Try adjusting or clearing your filters to see more trials.",
+      "none_title": "No extraction runs yet",
+      "none_description": "Start your first extraction run to see results here.",
+      "none_action": "Start an Extraction Run",
+      "no_match_title": "No extraction runs match your filters",
+      "no_match_description": "Try adjusting or clearing your filters to see more extraction runs.",
       "clear_all": "Clear All Filters"
     },
     "confirm": {
@@ -2386,50 +2407,50 @@
     },
     "disabled_reason": {
       "loading": "Loading project resources…",
-      "no_schema": "You need at least one schema to start a trial.",
-      "no_document": "You need to upload at least one document to start a trial.",
-      "no_prompt": "You need to create at least one prompt to start a trial."
+      "no_schema": "You need at least one schema to start an extraction run.",
+      "no_document": "You need at least one preprocessed document to start an extraction run. Upload files and run preprocessing first.",
+      "no_prompt": "You need to create at least one prompt to start an extraction run."
     },
     "errors": {
-      "load_trials": "Failed to load trials",
+      "load_trials": "Failed to load extraction runs",
       "load": "Failed to load"
     },
     "toast": {
-      "created": "Trial created",
-      "create_failed": "Failed to create trial",
-      "renamed": "Trial renamed",
-      "rename_failed": "Failed to rename trial",
-      "cancelled_kept": "Trial cancelled — already-processed results were kept",
-      "cancelled_discarded": "Trial cancelled — in-progress results were discarded",
-      "cancel_failed": "Failed to cancel trial",
-      "deleted": "Trial deleted",
-      "delete_failed": "Failed to delete trial",
+      "created": "Extraction run created",
+      "create_failed": "Failed to create extraction run",
+      "renamed": "Extraction run renamed",
+      "rename_failed": "Failed to rename extraction run",
+      "cancelled_kept": "Extraction run cancelled — already-processed results were kept",
+      "cancelled_discarded": "Extraction run cancelled — in-progress results were discarded",
+      "cancel_failed": "Failed to cancel extraction run",
+      "deleted": "Extraction run deleted",
+      "delete_failed": "Failed to delete extraction run",
       "retry_failed_docs": "Retrying failed documents",
-      "restarted": "Trial restarted",
-      "restart_failed": "Failed to restart trial"
+      "restarted": "Extraction run restarted",
+      "restart_failed": "Failed to restart extraction run"
     },
     "delete_dialog": {
-      "title": "Delete Trial",
-      "message": "Deleting this trial also removes its extraction results and any evaluations based on it. This action cannot be undone.",
+      "title": "Delete Extraction Run",
+      "message": "Deleting this extraction run also removes its extraction results and any evaluations based on it. This action cannot be undone.",
       "confirm": "Delete"
     },
     "retry_dialog": {
-      "title": "Retry Trial",
-      "message": "Start a new trial run with the same configuration? This will consume LLM credits and process all documents again.",
-      "confirm": "Retry Trial"
+      "title": "Retry Extraction Run",
+      "message": "Start a new run with the same configuration? This will consume LLM credits and process all documents again.",
+      "confirm": "Retry Extraction Run"
     },
     "table": {
-      "item_label": "trials",
-      "empty_title": "No trials found",
+      "item_label": "extraction runs",
+      "empty_title": "No extraction runs found",
       "processed_results": "Processed results",
       "results_short": "{count} res",
       "documents_with_errors": "Documents with errors",
       "errors_short": "{count} err",
-      "progress_aria": "Trial progress",
+      "progress_aria": "Extraction run progress",
       "ready": "Ready",
       "failed": "Failed",
       "results_action": "Results",
-      "col_name": "Trial",
+      "col_name": "Run",
       "col_schema": "Schema",
       "col_prompt": "Prompt",
       "col_model": "Model",
@@ -2445,8 +2466,8 @@
       "cancelled": "Cancelled"
     },
     "filters": {
-      "search_placeholder": "Search trials...",
-      "item_label": "trials",
+      "search_placeholder": "Search extraction runs...",
+      "item_label": "extraction runs",
       "all_status": "All Status",
       "all_schemas": "All Schemas",
       "all_prompts": "All Prompts",
@@ -2475,12 +2496,12 @@
       "chip_date": "Date: {value}"
     },
     "create": {
-      "title": "Start New Trial",
+      "title": "Start Extraction Run",
       "mode_simple": "Simple",
       "mode_advanced": "Advanced",
-      "what_is_title": "What is a trial?",
-      "what_is_body": "A trial runs an AI model over your documents to extract structured data. You need four things: a <strong>Schema</strong> (the fields to extract), a <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and the <strong>Documents</strong> to process. Your schema is automatically included with the prompt — you don't need to describe the fields manually.",
-      "help_text": "A trial runs an AI model over your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.",
+      "what_is_title": "What is an extraction run?",
+      "what_is_body": "An extraction run applies an AI model to your documents to extract structured data. You need four things: a <strong>Schema</strong> (the fields to extract), a <strong>Prompt</strong> (extraction instructions), a <strong>Model</strong> (the AI), and the <strong>Documents</strong> to process. Your schema is automatically included with the prompt — you don't need to describe the fields manually.",
+      "help_text": "An extraction run applies an AI model to your documents to extract structured data. You need a Schema, a Prompt, a Model, and the Documents to process. The schema is automatically included with the prompt.",
       "name_notes_hide": "Hide name / notes",
       "name_notes_add": "Add name / notes",
       "advanced_settings_hide": "Hide Advanced Settings",
@@ -2488,18 +2509,18 @@
       "custom_api_hide": "Hide Custom API Settings",
       "custom_api_use": "Use Custom API Settings",
       "no_model_title": "No default model configured",
-      "no_model_body": "This server has no system-wide LLM configured. You can still run a trial by pointing at any OpenAI-compatible API (OpenAI, Ollama, vLLM, llama.cpp…).",
+      "no_model_body": "This server has no system-wide LLM configured. You can still run an extraction by pointing at any OpenAI-compatible API (OpenAI, Ollama, vLLM, llama.cpp…).",
       "custom_api_simple_hide": "Hide custom API settings",
       "custom_api_simple_edit": "Edit custom API settings",
       "custom_api_simple_use": "Use a different API",
       "checking_title": "Checking model compatibility…",
-      "checking_body": "Verifying that {model} works with your schema before starting the trial.",
+      "checking_body": "Verifying that {model} works with your schema before starting the run.",
       "the_model": "the model",
       "cancel": "Cancel",
       "verifying": "Verifying…",
-      "start_trial": "Start Trial",
+      "start_trial": "Start Extraction Run",
       "discard_title": "Discard unsaved changes?",
-      "discard_message": "Your trial configuration will be lost.",
+      "discard_message": "Your extraction run configuration will be lost.",
       "discard_confirm": "Discard",
       "discard_cancel": "Keep editing",
       "status": {
@@ -2508,24 +2529,24 @@
         "select_documents": "Select documents to continue.",
         "verified_ready": "Model verified with this schema — ready to start.",
         "verification_failed": "Verification failed: {message}",
-        "will_check": "Model will be checked when you start the trial."
+        "will_check": "Model will be checked when you start the extraction run."
       },
       "toast": {
-        "start_failed": "Could not start the trial. Please try again."
+        "start_failed": "Could not start the extraction run. Please try again."
       },
       "intro_dismiss": "Got it — don't show this again",
       "large_run": {
-        "title": "Start large trial?",
-        "message": "This trial will run LLM extraction on {count} documents. Each document is a separate LLM call and may consume API credits."
+        "title": "Start large extraction run?",
+        "message": "This run will perform LLM extraction on {count} documents. Each document is a separate LLM call and may consume API credits."
       },
-      "start_trial_count": "Start Trial ({count} document) | Start Trial ({count} documents)"
+      "start_trial_count": "Start Extraction Run ({count} document) | Start Extraction Run ({count} documents)"
     },
     "metadata": {
-      "name_label": "Trial Name",
+      "name_label": "Extraction Run Name",
       "optional": "(optional)",
       "name_placeholder": "E.g. Contract Extraction Run Q3",
       "description_label": "Description",
-      "description_placeholder": "Short summary for this trial (e.g. doc type, goal, changes etc)"
+      "description_placeholder": "Short summary for this extraction run (e.g. doc type, goal, changes etc)"
     },
     "select": {
       "schema_label": "Schema",
@@ -2540,7 +2561,7 @@
       "model_loading": "Loading models...",
       "model_none": "No models available",
       "model_placeholder": "Select a model",
-      "model_help_tooltip": "The AI model used for extraction, listed by the raw model ID your LLM endpoint reports (system default, or your custom API settings). Whether it can produce structured JSON for your schema is checked automatically when the trial starts."
+      "model_help_tooltip": "The AI model used for extraction, listed by the raw model ID your LLM endpoint reports (system default, or your custom API settings). Whether it can produce structured JSON for your schema is checked automatically when the extraction run starts."
     },
     "docsel": {
       "select_documents": "Select Documents",
@@ -2552,7 +2573,7 @@
         "load_groups_failed": "Failed to load document groups",
         "group_empty": "\"{name}\" has no documents",
         "load_group_docs_failed": "Failed to load documents for this group",
-        "loaded_from_trial": "Loaded {count} documents from previous trial",
+        "loaded_from_trial": "Loaded {count} documents from previous extraction run",
         "selected_all": "Selected all {count} matching documents",
         "select_all_failed": "Could not select all documents",
         "selected_recent": "Selected {count} documents from the last {days} days",
@@ -2583,8 +2604,8 @@
       "next": "Next"
     },
     "smart": {
-      "load_from_trial": "Load from Previous Trial",
-      "select_trial": "Select a previous trial...",
+      "load_from_trial": "Load from Previous Extraction Run",
+      "select_trial": "Select a previous extraction run...",
       "trial_option": "{name} - {date} ({count} docs)",
       "filter_by_date": "Filter by Date Range",
       "last_7_days": "Last 7 days",
@@ -2625,10 +2646,10 @@
     "model_test": {
       "title": "Model & Schema Compatibility",
       "test_now": "Test now",
-      "warning_help": "The model is checked automatically when you start the trial — or test it now to confirm compatibility beforehand."
+      "warning_help": "The model is checked automatically when you start the extraction run — or test it now to confirm compatibility beforehand."
     },
     "results": {
-      "aria": "Trial results",
+      "aria": "Extraction run results",
       "n_results": "{count} results",
       "model_label": "Model:",
       "prompt_label": "Prompt:",
@@ -2642,11 +2663,11 @@
       "first_result": "First result",
       "next_title": "Next document (→)",
       "last_result": "Last result",
-      "loading": "Loading trial results…",
-      "not_found": "Trial not found",
-      "return": "Return to trials",
-      "no_results_title": "No results available for this trial.",
-      "wait": "Please wait for the trial to complete.",
+      "loading": "Loading extraction run results…",
+      "not_found": "Extraction run not found",
+      "return": "Return to extraction runs",
+      "no_results_title": "No results available for this extraction run.",
+      "wait": "Please wait for the extraction run to complete.",
       "search_placeholder": "Search documents…",
       "all_statuses": "All statuses",
       "no_match": "No results match your filters.",
@@ -2680,7 +2701,7 @@
         "no_loaded_result": "No loaded result for this document — it may have failed before producing one, or is on another page."
       },
       "errors": {
-        "load_trial": "Failed to load trial data"
+        "load_trial": "Failed to load extraction run data"
       }
     },
     "viewer": {
@@ -2729,12 +2750,12 @@
       "docs_progress": "{done}/{total} docs",
       "elapsed": "{duration} elapsed",
       "eta": "• ≈ {duration} left",
-      "progress_aria": "Trial progress",
+      "progress_aria": "Extraction run progress",
       "results_ready": "Results ready",
       "failed_details": "Failed — see details in Results",
       "cancel": "Cancel",
       "results": "Results",
-      "download_partial_title": "This trial did not finish — only the successfully extracted documents are included.",
+      "download_partial_title": "This extraction run did not finish — only the successfully extracted documents are included.",
       "download": "Download",
       "download_partial": "Download partial",
       "retry": "Retry",
@@ -2745,41 +2766,41 @@
       "count": "{count} document error | {count} document errors",
       "view_details": "View error details",
       "show_in_viewer_title": "Show this document in the viewer",
-      "trial_name": "Trial",
+      "trial_name": "Run",
       "doc_fallback": "Doc {id}"
     },
     "rename": {
-      "title": "Rename Trial",
+      "title": "Rename Extraction Run",
       "name_label": "Name",
       "description_label": "Description",
       "cancel": "Cancel",
       "save": "Save"
     },
     "cancel_modal": {
-      "title": "Cancel Trial",
-      "message": "Cancel this running trial? Documents that are still being processed will be stopped.",
+      "title": "Cancel Extraction Run",
+      "message": "Cancel this extraction run? Documents that are still being processed will be stopped.",
       "keep_label": "Keep already-processed results",
       "keep_yes": "Results extracted so far stay available (partial download and review).",
       "keep_no": "Results extracted so far will be discarded and cannot be recovered.",
       "keep_running": "Keep Running",
-      "confirm": "Cancel Trial"
+      "confirm": "Cancel Extraction Run"
     },
     "retry_modal": {
-      "title": "Retry Trial",
-      "message": "Start a new trial run with the same configuration? This will consume LLM credits.",
+      "title": "Retry Extraction Run",
+      "message": "Start a new run with the same configuration? This will consume LLM credits.",
       "failed_only": "Retry failed documents only",
-      "failed_only_desc": "Creates a new trial that processes just the documents that failed.",
+      "failed_only_desc": "Creates a new extraction run that processes just the documents that failed.",
       "all": "Re-run all documents",
       "all_desc": "Processes every document again, including the ones that already succeeded.",
       "cancel": "Cancel",
-      "confirm": "Retry Trial"
+      "confirm": "Retry Extraction Run"
     },
     "download": {
-      "title": "Download Trial Results",
-      "partial_note": "This trial did not finish successfully. The download contains only the {count} document(s) that were extracted — documents that failed are not included.",
-      "format_json_zip": "<strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per document.<span class=\"block\">Each file includes all extracted results, full document metadata, preprocessing configuration, and trial configuration.</span>",
-      "format_csv_zip": "<strong>CSV (with files):</strong> Downloads a <b>ZIP archive</b> with the CSV and attached files.<span class=\"block\">The CSV includes all extracted results, full document metadata, preprocessing configuration, and trial configuration.</span>",
-      "format_csv_flat": "<strong>CSV (flat):</strong> Downloads a single CSV file, one row per document.<br />Includes all extracted results, document metadata, preprocessing configuration, and trial configuration.",
+      "title": "Download Extraction Run Results",
+      "partial_note": "This extraction run did not finish successfully. The download contains only the {count} document(s) that were extracted — documents that failed are not included.",
+      "format_json_zip": "<strong>JSON (per-document):</strong> Downloads a <b>ZIP archive</b> with one JSON file per document.<span class=\"block\">Each file includes all extracted results, full document metadata, preprocessing configuration, and extraction run configuration.</span>",
+      "format_csv_zip": "<strong>CSV (with files):</strong> Downloads a <b>ZIP archive</b> with the CSV and attached files.<span class=\"block\">The CSV includes all extracted results, full document metadata, preprocessing configuration, and extraction run configuration.</span>",
+      "format_csv_flat": "<strong>CSV (flat):</strong> Downloads a single CSV file, one row per document.<br />Includes all extracted results, document metadata, preprocessing configuration, and extraction run configuration.",
       "format_label": "Format",
       "format_json_option": "JSON (per-document, ZIP)",
       "format_csv_option": "CSV (table, with optional files)",
@@ -2793,9 +2814,9 @@
       "include_usage": "Include token usage",
       "include_usage_title": "If checked: each result also includes token usage stats (prompt/completion/total tokens) and finish reason.",
       "include_usage_hint": "(adds token counts and finish reason)",
-      "note_csv_content": "Will include original files and full document text inside a ZIP.<br /><b>Note:</b> Download may be large if your trial contains many files.",
+      "note_csv_content": "Will include original files and full document text inside a ZIP.<br /><b>Note:</b> Download may be large if your extraction run contains many files.",
       "note_csv_only": "Only a single CSV will be downloaded (no files/text included).",
-      "note_json_content": "Each per-document JSON will contain the extracted document text, and the original source files are bundled in a <code>files/</code> folder inside the ZIP.<br /><b>Note:</b> Download may be large if your trial contains many files.",
+      "note_json_content": "Each per-document JSON will contain the extracted document text, and the original source files are bundled in a <code>files/</code> folder inside the ZIP.<br /><b>Note:</b> Download may be large if your extraction run contains many files.",
       "note_json_only": "The JSON files contain only the extracted results and metadata — no document text or source files.",
       "cancel": "Cancel",
       "downloading": "Downloading...",
@@ -2806,18 +2827,18 @@
       }
     },
     "selector": {
-      "title": "Evaluate Trial",
+      "title": "Evaluate Extraction Run",
       "retry": "Retry",
       "eval_error_heading": "Evaluation Error",
       "mappings_required_title": "Schema-specific field mappings required",
-      "mappings_required_body": "Each trial requires field mappings for its specific schema. Trials without mappings will be grayed out.",
+      "mappings_required_body": "Each extraction run requires field mappings for its specific schema. Runs without mappings will be grayed out.",
       "configure_mappings": "Configure mappings",
-      "loading_trials": "Loading trials and checking mappings...",
-      "empty_title": "No completed trials available for evaluation",
-      "empty_desc": "Run some trials first to evaluate them against ground truth",
-      "select_heading": "Select a trial to evaluate",
-      "select_desc": "Choose from completed trials to compare against your ground truth data.",
-      "total_trials": "Total trials:",
+      "loading_trials": "Loading extraction runs and checking mappings...",
+      "empty_title": "No completed extraction runs available for evaluation",
+      "empty_desc": "Run some extractions first to evaluate them against ground truth",
+      "select_heading": "Select an extraction run to evaluate",
+      "select_desc": "Choose from completed extraction runs to compare against your ground truth data.",
+      "total_trials": "Total extraction runs:",
       "ready_for_eval": "Ready for evaluation:",
       "missing_mappings": "Missing mappings:",
       "checking_mappings": "Checking field mappings...",
@@ -2835,30 +2856,30 @@
       "configure_to_enable": "Configure field mappings for \"{schema}\" schema to enable evaluation",
       "already_evaluated": "Already evaluated",
       "n_results": "{count} results",
-      "item_label": "trials",
+      "item_label": "extraction runs",
       "cancel": "Cancel",
       "evaluating": "Evaluating...",
       "evaluate_named": "Evaluate {name}",
-      "select_first": "Select Trial First",
-      "already_eval_title": "Trial already evaluated",
+      "select_first": "Select Extraction Run First",
+      "already_eval_title": "Extraction run already evaluated",
       "create_another": "Create another evaluation",
       "schema_fallback": "Schema {id}",
       "op_retry": "Retry",
-      "op_loading_data": "Loading trial data",
-      "op_evaluation": "Trial evaluation",
+      "op_loading_data": "Loading extraction run data",
+      "op_evaluation": "Extraction run evaluation",
       "op_refreshing_mappings": "Refreshing mapping status",
       "validation": {
-        "select_trial": "Please select a trial to evaluate",
+        "select_trial": "Please select an extraction run to evaluate",
         "requires_mappings": "{name} requires field mappings for schema \"{schema}\"",
         "gt_required": "Ground truth file is required",
-        "no_results": "Selected trial has no results to evaluate"
+        "no_results": "Selected extraction run has no results to evaluate"
       },
       "reeval_on": " on {date}",
-      "reeval_message": "This trial was already evaluated{when} against this ground truth. Create another evaluation?",
-      "cannot_evaluate": "Cannot evaluate trial: {errors}",
+      "reeval_message": "This extraction run was already evaluated{when} against this ground truth. Create another evaluation?",
+      "cannot_evaluate": "Cannot evaluate extraction run: {errors}",
       "mappings_removed": "Field mappings for schema \"{schema}\" are not configured or have been removed",
       "mappings_missing": "Field mappings missing: {detail}",
-      "no_results_run_first": "Trial has no results to evaluate. Please run the trial first.",
+      "no_results_run_first": "Extraction run has no results to evaluate. Please run it first.",
       "data_consistency": "Data consistency issue detected. Some documents or ground truth entries are missing.",
       "eval_failed": "Evaluation failed: {detail}",
       "toast": {
@@ -2878,7 +2899,7 @@
       "coverage": "{found}/{total} located",
       "coverage_title": "Value provenance",
       "coverage_help": "Values are located by searching the extracted text. Matches come from a text search, not from the model — verify before relying on them.",
-      "coverage_evidence_mode": "This trial ran with source quotes: the model was asked to quote the text each value came from.",
+      "coverage_evidence_mode": "This extraction run used source quotes: the model was asked to quote the text each value came from.",
       "coverage_missing": "No citation: {fields}",
       "prev_match": "Previous occurrence",
       "next_match": "Next occurrence",
@@ -2946,21 +2967,21 @@
       "project_documents_forbidden": "Not authorized to access this project's documents",
       "document_not_found": "Document not found",
       "version_already_latest": "This version is already the latest.",
-      "document_in_trial": "Document is referenced in trial '{trial}'. Remove from trial(s) first.",
-      "document_in_trial_result": "Document is referenced in a trial result. Remove results/trials first.",
-      "document_in_evaluation_metric": "Document is referenced in evaluation metrics. Remove related evaluation/trial first.",
+      "document_in_trial": "Document is referenced in extraction run '{trial}'. Remove from extraction run(s) first.",
+      "document_in_trial_result": "Document is referenced in an extraction run result. Remove results/extraction runs first.",
+      "document_in_evaluation_metric": "Document is referenced in evaluation metrics. Remove related evaluation/extraction run first.",
       "document_in_sets": "Document is part of {count} document sets. Remove from sets first.",
       "create_set_forbidden": "Not authorized to create document sets for this project",
-      "trial_not_found_in_project": "Trial not found in this project",
+      "trial_not_found_in_project": "Extraction run not found in this project",
       "document_set_not_found": "Document set not found",
-      "set_referenced_by_trials": "Cannot delete document set: one or more trials reference it.",
-      "trial_not_found": "Trial not found"
+      "set_referenced_by_trials": "Cannot delete document set: one or more extraction runs reference it.",
+      "trial_not_found": "Extraction run not found"
     },
     "evaluations": {
       "project_not_found": "Project not found",
       "not_authorized_access": "Not authorized to access this project's evaluations",
       "not_authorized_delete": "Not authorized to delete this project's evaluations",
-      "not_authorized_evaluate": "Not authorized to evaluate trials for this project",
+      "not_authorized_evaluate": "Not authorized to evaluate extraction runs for this project",
       "groundtruth_not_found": "Ground truth not found",
       "evaluation_not_found": "Evaluation not found",
       "evaluation_not_found_for_project": "Evaluation not found for this project",
@@ -2968,7 +2989,7 @@
       "document_not_found": "Document not found in evaluation",
       "too_many_compare": "Cannot compare more than {max_evaluations} evaluations at once (requested {requested}).",
       "too_many_download": "Cannot download more than {max_evaluations} evaluations at once (requested {requested}).",
-      "too_many_trials": "Cannot evaluate more than {max_trials} trials at once (requested {requested}).",
+      "too_many_trials": "Cannot evaluate more than {max_trials} extraction runs at once (requested {requested}).",
       "invalid_evaluation_ids": "Invalid evaluation_ids",
       "no_evaluation_ids": "No evaluation_ids provided",
       "all_evaluations_failed": "All evaluations failed: {errors}"
@@ -3013,7 +3034,9 @@
       "no_file_provided": "No file provided",
       "name_required": "A name is required when no single file is provided",
       "id_column_too_long": "ID column name is too long (max 200 characters).",
-      "invalid_schema_paths": "Schema field path(s) not found in schema: {paths}. Use a leaf path from the schema (e.g. 'patient.age' or 'lab_results[].value')."
+      "invalid_schema_paths": "Schema field path(s) not found in schema: {paths}. Use a leaf path from the schema (e.g. 'patient.age' or 'lab_results[].value').",
+      "match_preview_parse_failed": "{error}",
+      "match_preview_load_failed": "Failed to load ground truth. See server logs for details."
     },
     "preprocess": {
       "project_not_found": "Project not found",
@@ -3044,7 +3067,7 @@
       "not_found": "Prompt not found",
       "update_forbidden": "Not authorized to update prompts for this project",
       "delete_forbidden": "Not authorized to delete prompts from this project",
-      "referenced_by_trial": "Cannot delete prompt referenced by a trial"
+      "referenced_by_trial": "Cannot delete prompt referenced by an extraction run"
     },
     "schemas": {
       "required_without_property": "Schema lists required field(s) that are not defined in properties, so the model can never return them: {details}",
@@ -3057,7 +3080,7 @@
       "not_authorized_delete": "Not authorized to delete schemas from this project",
       "invalid_json_schema": "Invalid JSON schema",
       "not_found": "Schema not found",
-      "referenced_by_trial": "Cannot delete schema referenced by a trial"
+      "referenced_by_trial": "Cannot delete schema referenced by an extraction run"
     },
     "sso": {
       "slug_no_alphanumeric": "Provider name must contain alphanumeric characters.",
@@ -3092,10 +3115,10 @@
     },
     "trials": {
       "required_without_property": "This schema lists required field(s) that are not defined in properties, so every document would fail validation: {details}",
-      "schema_definition_invalid": "This trial's schema is not valid JSON Schema: {details}",
+      "schema_definition_invalid": "This extraction run's schema is not valid JSON Schema: {details}",
       "project_not_found": "Project not found",
       "not_authorized_project_action": "Not authorized to {permission} this project",
-      "not_authorized_create": "Not authorized to create trials for this project",
+      "not_authorized_create": "Not authorized to create extraction runs for this project",
       "schema_not_found": "Schema not found",
       "prompt_not_found": "Prompt not found",
       "document_set_not_found": "Document set not found in this project",
@@ -3105,19 +3128,19 @@
       "llm_config_incomplete": "LLM configuration is incomplete",
       "llm_endpoint_not_allowed": "The provided LLM endpoint URL is not allowed.",
       "bypass_celery_admin_only": "Only admins may set bypass_celery",
-      "celery_disabled": "Background processing is disabled on this server (DISABLE_CELERY). Enable Celery, or run the trial with bypass_celery (admins only).",
-      "dispatch_failed": "Could not queue trial for background processing. Please try again later.",
-      "trial_not_found": "Trial not found",
-      "no_failed_documents": "Trial has no failed documents to retry",
-      "not_authorized_access": "Not authorized to access this project's trials",
+      "celery_disabled": "Background processing is disabled on this server (DISABLE_CELERY). Enable Celery, or run the extraction with bypass_celery (admins only).",
+      "dispatch_failed": "Could not queue extraction run for background processing. Please try again later.",
+      "trial_not_found": "Extraction run not found",
+      "no_failed_documents": "Extraction run has no failed documents to retry",
+      "not_authorized_access": "Not authorized to access this project's extraction runs",
       "invalid_status_filter": "Invalid status filter: {status}",
-      "not_authorized_update": "Not authorized to update trials for this project",
+      "not_authorized_update": "Not authorized to update extraction runs for this project",
       "no_updatable_fields": "No updatable fields provided",
-      "cannot_cancel": "Trial cannot be cancelled",
-      "not_authorized_delete": "Not authorized to delete trials for this project",
-      "still_running": "Trial is still running. Cancel it before deleting.",
-      "no_results": "No results found for this trial",
-      "not_authorized_evaluate": "Not authorized to evaluate trials for this project",
+      "cannot_cancel": "Extraction run cannot be cancelled",
+      "not_authorized_delete": "Not authorized to delete extraction runs for this project",
+      "still_running": "Extraction run is still running. Cancel it before deleting.",
+      "no_results": "No results found for this extraction run",
+      "not_authorized_evaluate": "Not authorized to evaluate extraction runs for this project",
       "groundtruth_not_found": "Ground truth not found",
       "validation_failed": "Validation failed. See server logs for details.",
       "evaluation_value_error": "{error}"

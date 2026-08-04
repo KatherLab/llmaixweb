@@ -43,8 +43,9 @@
           {{ $t('projects.grid.empty_body') }}
         </p>
         <CreateProjectButton class="mt-6" />
-        <!-- 6 workflow steps: 2 / 3 / 6 columns keep the grid balanced (no orphan) -->
-        <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 max-w-4xl text-left">
+        <!-- The 5 workflow steps, mirroring the project workspace tabs
+             (same projects.steps.* labels) so the map matches the real app. -->
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 max-w-4xl text-left">
           <div
             v-for="step in workflowSteps"
             :key="step.label"
@@ -52,6 +53,7 @@
           >
             <component :is="step.icon" class="h-5 w-5 text-primary" aria-hidden="true" />
             <span class="text-xs font-semibold text-content">{{ $t(step.label) }}</span>
+            <span class="text-xs text-content-muted">{{ $t(step.description) }}</span>
           </div>
         </div>
       </div>
@@ -141,15 +143,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type ComputedRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  FolderPlus,
-  FileUp,
-  ScanText,
-  FileText,
-  Braces,
-  FlaskConical,
-  ClipboardCheck,
-} from '@lucide/vue'
+import { FolderPlus, FileUp, FileText, Braces, FlaskConical, ClipboardCheck } from '@lucide/vue'
 import { projectsApi } from '@/services/projectsApi'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -201,14 +195,30 @@ const showAllProjects = ref(false)
 const isLoading = ref(true)
 const loadError = ref<string>('')
 
-// Onboarding workflow map shown in the first-run empty state.
+// Onboarding workflow map shown in the first-run empty state. Labels reuse the
+// projects.steps.* keys so the map shows the exact tabs a project opens with.
 const workflowSteps = [
-  { label: 'projects.grid.workflow.upload', icon: FileUp },
-  { label: 'projects.grid.workflow.preprocess', icon: ScanText },
-  { label: 'projects.grid.workflow.documents', icon: FileText },
-  { label: 'projects.grid.workflow.schemas', icon: Braces },
-  { label: 'projects.grid.workflow.trials', icon: FlaskConical },
-  { label: 'projects.grid.workflow.evaluate', icon: ClipboardCheck },
+  { label: 'projects.steps.files', description: 'projects.grid.workflow.files_desc', icon: FileUp },
+  {
+    label: 'projects.steps.documents',
+    description: 'projects.grid.workflow.documents_desc',
+    icon: FileText,
+  },
+  {
+    label: 'projects.steps.schemas',
+    description: 'projects.grid.workflow.schemas_desc',
+    icon: Braces,
+  },
+  {
+    label: 'projects.steps.trials',
+    description: 'projects.grid.workflow.trials_desc',
+    icon: FlaskConical,
+  },
+  {
+    label: 'projects.steps.evaluation',
+    description: 'projects.grid.workflow.evaluation_desc',
+    icon: ClipboardCheck,
+  },
 ]
 
 const projects = ref<ProjectRow[]>([])

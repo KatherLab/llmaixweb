@@ -611,6 +611,166 @@ def preview_groundtruth(
     }
 
 
+def _match_gt_key_for_document(
+    doc_id: int,
+    document_name: str | None,
+    filename: str | None,
+    gt_keys_lower: dict[str, str],
+) -> str | None:
+    """Resolve the ground-truth key a document would match during evaluation.
+
+    MIRROR of ``EvaluationEngine._find_document_key_by_data``
+    (backend/src/utils/evaluation.py) — same candidates, same priority order —
+    with ``gt_keys_lower`` precomputed once by the caller instead of rebuilt
+    per document. Keep the two in sync: the match pre-check must predict
+    exactly what evaluation will do.
+
+    Order (first hit wins):
+    1. document_name (case-insensitive, with and without extension)
+    2. filename (with/without extension, plus base name for paths)
+    3. doc_id variants (id, "doc_<id>", "document_<id>")
+    """
+    if document_name:
+        for candidate in (document_name.lower(), Path(document_name).stem.lower()):
+            if candidate in gt_keys_lower:
+                return gt_keys_lower[candidate]
+    if filename:
+        # The source method also checks Path(filename).name / its stem after
+        # the plain stem — .name only differs when the stored filename carries
+        # a directory prefix, and its stem is identical to Path(filename).stem.
+        for candidate in (
+            filename.lower(),
+            Path(filename).stem.lower(),
+            Path(filename).name.lower(),
+        ):
+            if candidate in gt_keys_lower:
+                return gt_keys_lower[candidate]
+    for variant in (doc_id, str(doc_id), f"doc_{doc_id}", f"document_{doc_id}"):
+        key = str(variant).lower()
+        if key in gt_keys_lower:
+            return gt_keys_lower[key]
+    return None
+
+
+@router.post(
+    "/groundtruth/{groundtruth_id}/match-preview",
+    response_model=schemas.GroundTruthMatchPreview,
+)
+def preview_groundtruth_document_matches(
+    *,
+    db: Session = Depends(get_db),
+    project_id: int,
+    groundtruth_id: int,
+    id_column: str | None = Body(None, embed=True),
+    current_user: models.User = Depends(get_current_user),
+) -> schemas.GroundTruthMatchPreview:
+    """Pre-check how many ground-truth rows would match a project document.
+
+    Runs BEFORE the ID column/field is saved: the candidate ``id_column``
+    (CSV/XLSX column name, JSON id field, or null/empty for the app's default
+    filename-based matching) is applied in-memory only — neither
+    ``id_column_name`` nor ``data_cache`` is touched, and no evaluations are
+    invalidated. Matching mirrors what evaluation will actually do (see
+    ``_match_gt_key_for_document``), so a 0-match configuration is caught
+    before mappings are saved instead of after a full evaluation run.
+    """
+    project: models.Project | None = db.execute(
+        select(models.Project).where(models.Project.id == project_id)
+    ).scalar_one_or_none()
+    if not project:
+        raise api_error("groundtruth.project_not_found", 404, "Project not found")
+    if not can_access_project(current_user, project):
+        raise api_error("groundtruth.not_authorized", 403, "Not authorized")
+
+    groundtruth: models.GroundTruth | None = db.execute(
+        select(models.GroundTruth).where(
+            models.GroundTruth.project_id == project_id,
+            models.GroundTruth.id == groundtruth_id,
+        )
+    ).scalar_one_or_none()
+    if not groundtruth:
+        raise api_error("groundtruth.not_found", 404, "Ground truth not found")
+
+    candidate = strip_nul(id_column or "").strip()
+    saved = (groundtruth.id_column_name or "").strip()
+
+    # Load ground-truth data keyed by the CANDIDATE id config. Reuse the cached
+    # parse only when the candidate equals the saved column (the cache was
+    # built with it); otherwise parse fresh in memory, mirroring
+    # EvaluationEngine._load_ground_truth (utils/evaluation.py): the id column
+    # is passed to the parser for CSV/XLSX only — JSON/ZIP keys always come
+    # from the documents' id/patient_id fields or the archive filenames.
+    if candidate == saved and groundtruth.data_cache:
+        gt_data = groundtruth.data_cache
+    else:
+        from ....dependencies import get_file
+        from ....utils.evaluation import GroundTruthParser
+        from ....utils.json_utils import make_jsonable
+
+        try:
+            content = get_file(groundtruth.file_uuid)
+            parser = GroundTruthParser()
+            if groundtruth.format in ["csv", "xlsx"]:
+                gt_data = parser.parse(
+                    content, groundtruth.format, id_column=candidate or None
+                )
+            else:
+                gt_data = parser.parse(content, groundtruth.format)
+            gt_data = make_jsonable(gt_data)
+        except ValueError as e:
+            # Parse errors (e.g. candidate column missing from the file) are
+            # actionable user feedback — surface them like the preview endpoint.
+            raise api_error(
+                "groundtruth.match_preview_parse_failed", 422, str(e), error=str(e)
+            )
+        except Exception:
+            logger.error(
+                "Match preview failed to load ground truth %s",
+                groundtruth_id,
+                exc_info=True,
+            )
+            raise api_error(
+                "groundtruth.match_preview_load_failed",
+                500,
+                "Failed to load ground truth. See server logs for details.",
+            )
+
+    if groundtruth.format in ["csv", "xlsx"]:
+        match_mode = "id_column" if candidate else "filename"
+    else:
+        match_mode = "json_field" if candidate else "filename"
+
+    # All project documents with their original filename — one query, then
+    # pure set/dict lookups (no N+1).
+    doc_rows = db.execute(
+        select(
+            models.Document.id,
+            models.Document.document_name,
+            models.File.file_name,
+        )
+        .join(models.File, models.Document.original_file_id == models.File.id)
+        .where(models.Document.project_id == project_id)
+    ).all()
+
+    gt_keys_lower = {str(k).lower(): k for k in gt_data.keys()}
+    matched_keys: set[str] = set()
+    for doc_id, document_name, file_name in doc_rows:
+        key = _match_gt_key_for_document(
+            doc_id, document_name, file_name, gt_keys_lower
+        )
+        if key is not None:
+            matched_keys.add(key)
+
+    unmatched_examples = [str(k) for k in gt_data.keys() if k not in matched_keys][:5]
+
+    return schemas.GroundTruthMatchPreview(
+        total_rows=len(gt_data),
+        matched_count=len(matched_keys),
+        unmatched_examples=unmatched_examples,
+        match_mode=match_mode,
+    )
+
+
 @router.post(
     "/groundtruth/{groundtruth_id}/schema/{schema_id}/mapping",
     response_model=schemas.GroundTruth,

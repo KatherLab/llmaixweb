@@ -34,7 +34,7 @@ mitigations.
 |------|----------|---------|-------|
 | Uploaded files (PDF/image/CSV…) | Local dir or S3, UUID filename | **Plaintext** — operator must encrypt volume/bucket | `File` model |
 | Extracted document text | PostgreSQL `documents.text` | **Plaintext** — operator must encrypt DB volume | The text sent to the LLM |
-| Trial results | PostgreSQL `trial_results.result` (JSON) | Plaintext | Extracted structured values |
+| Extraction-run results | PostgreSQL `trial_results.result` (JSON) | Plaintext | Extracted structured values |
 | Ground truth | PostgreSQL `ground_truth.data_cache` + original file | Plaintext | Uploaded reference values |
 | Evaluation metrics | PostgreSQL `evaluation_metrics.*_value` | Plaintext | Predicted/GT values per field |
 
@@ -46,7 +46,7 @@ mitigations.
 
 | Egress point | Trigger | Control | Audited as |
 |--------------|---------|---------|-----------|
-| **LLM extraction** | Running a trial | SSRF-validated endpoint; no redirect-follow; keep self-hosted | `llm_extraction_call` (host + model + doc count) |
+| **LLM extraction** | Running an extraction run | SSRF-validated endpoint; no redirect-follow; keep self-hosted | `llm_extraction_call` (host + model + doc count) |
 | **Remote OCR** | Preprocessing with Mistral/Vision OCR or a custom endpoint | Off by default (`REMOTE_OCR_FALLBACK_ENABLED=false`); SSRF-validated + optional `ALLOWED_OCR_ENDPOINTS` allowlist | `ocr_external_call` (engine + host + file count) |
 | **Document/file download** | User downloads a document, ZIP, or report | AuthZ (owner/admin); audited | `document_download` / `export` |
 | **Audit export** | Admin exports the audit CSV | Admin-only; the export itself is audited | `export` |
@@ -62,7 +62,7 @@ mitigations.
   (`backend/src/utils/url_safety.py`) to block cloud-metadata hosts and
   non-HTTP(S) schemes; extraction clients disable redirect following.
 - **Egress allowlist.** Optionally restrict LLM/OCR destinations to an approved
-  set of hosts via `ALLOWED_LLM_ENDPOINTS` / `ALLOWED_OCR_ENDPOINTS` — a trial or
+  set of hosts via `ALLOWED_LLM_ENDPOINTS` / `ALLOWED_OCR_ENDPOINTS` — an extraction run or
   OCR run pointed anywhere else is rejected with a 400.
 - **Accountability.** Every LLM egress is recorded in the audit log with the
   destination host, model, and document count (never content). See

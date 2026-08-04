@@ -58,6 +58,27 @@ export interface GroundTruthPreview {
   current_id_column: string | null
 }
 
+/** Request body for `POST /groundtruth/{id}/match-preview`. */
+export interface GroundTruthMatchPreviewRequest {
+  /**
+   * Candidate ID config to check (unsaved): CSV/XLSX column name or JSON id
+   * field; `null` = match by filename (the app's default).
+   */
+  id_column: string | null
+}
+
+/** Response for `POST /groundtruth/{id}/match-preview`. */
+export interface GroundTruthMatchPreview {
+  /** Number of parsed ground-truth rows/documents. */
+  total_rows: number
+  /** Rows that at least one project document resolves to. */
+  matched_count: number
+  /** Up to 5 example ground-truth keys no document matches. */
+  unmatched_examples: string[]
+  /** How the rows were keyed for matching. */
+  match_mode: 'id_column' | 'json_field' | 'filename'
+}
+
 /** Response for `GET /groundtruth/{id}/schema/{schemaId}/mapping/status`. */
 export interface FieldMappingStatus {
   has_mappings: boolean

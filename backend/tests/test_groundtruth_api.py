@@ -336,6 +336,155 @@ def test_preview_csv(client, api_url, user_headers, make_project, files_base_pat
 
 
 # --------------------------------------------------------------------------- #
+# match-preview (pre-save ground-truth <-> document ID match check)
+# --------------------------------------------------------------------------- #
+def _make_documents_from_reports(client, api_url, headers, project_id, files_base_path):
+    """Upload the reports CSV and preprocess it row-by-row (bypass_celery, so
+    ``headers`` must be an admin) — creates one document per report, named by
+    the ``id`` column (e.g. "9874562.pdf")."""
+    name = "reports_with_groundtruth.csv"
+    with open(files_base_path / name, "rb") as f:
+        file_id = client.post(
+            f"{api_url}/project/{project_id}/file",
+            headers=headers,
+            files={"file": (name, f, "text/csv")},
+            data={
+                "file_info": json.dumps(
+                    {
+                        "file_name": name,
+                        "file_type": "text/csv",
+                        "preprocessing_strategy": "row_by_row",
+                        "file_metadata": {
+                            "delimiter": ",",
+                            "encoding": "utf-8",
+                            "has_header": True,
+                            "text_columns": ["report"],
+                            "case_id_column": "id",
+                        },
+                    }
+                )
+            },
+        ).json()["id"]
+    r = client.post(
+        f"{api_url}/project/{project_id}/preprocess",
+        headers=headers,
+        json={
+            "file_ids": [file_id],
+            "inline_config": {"name": "row-by-row", "description": "per report"},
+            "bypass_celery": True,
+        },
+    )
+    assert r.status_code == 200, r.text
+
+
+def test_match_preview_full_match(
+    client, api_url, admin_headers, make_project, files_base_path
+):
+    """Every GT row keyed by the candidate id column matches a document."""
+    project_id = make_project(admin_headers)["id"]
+    _make_documents_from_reports(
+        client, api_url, admin_headers, project_id, files_base_path
+    )
+    gt_id = _upload_csv(
+        client, api_url, admin_headers, project_id, files_base_path
+    ).json()["id"]
+
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/match-preview"),
+        headers=admin_headers,
+        json={"id_column": "id"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total_rows"] == 8
+    assert body["matched_count"] == 8
+    assert body["unmatched_examples"] == []
+    assert body["match_mode"] == "id_column"
+
+
+def test_match_preview_partial_match_with_examples(
+    client, api_url, admin_headers, make_project, files_base_path
+):
+    """Rows whose IDs match no document are counted and sampled as examples."""
+    project_id = make_project(admin_headers)["id"]
+    _make_documents_from_reports(
+        client, api_url, admin_headers, project_id, files_base_path
+    )
+    gt_csv = b"id,cough\n9874562.pdf,True\nghost_a,False\nghost_b,True\n"
+    gt_id = client.post(
+        _gt_url(api_url, project_id),
+        headers=admin_headers,
+        files={"file": ("partial.csv", io.BytesIO(gt_csv), "text/csv")},
+        data={"format": "csv"},
+    ).json()["id"]
+
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/match-preview"),
+        headers=admin_headers,
+        json={"id_column": "id"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total_rows"] == 3
+    assert body["matched_count"] == 1
+    assert body["unmatched_examples"] == ["ghost_a", "ghost_b"]
+    assert body["match_mode"] == "id_column"
+
+    # The check is a pure preview: the saved id column stays untouched.
+    gt = client.get(
+        _gt_url(api_url, project_id, f"/{gt_id}"), headers=admin_headers
+    ).json()
+    assert gt["id_column_name"] is None
+
+
+def test_match_preview_filename_mode_json(
+    client, api_url, admin_headers, make_project, files_base_path
+):
+    """JSON ground truth with a null candidate id -> filename-based matching."""
+    project_id = make_project(admin_headers)["id"]
+    _make_documents_from_reports(
+        client, api_url, admin_headers, project_id, files_base_path
+    )
+    docs = [
+        {"id": "9874562.pdf", "cough": True, "location": "main"},
+        {"id": "no_such_document", "cough": False, "location": "left"},
+    ]
+    gt_id = _upload_json(client, api_url, admin_headers, project_id, docs=docs).json()[
+        "id"
+    ]
+
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/match-preview"),
+        headers=admin_headers,
+        json={"id_column": None},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total_rows"] == 2
+    assert body["matched_count"] == 1
+    assert body["unmatched_examples"] == ["no_such_document"]
+    assert body["match_mode"] == "filename"
+
+
+def test_match_preview_bad_column_422(
+    client, api_url, admin_headers, make_project, files_base_path
+):
+    """A candidate column missing from the file fails loudly (like preview)."""
+    project_id = make_project(admin_headers)["id"]
+    gt_id = _upload_csv(
+        client, api_url, admin_headers, project_id, files_base_path
+    ).json()["id"]
+
+    resp = client.post(
+        _gt_url(api_url, project_id, f"/{gt_id}/match-preview"),
+        headers=admin_headers,
+        json={"id_column": "column_that_does_not_exist"},
+    )
+    assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"]["code"] == "groundtruth.match_preview_parse_failed"
+
+
+# --------------------------------------------------------------------------- #
 # mapping/suggest, validate-json, mapping/status, legacy mapping,
 # mapping validation error
 # --------------------------------------------------------------------------- #

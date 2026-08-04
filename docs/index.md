@@ -6,8 +6,8 @@ configurable schemas and prompts, then evaluate the results against ground
 truth.
 
 <figure markdown>
-  ![A completed extraction trial in LLMAIx Web: the source medical report on the left and the structured JSON the model produced on the right](assets/screenshots/trial-results.png){ width="900" }
-  <figcaption>A completed extraction trial — each source report next to the structured JSON the model produced.</figcaption>
+  ![A completed extraction run in LLMAIx Web: the source medical report on the left and the structured JSON the model produced on the right](assets/screenshots/trial-results.png){ width="900" }
+  <figcaption>A completed extraction run — each source report next to the structured JSON the model produced.</figcaption>
 </figure>
 
 !!! warning "Research use only"
@@ -25,7 +25,7 @@ truth.
   Docling, Mistral OCR, and vision-LLM OCR.
 - **Design schemas visually** — a tree-based JSON schema editor with nested
   objects, arrays, every JSON type, import/export, and validation.
-- **Run LLM trials** — extraction runs across different prompts, schemas, and
+- **Run LLM extractions** — extraction runs across different prompts, schemas, and
   models against any OpenAI-compatible endpoint.
 - **Evaluate** — upload ground-truth spreadsheets, compare field-by-field, and
   compute per-field and overall accuracy metrics.
@@ -63,7 +63,7 @@ as Gemma via vLLM — for sensitive environments.
 A **project** is the top-level container. Inside it you follow this sequence:
 
 ```
-Files → Preprocessing → Documents → Schemas + Prompts → Trials → Evaluation
+Files → Preprocessing → Documents → Schemas + Prompts → Extraction Runs → Evaluation
 ```
 
 Each step has its own tab in the project view and its own page in the

@@ -139,9 +139,9 @@
       "dismiss_task": "Ignorer la tâche",
       "processing": "Traitement…",
       "preprocessing_progress": "Progression du prétraitement",
-      "trials_count": "Essais ({count})",
-      "view_trial": "Voir l'essai {name}",
-      "dismiss_trial": "Ignorer l'essai",
+      "trials_count": "Exécutions d'extraction ({count})",
+      "view_trial": "Voir l'exécution {name}",
+      "dismiss_trial": "Ignorer l'exécution",
       "docs_progress": "{done}/{total} docs",
       "view_all": "Voir toute l'activité",
       "files_processing": "{completed}/{total} fichiers traités",
@@ -265,7 +265,7 @@
       "permanently_delete": "Supprimer définitivement",
       "delete_invitation_title": "Supprimer l'invitation",
       "delete": "Supprimer",
-      "delete_user_message": "Cette action supprimera définitivement le compte utilisateur et toutes les données associées, y compris tous les projets appartenant à cet utilisateur (fichiers, documents, schémas, prompts, essais, évaluations), et les fichiers téléversés seront retirés du stockage.\n\nÊtes-vous sûr de vouloir supprimer cet utilisateur ?\n{name} ({email})",
+      "delete_user_message": "Cette action supprimera définitivement le compte utilisateur et toutes les données associées, y compris tous les projets appartenant à cet utilisateur (fichiers, documents, schémas, prompts, exécutions d'extraction, évaluations), et les fichiers téléversés seront retirés du stockage.\n\nÊtes-vous sûr de vouloir supprimer cet utilisateur ?\n{name} ({email})",
       "delete_invitation_message": "Êtes-vous sûr de vouloir supprimer cette invitation ? Cette action est irréversible.\n{email}",
       "toast": {
         "user_deleted": "Utilisateur « {name} » supprimé avec succès.",
@@ -498,7 +498,8 @@
       "create_account": "Créer un compte",
       "have_account": "Vous avez déjà un compte ?",
       "sign_in_here": "Connectez-vous ici",
-      "success_toast": "Inscription réussie ! Connexion en cours..."
+      "success_toast": "Inscription réussie ! Connexion en cours...",
+      "closed_hint": "L'inscription se fait uniquement sur invitation — demandez un lien d'invitation à un administrateur."
     },
     "first_admin": {
       "welcome_to": "Bienvenue sur",
@@ -690,15 +691,15 @@
       "count": "aucun groupe | un groupe | {count} groupes",
       "empty_title": "Aucun groupe de documents",
       "empty_search": "Essayez d'ajuster votre recherche",
-      "empty_description": "Un groupe est un ensemble nommé de documents sur lequel vous pouvez lancer un essai. Créez-en un pour exécuter une extraction sur une sélection spécifique de documents.",
+      "empty_description": "Un groupe est un ensemble nommé de documents sur lequel vous pouvez lancer une exécution d'extraction. Créez-en un pour exécuter une extraction sur une sélection spécifique de documents.",
       "item_label": "groupes",
       "auto": "Auto",
       "auto_generated_tooltip": "Généré automatiquement lors du prétraitement",
       "mixed": "Mixte",
       "type_auto": "Généré automatiquement",
       "type_manual": "Manuel",
-      "cannot_delete_tooltip": "Suppression impossible — ce groupe est utilisé par un essai",
-      "cannot_delete_aria": "Suppression impossible - utilisé par un essai",
+      "cannot_delete_tooltip": "Suppression impossible — ce groupe est utilisé par une exécution d'extraction",
+      "cannot_delete_aria": "Suppression impossible - utilisé par une exécution d'extraction",
       "delete_title": "Supprimer le groupe de documents",
       "also_delete_documents": "Supprimer aussi tous les documents de ce groupe (s'ils ne sont pas référencés ailleurs)",
       "col_name": "Nom du groupe",
@@ -713,7 +714,7 @@
     "group_form": {
       "edit_title": "Modifier le groupe de documents",
       "create_title": "Créer un groupe de documents",
-      "purpose_hint": "Un groupe est un ensemble nommé de documents sur lequel vous pouvez lancer un essai — utilisez-le pour exécuter une extraction sur une sélection spécifique de documents.",
+      "purpose_hint": "Un groupe est un ensemble nommé de documents sur lequel vous pouvez lancer une exécution d'extraction — utilisez-le pour exécuter une extraction sur une sélection spécifique de documents.",
       "name_label": "Nom du groupe",
       "name_placeholder": "ex. Rapports financiers du T4",
       "description_label": "Description",
@@ -837,7 +838,7 @@
     },
     "batch": {
       "entity_document": "document | documents",
-      "entity_trial": "essai | essais",
+      "entity_trial": "exécution d'extraction | exécutions d'extraction",
       "entity_file": "fichier | fichiers",
       "selected": "{count} {entity} sélectionné(s)",
       "force_reprocess": "Forcer le retraitement (ignorer les résultats existants)",
@@ -867,13 +868,13 @@
       "button_export": "Exporter",
       "button_delete": "Supprimer {entity}",
       "button_confirm": "Confirmer",
-      "cascade_files": "Supprimer aussi les documents produits, leurs essais et résultats d'extraction, et les retirer des groupes",
-      "cascade_default": "Supprimer aussi les essais et résultats d'extraction associés, et retirer les documents des groupes",
-      "warn_trials": "Les essais sélectionnés et leurs résultats seront supprimés définitivement.",
+      "cascade_files": "Supprimer aussi les documents produits, leurs exécutions d'extraction et résultats, et les retirer des groupes",
+      "cascade_default": "Supprimer aussi les exécutions d'extraction et résultats associés, et retirer les documents des groupes",
+      "warn_trials": "Les exécutions d'extraction sélectionnées et leurs résultats seront supprimés définitivement.",
       "warn_files": "Les fichiers sélectionnés et leurs résultats de prétraitement seront supprimés définitivement.",
       "warn_documents": "Les documents sélectionnés et leurs résultats de prétraitement seront supprimés définitivement.",
       "impact_document": "{count} document | {count} documents",
-      "impact_trial": "{count} essai | {count} essais",
+      "impact_trial": "{count} exécution d'extraction | {count} exécutions d'extraction",
       "impact_group_membership": "{count} appartenance à un groupe | {count} appartenances à des groupes",
       "impact_extraction_result": "{count} résultat d'extraction | {count} résultats d'extraction",
       "impact_evaluation_metric": "{count} métrique d'évaluation | {count} métriques d'évaluation",
@@ -904,7 +905,7 @@
       "start_reprocessing_failed": "Échec du démarrage du retraitement",
       "load_documents_failed": "Échec du chargement des documents",
       "load_groups_failed": "Échec du chargement des groupes de documents",
-      "cannot_delete_group": "Impossible de supprimer le groupe - il est utilisé par un essai",
+      "cannot_delete_group": "Impossible de supprimer le groupe - il est utilisé par une exécution d'extraction",
       "group_and_docs_deleted": "Groupe et {count} document supprimés | Groupe et {count} documents supprimés",
       "group_deleted_docs_referenced": "Groupe supprimé, mais les documents n'ont pas pu être supprimés (référencés ailleurs).",
       "group_deleted": "Groupe de documents supprimé",
@@ -918,12 +919,12 @@
       "retrying": "Nouvelle tentative...",
       "retry": "Réessayer",
       "title": "Évaluation",
-      "subtitle": "Comparer les résultats des trials aux données Ground Truth",
+      "subtitle": "Comparer les résultats des exécutions d'extraction aux données Ground Truth",
       "upload_ground_truth": "Importer un Ground Truth",
       "export_results": "Exporter les résultats",
       "loading_ground_truth": "Chargement des fichiers Ground Truth...",
       "empty_gt_title": "Aucun fichier Ground Truth pour l'instant",
-      "empty_gt_description": "Importez des données Ground Truth pour évaluer les résultats de vos trials",
+      "empty_gt_description": "Importez des données Ground Truth pour évaluer les résultats de vos exécutions d'extraction",
       "ground_truth_files": "Fichiers Ground Truth",
       "manage": "Gérer",
       "ground_truth_number": "Ground Truth #{number}",
@@ -935,18 +936,18 @@
       "show_explainer": "Montrer comment fonctionne l'évaluation",
       "hide_help": "Masquer l'aide",
       "how_it_works": "Comment ça marche",
-      "evaluate_trial": "Évaluer le trial",
+      "evaluate_trial": "Évaluer une exécution d'extraction",
       "edit_mappings": "Modifier les correspondances",
       "configure_mappings": "Configurer les correspondances",
       "hide": "Masquer",
       "setup_required": "Configuration requise",
-      "no_evaluations": "Aucune évaluation pour l'instant. Sélectionnez un trial à évaluer.",
+      "no_evaluations": "Aucune évaluation pour l'instant. Sélectionnez une exécution d'extraction à évaluer.",
       "item_label": "évaluations"
     },
     "concepts": {
       "title": "Comment fonctionne l'évaluation",
       "ground_truth_term": "Ground Truth",
-      "ground_truth_desc": "— un fichier contenant les valeurs extraites correctes auxquelles comparer les résultats des trials.",
+      "ground_truth_desc": "— un fichier contenant les valeurs extraites correctes auxquelles comparer les résultats des exécutions d'extraction.",
       "field_mapping_term": "Correspondance de champ",
       "field_mapping_desc": "— relie chaque colonne du Ground Truth au champ de schéma correspondant afin de comparer les valeurs.",
       "id_field_term": "Champ d'identifiant",
@@ -966,11 +967,11 @@
     },
     "delete": {
       "title": "Supprimer l'évaluation ?",
-      "message": "Cela supprime les métriques calculées pour {trial}. Le trial et ses résultats sont conservés ; vous pouvez réévaluer à tout moment.",
+      "message": "Cela supprime les métriques calculées pour {trial}. L'exécution d'extraction et ses résultats sont conservés ; vous pouvez réévaluer à tout moment.",
       "confirm": "Supprimer"
     },
     "columns": {
-      "trial": "Trial",
+      "trial": "Exécution",
       "model": "Modèle",
       "overall_accuracy": "Exactitude globale",
       "documents": "Documents",
@@ -1002,7 +1003,7 @@
     },
     "analysis": {
       "back": "Retour aux évaluations",
-      "trial_number": "Trial #{number}",
+      "trial_number": "Exécution #{number}",
       "export": "Exporter",
       "overall_metrics": "Métriques globales",
       "matched_only_tooltip": "L'exactitude est calculée uniquement sur les documents associés. Les documents non associés sont listés dans le tableau ci-dessous.",
@@ -1208,7 +1209,13 @@
       "select_different": "Sélectionner d'autres fichiers",
       "start_processing": "Démarrer le traitement",
       "tesseract_language": "Langue Tesseract",
-      "unknown": "Inconnu"
+      "unknown": "Inconnu",
+      "what_happens": "Le prétraitement convertit vos fichiers en texte brut lisible par l'IA. Les PDF avec texte intégré sont lus directement ; les scans et images nécessitent une OCR.",
+      "engine_desc": {
+        "docling_tesseract": "S'exécute sur ce serveur — gratuit, vos données restent locales, idéal pour les scans nets",
+        "mistral_ocr": "Envoie les pages à une API OCR externe — plus performant sur les mises en page complexes et l'écriture manuscrite",
+        "llm_vision": "Envoie les images des pages à un modèle d'IA de vision — le plus flexible, idéal pour les documents difficiles"
+      }
     },
     "dropzone": {
       "aria_label": "Téléverser des fichiers — déposez les fichiers ici ou activez pour parcourir",
@@ -1460,14 +1467,20 @@
       "succeeded": "{count} réussi(s)",
       "title": "Téléverser des fichiers",
       "uploading_file": "Téléversement du fichier {current} sur {total}"
+    },
+    "first_run": {
+      "title": "Comment fonctionne ce projet",
+      "step_upload": "Téléversez vos documents (PDF, scans, feuilles de calcul)",
+      "step_preprocess": "Prétraitez-les pour en extraire le texte",
+      "step_review": "Vérifiez les documents obtenus, puis définissez ce qu'il faut extraire"
     }
   },
   "groundtruth": {
     "manager": {
       "title": "Gérer les fichiers Ground Truth",
-      "subtitle": "Les fichiers Ground Truth contiennent les valeurs extraites correctes auxquelles vous comparez les résultats des essais. Configurez les mappages de champs pour lier chaque colonne Ground Truth à un champ de schéma.",
+      "subtitle": "Les fichiers Ground Truth contiennent les valeurs extraites correctes auxquelles vous comparez les résultats des exécutions d'extraction. Configurez les mappages de champs pour lier chaque colonne Ground Truth à un champ de schéma.",
       "empty_title": "Aucun fichier Ground Truth n'a encore été importé",
-      "empty_description": "Importez un fichier contenant les valeurs correctes (CSV, XLSX ou JSON) pour commencer à évaluer la précision des essais.",
+      "empty_description": "Importez un fichier contenant les valeurs correctes (CSV, XLSX ou JSON) pour commencer à évaluer la précision des extractions.",
       "default_name": "Ground Truth n°{number}",
       "mappings_count": "{count} mappage | {count} mappages",
       "created": "Créé : {date}",
@@ -1607,7 +1620,15 @@
       "use_filename": "Utiliser le nom de fichier du document",
       "use_field": "Utiliser le champ :",
       "select_field": "Sélectionner un champ...",
-      "match_hint": "Détermine comment les documents sont associés aux résultats des essais pour l'évaluation."
+      "match_hint": "Détermine comment les documents sont associés aux résultats des exécutions d'extraction pour l'évaluation."
+    },
+    "match_check": {
+      "button": "Vérifier la correspondance",
+      "success": "{matched} lignes Ground Truth sur {total} correspondent à un document",
+      "partial": "{matched} lignes Ground Truth sur {total} correspondent à un document. Exemples sans correspondance :",
+      "none": "Aucune des {total} lignes Ground Truth ne correspond à un document.",
+      "hint": "Vérifiez que les valeurs de cette colonne correspondent aux noms ou aux ID de vos documents.",
+      "failed": "Échec de la vérification de correspondance : {error}"
     }
   },
   "landing": {
@@ -1618,11 +1639,11 @@
     },
     "hero": {
       "badge": "Plateforme d'extraction de documents vers JSON",
-      "description": "Transformez des documents médicaux et de laboratoire non structurés en JSON structuré et validé. Définissez votre schéma, lancez des essais d'extraction LLM et mesurez la précision par rapport aux données de référence — avec n'importe quel modèle compatible OpenAI, local ou hébergé."
+      "description": "Transformez des documents médicaux et de laboratoire non structurés en JSON structuré et validé. Définissez votre schéma, lancez des exécutions d'extraction LLM et mesurez la précision par rapport aux données de référence — avec n'importe quel modèle compatible OpenAI, local ou hébergé."
     },
     "cta": {
       "title": "Commencez à extraire des données structurées",
-      "subtitle": "Téléversez vos documents, définissez un schéma et lancez votre premier essai d'extraction.",
+      "subtitle": "Téléversez vos documents, définissez un schéma et lancez votre première exécution d'extraction.",
       "go_to_projects": "Aller aux projets",
       "get_started": "Commencer",
       "login": "Connexion",
@@ -1647,12 +1668,12 @@
         "description": "Comparez les valeurs extraites à un fichier de référence champ par champ, avec des métriques par champ et par document ainsi que des matrices de confusion."
       },
       "trials": {
-        "title": "Essais reproductibles",
+        "title": "Exécutions reproductibles",
         "description": "Exécutez l'extraction sur des ensembles de documents avec des prompts, schémas, modèles, températures et limites de jetons configurables. Comparez les exécutions côte à côte."
       },
       "api": {
         "title": "API compatibles OpenAI",
-        "description": "Pointez les essais vers n'importe quel point de terminaison compatible OpenAI — OpenAI, Mistral, vLLM, Ollama ou llama.cpp. Combinez-les à volonté par essai."
+        "description": "Pointez les exécutions d'extraction vers n'importe quel point de terminaison compatible OpenAI — OpenAI, Mistral, vLLM, Ollama ou llama.cpp. Combinez-les à volonté par exécution."
       }
     },
     "pipeline": {
@@ -1675,7 +1696,7 @@
           "subtitle": "Définir la structure"
         },
         "trials": {
-          "title": "Lancer des essais",
+          "title": "Lancer des extractions",
           "subtitle": "Extraction LLM"
         },
         "evaluation": {
@@ -1731,8 +1752,8 @@
       "step3": {
         "title": "Gestion des documents",
         "organization": "Organisation",
-        "selection_for_trials": "Sélection pour les essais",
-        "choose_documents": "Choisissez des documents pour un essai de deux façons :",
+        "selection_for_trials": "Sélection pour les exécutions d'extraction",
+        "choose_documents": "Choisissez des documents pour une exécution d'extraction de deux façons :",
         "document_features": {
           "sets": "Regrouper les documents en ensembles réutilisables",
           "filter": "Filtrer et rechercher par métadonnées",
@@ -1742,11 +1763,11 @@
         "selection_options": {
           "sets": {
             "name": "Ensembles de documents",
-            "description": "Exécuter un essai sur un groupe entier en une seule fois"
+            "description": "Exécuter une extraction sur un groupe entier en une seule fois"
           },
           "individual": {
             "name": "Sélection individuelle",
-            "description": "Choisir manuellement des documents spécifiques pour un essai"
+            "description": "Choisir manuellement des documents spécifiques pour une exécution d'extraction"
           }
         }
       },
@@ -1765,7 +1786,7 @@
       "step5": {
         "title": "Extraction pilotée par LLM",
         "compatible_providers": "Fournisseurs compatibles",
-        "trial_configuration": "Configuration de l'essai",
+        "trial_configuration": "Configuration de l'exécution",
         "flow": {
           "document": "Document",
           "prompt": "Prompt",
@@ -1791,7 +1812,7 @@
           "limits": "Définir la température et les limites de jetons",
           "sets": "Exécuter sur des ensembles de documents complets",
           "compare": "Comparer prompts, schémas et modèles",
-          "tokens": "Suivre l'utilisation des jetons par essai"
+          "tokens": "Suivre l'utilisation des jetons par exécution"
         }
       },
       "step6": {
@@ -1856,17 +1877,17 @@
       "files": "Fichiers et prétraitement",
       "documents": "Documents",
       "schemas": "Schémas et invites",
-      "trials": "Lancer des essais",
+      "trials": "Exécutions d'extraction",
       "evaluation": "Évaluation"
     },
     "hints": {
       "no_documents": {
         "title": "Aucun document pour l'instant",
-        "body": "Prétraitez vos fichiers téléversés pour générer des documents. Les documents sont le texte extrait que le LLM lit lors d'un essai."
+        "body": "Prétraitez vos fichiers téléversés pour générer des documents. Les documents sont le texte extrait que le LLM lit lors d'une exécution d'extraction."
       },
       "no_trial_documents": {
-        "title": "Aucun document pour lancer un essai",
-        "body": "Un essai extrait des données structurées de vos documents. Prétraitez d'abord des fichiers pour générer des documents."
+        "title": "Aucun document pour lancer une extraction",
+        "body": "Une exécution d'extraction extrait des données structurées de vos documents. Prétraitez d'abord des fichiers pour générer des documents."
       },
       "no_schema": {
         "title": "Aucun schéma pour l'instant"
@@ -1875,11 +1896,11 @@
         "title": "Aucune invite pour l'instant"
       },
       "schema_prompt": {
-        "body": "Un essai nécessite un schéma (les champs à extraire) et une invite (les instructions d'extraction). Créez les deux avant de lancer un essai."
+        "body": "Une exécution d'extraction nécessite un schéma (les champs à extraire) et une invite (les instructions d'extraction). Créez les deux avant de lancer une exécution."
       },
       "no_trials": {
-        "title": "Aucun essai à évaluer",
-        "body": "L'évaluation compare les résultats d'essai aux données de référence. Lancez d'abord un essai pour produire des résultats à évaluer."
+        "title": "Aucune exécution d'extraction à évaluer",
+        "body": "L'évaluation compare les résultats d'extraction aux données de référence. Lancez d'abord une exécution pour produire des résultats à évaluer."
       }
     },
     "create": {
@@ -1910,7 +1931,7 @@
       "impact_document": "{count} document | {count} documents",
       "impact_schema": "{count} schéma | {count} schémas",
       "impact_prompt": "{count} invite | {count} invites",
-      "impact_trial": "{count} essai | {count} essais",
+      "impact_trial": "{count} exécution d'extraction | {count} exécutions d'extraction",
       "impact_evaluation": "{count} évaluation | {count} évaluations"
     },
     "grid": {
@@ -1934,12 +1955,11 @@
       },
       "load_failed": "Échec du chargement des projets.",
       "workflow": {
-        "upload": "Téléverser des fichiers",
-        "preprocess": "Prétraiter",
-        "documents": "Documents",
-        "schemas": "Schémas",
-        "trials": "Lancer des essais",
-        "evaluate": "Évaluer"
+        "files_desc": "Téléversez des PDF, scans et feuilles de calcul, puis convertissez-les en texte lisible",
+        "documents_desc": "Vérifiez le texte extrait avant de lancer l'extraction",
+        "schemas_desc": "Définissez les champs à extraire et les instructions pour l'IA",
+        "trials_desc": "Exécutez l'extraction sur vos documents avec un LLM",
+        "evaluation_desc": "Comparez les résultats avec la Ground Truth pour mesurer la précision"
       }
     },
     "settings": {
@@ -1991,11 +2011,12 @@
       "delete": "Supprimer le schéma",
       "col_name": "Nom",
       "col_created": "Créé le",
-      "search_chip": "Recherche : \"{query}\""
+      "search_chip": "Recherche : \"{query}\"",
+      "start_from_template": "Partir d'un modèle"
     },
     "view": {
       "snapshot": "Instantané",
-      "snapshot_title": "Copie figée du schéma tel qu'il était lors de l'exécution de l'essai",
+      "snapshot_title": "Copie figée du schéma tel qu'il était au lancement de l'exécution d'extraction",
       "copy": "Copier",
       "close": "Fermer",
       "copied": "Schéma copié"
@@ -2079,7 +2100,7 @@
       "item_label": "prompts",
       "search_placeholder": "Rechercher des prompts...",
       "no_match": "Aucun prompt ne correspond à votre recherche",
-      "auto_injected_tooltip": "Aucun espace réservé {ph} — le texte du document est ajouté automatiquement lors de l'exécution de l'essai.",
+      "auto_injected_tooltip": "Aucun espace réservé {ph} — le texte du document est ajouté automatiquement lors de l'exécution de l'extraction.",
       "auto_injected": "Injecté automatiquement",
       "view": "Afficher le prompt",
       "edit": "Modifier le prompt",
@@ -2091,7 +2112,7 @@
     },
     "view": {
       "snapshot": "Instantané",
-      "snapshot_title": "Copie figée du prompt tel qu'il était lors de l'exécution de l'essai",
+      "snapshot_title": "Copie figée du prompt tel qu'il était au lancement de l'exécution d'extraction",
       "copy": "Copier",
       "close": "Fermer",
       "copied": "Prompt copié"
@@ -2108,12 +2129,12 @@
       "description_placeholder": "Décrivez ce que ce prompt est censé extraire...",
       "instruction_label": "Instruction d'extraction",
       "instruction_placeholder": "À partir du contenu du document, extrayez ces champs :",
-      "instruction_help": "Ceci sera utilisé comme prompt utilisateur. Le texte du document et le schéma sélectionné sont ajoutés automatiquement lors de l'exécution de l'essai.",
+      "instruction_help": "Ceci sera utilisé comme prompt utilisateur. Le texte du document et le schéma sélectionné sont ajoutés automatiquement lors de l'exécution de l'extraction.",
       "system_from_advanced": "Ce prompt contient un prompt système issu du mode Avancé. Il est conservé pendant la modification, mais ne sera pas enregistré tant que le mode Simple est sélectionné.",
       "hide": "Masquer",
       "preview": "Aperçu",
       "preview_with_sample": "Aperçu avec un document exemple",
-      "simple_preview_help": "En mode Simple, aucun message système n'est envoyé — votre instruction devient le message utilisateur, avec le document et le schéma de l'essai ajoutés :",
+      "simple_preview_help": "En mode Simple, aucun message système n'est envoyé — votre instruction devient le message utilisateur, avec le document et le schéma de l'exécution d'extraction ajoutés :",
       "user_message_preview": "Aperçu du message utilisateur",
       "system_message_preview": "Aperçu du message système",
       "callout_title": "Comment fonctionnent les prompts",
@@ -2123,7 +2144,7 @@
       "callout_user_text": "— instructions par document, où",
       "callout_replaced": "est remplacé par le texte du document.",
       "callout_schema_label": "Le schéma sélectionné est automatiquement inclus",
-      "callout_schema_text": "lors de l'exécution de l'essai, afin que le modèle sache quels champs extraire. Vous n'avez pas besoin de coller le JSON du schéma dans votre prompt — cela le dupliquerait.",
+      "callout_schema_text": "lors de l'exécution de l'extraction, afin que le modèle sache quels champs extraire. Vous n'avez pas besoin de coller le JSON du schéma dans votre prompt — cela le dupliquerait.",
       "insert_placeholder_title": "Insérer {ph} au niveau du curseur",
       "insert_placeholder": "+ Insérer {ph}",
       "system_placeholder": "Vous êtes un assistant IA spécialisé dans l'extraction d'informations structurées à partir de documents...",
@@ -2363,22 +2384,22 @@
     }
   },
   "trials": {
-    "title": "Essais",
-    "subtitle": "Exécutez un modèle d'IA sur vos documents pour extraire des données structurées, puis comparez les résultats entre les essais.",
-    "count": "{count} essai | {count} essais",
+    "title": "Exécutions d'extraction",
+    "subtitle": "Exécutez un modèle d'IA sur vos documents pour extraire des données structurées, puis comparez les résultats entre les exécutions.",
+    "count": "{count} exécution | {count} exécutions",
     "actions": {
-      "start_new": "Lancer un nouvel essai",
+      "start_new": "Lancer une exécution d'extraction",
       "delete": "Supprimer"
     },
     "batch": {
-      "item_label": "essai"
+      "item_label": "exécution d'extraction"
     },
     "empty": {
-      "none_title": "Aucun essai pour le moment",
-      "none_description": "Lancez votre premier essai d'extraction pour voir les résultats ici.",
-      "none_action": "Lancer un essai",
-      "no_match_title": "Aucun essai ne correspond à vos filtres",
-      "no_match_description": "Ajustez ou réinitialisez vos filtres pour voir plus d'essais.",
+      "none_title": "Aucune exécution d'extraction pour le moment",
+      "none_description": "Lancez votre première exécution d'extraction pour voir les résultats ici.",
+      "none_action": "Lancer une exécution",
+      "no_match_title": "Aucune exécution d'extraction ne correspond à vos filtres",
+      "no_match_description": "Ajustez ou réinitialisez vos filtres pour voir plus d'exécutions.",
       "clear_all": "Effacer tous les filtres"
     },
     "confirm": {
@@ -2386,50 +2407,50 @@
     },
     "disabled_reason": {
       "loading": "Chargement des ressources du projet…",
-      "no_schema": "Vous avez besoin d'au moins un schéma pour lancer un essai.",
-      "no_document": "Vous devez téléverser au moins un document pour lancer un essai.",
-      "no_prompt": "Vous devez créer au moins un prompt pour lancer un essai."
+      "no_schema": "Vous avez besoin d'au moins un schéma pour lancer une exécution d'extraction.",
+      "no_document": "Vous avez besoin d'au moins un document prétraité pour lancer une exécution d'extraction. Téléversez d'abord des fichiers et lancez le prétraitement.",
+      "no_prompt": "Vous devez créer au moins un prompt pour lancer une exécution d'extraction."
     },
     "errors": {
-      "load_trials": "Échec du chargement des essais",
+      "load_trials": "Échec du chargement des exécutions d'extraction",
       "load": "Échec du chargement"
     },
     "toast": {
-      "created": "Essai créé",
-      "create_failed": "Échec de la création de l'essai",
-      "renamed": "Essai renommé",
-      "rename_failed": "Échec du renommage de l'essai",
-      "cancelled_kept": "Essai annulé — les résultats déjà traités ont été conservés",
-      "cancelled_discarded": "Essai annulé — les résultats en cours ont été supprimés",
-      "cancel_failed": "Échec de l'annulation de l'essai",
-      "deleted": "Essai supprimé",
-      "delete_failed": "Échec de la suppression de l'essai",
+      "created": "Exécution d'extraction créée",
+      "create_failed": "Échec de la création de l'exécution d'extraction",
+      "renamed": "Exécution d'extraction renommée",
+      "rename_failed": "Échec du renommage de l'exécution d'extraction",
+      "cancelled_kept": "Exécution d'extraction annulée — les résultats déjà traités ont été conservés",
+      "cancelled_discarded": "Exécution d'extraction annulée — les résultats en cours ont été supprimés",
+      "cancel_failed": "Échec de l'annulation de l'exécution d'extraction",
+      "deleted": "Exécution d'extraction supprimée",
+      "delete_failed": "Échec de la suppression de l'exécution d'extraction",
       "retry_failed_docs": "Nouvelle tentative pour les documents en échec",
-      "restarted": "Essai relancé",
-      "restart_failed": "Échec du redémarrage de l'essai"
+      "restarted": "Exécution d'extraction relancée",
+      "restart_failed": "Échec du redémarrage de l'exécution d'extraction"
     },
     "delete_dialog": {
-      "title": "Supprimer l'essai",
-      "message": "La suppression de cet essai supprime également ses résultats d'extraction et toutes les évaluations qui en découlent. Cette action est irréversible.",
+      "title": "Supprimer l'exécution d'extraction",
+      "message": "La suppression de cette exécution d'extraction supprime également ses résultats et toutes les évaluations qui en découlent. Cette action est irréversible.",
       "confirm": "Supprimer"
     },
     "retry_dialog": {
-      "title": "Relancer l'essai",
-      "message": "Lancer un nouvel essai avec la même configuration ? Cela consommera des crédits LLM et traitera à nouveau tous les documents.",
-      "confirm": "Relancer l'essai"
+      "title": "Relancer l'exécution d'extraction",
+      "message": "Lancer une nouvelle exécution avec la même configuration ? Cela consommera des crédits LLM et traitera à nouveau tous les documents.",
+      "confirm": "Relancer l'exécution"
     },
     "table": {
-      "item_label": "essais",
-      "empty_title": "Aucun essai trouvé",
+      "item_label": "exécutions d'extraction",
+      "empty_title": "Aucune exécution d'extraction trouvée",
       "processed_results": "Résultats traités",
       "results_short": "{count} rés.",
       "documents_with_errors": "Documents avec erreurs",
       "errors_short": "{count} err.",
-      "progress_aria": "Progression de l'essai",
+      "progress_aria": "Progression de l'exécution d'extraction",
       "ready": "Prêt",
       "failed": "Échoué",
       "results_action": "Résultats",
-      "col_name": "Essai",
+      "col_name": "Exécution",
       "col_schema": "Schéma",
       "col_prompt": "Prompt",
       "col_model": "Modèle",
@@ -2445,8 +2466,8 @@
       "cancelled": "Annulé"
     },
     "filters": {
-      "search_placeholder": "Rechercher des essais...",
-      "item_label": "essais",
+      "search_placeholder": "Rechercher des exécutions d'extraction...",
+      "item_label": "exécutions d'extraction",
       "all_status": "Tous les statuts",
       "all_schemas": "Tous les schémas",
       "all_prompts": "Tous les prompts",
@@ -2475,12 +2496,12 @@
       "chip_date": "Date : {value}"
     },
     "create": {
-      "title": "Lancer un nouvel essai",
+      "title": "Lancer une exécution d'extraction",
       "mode_simple": "Simple",
       "mode_advanced": "Avancé",
-      "what_is_title": "Qu'est-ce qu'un essai ?",
-      "what_is_body": "Un essai exécute un modèle d'IA sur vos documents pour extraire des données structurées. Vous avez besoin de quatre éléments : un <strong>Schéma</strong> (les champs à extraire), un <strong>Prompt</strong> (les instructions d'extraction), un <strong>Modèle</strong> (l'IA) et les <strong>Documents</strong> à traiter. Votre schéma est automatiquement inclus avec le prompt — vous n'avez pas besoin de décrire les champs manuellement.",
-      "help_text": "Un essai exécute un modèle d'IA sur vos documents pour extraire des données structurées. Vous avez besoin d'un schéma, d'un prompt, d'un modèle et des documents à traiter. Le schéma est automatiquement inclus avec le prompt.",
+      "what_is_title": "Qu'est-ce qu'une exécution d'extraction ?",
+      "what_is_body": "Une exécution d'extraction applique un modèle d'IA à vos documents pour extraire des données structurées. Vous avez besoin de quatre éléments : un <strong>Schéma</strong> (les champs à extraire), un <strong>Prompt</strong> (les instructions d'extraction), un <strong>Modèle</strong> (l'IA) et les <strong>Documents</strong> à traiter. Votre schéma est automatiquement inclus avec le prompt — vous n'avez pas besoin de décrire les champs manuellement.",
+      "help_text": "Une exécution d'extraction applique un modèle d'IA à vos documents pour extraire des données structurées. Vous avez besoin d'un schéma, d'un prompt, d'un modèle et des documents à traiter. Le schéma est automatiquement inclus avec le prompt.",
       "name_notes_hide": "Masquer le nom / les notes",
       "name_notes_add": "Ajouter un nom / des notes",
       "advanced_settings_hide": "Masquer les paramètres avancés",
@@ -2488,18 +2509,18 @@
       "custom_api_hide": "Masquer les paramètres API personnalisés",
       "custom_api_use": "Utiliser des paramètres API personnalisés",
       "no_model_title": "Aucun modèle par défaut configuré",
-      "no_model_body": "Ce serveur n'a aucun LLM configuré à l'échelle du système. Vous pouvez tout de même lancer un essai en pointant vers n'importe quelle API compatible OpenAI (OpenAI, Ollama, vLLM, llama.cpp…).",
+      "no_model_body": "Ce serveur n'a aucun LLM configuré à l'échelle du système. Vous pouvez tout de même lancer une extraction en pointant vers n'importe quelle API compatible OpenAI (OpenAI, Ollama, vLLM, llama.cpp…).",
       "custom_api_simple_hide": "Masquer les paramètres API personnalisés",
       "custom_api_simple_edit": "Modifier les paramètres API personnalisés",
       "custom_api_simple_use": "Utiliser une autre API",
       "checking_title": "Vérification de la compatibilité du modèle…",
-      "checking_body": "Vérification que {model} fonctionne avec votre schéma avant de lancer l'essai.",
+      "checking_body": "Vérification que {model} fonctionne avec votre schéma avant de lancer l'exécution.",
       "the_model": "le modèle",
       "cancel": "Annuler",
       "verifying": "Vérification…",
-      "start_trial": "Lancer l'essai",
+      "start_trial": "Lancer l'exécution",
       "discard_title": "Abandonner les modifications non enregistrées ?",
-      "discard_message": "Votre configuration d'essai sera perdue.",
+      "discard_message": "Votre configuration d'exécution sera perdue.",
       "discard_confirm": "Abandonner",
       "discard_cancel": "Continuer l'édition",
       "status": {
@@ -2508,24 +2529,24 @@
         "select_documents": "Sélectionnez des documents pour continuer.",
         "verified_ready": "Modèle vérifié avec ce schéma — prêt à démarrer.",
         "verification_failed": "Échec de la vérification : {message}",
-        "will_check": "Le modèle sera vérifié lorsque vous lancerez l'essai."
+        "will_check": "Le modèle sera vérifié lorsque vous lancerez l'exécution."
       },
       "toast": {
-        "start_failed": "Impossible de lancer l'essai. Veuillez réessayer."
+        "start_failed": "Impossible de lancer l'exécution d'extraction. Veuillez réessayer."
       },
       "intro_dismiss": "Compris — ne plus afficher",
       "large_run": {
-        "title": "Lancer un essai volumineux ?",
-        "message": "Cet essai exécutera l'extraction LLM sur {count} documents. Chaque document est un appel LLM distinct et peut consommer des crédits d'API."
+        "title": "Lancer une exécution volumineuse ?",
+        "message": "Cette exécution effectuera l'extraction LLM sur {count} documents. Chaque document est un appel LLM distinct et peut consommer des crédits d'API."
       },
-      "start_trial_count": "Lancer l'essai ({count} document) | Lancer l'essai ({count} documents)"
+      "start_trial_count": "Lancer l'exécution ({count} document) | Lancer l'exécution ({count} documents)"
     },
     "metadata": {
-      "name_label": "Nom de l'essai",
+      "name_label": "Nom de l'exécution",
       "optional": "(facultatif)",
       "name_placeholder": "Ex. : Extraction de contrats T3",
       "description_label": "Description",
-      "description_placeholder": "Bref résumé de cet essai (ex. : type de document, objectif, modifications, etc.)"
+      "description_placeholder": "Bref résumé de cette exécution (ex. : type de document, objectif, modifications, etc.)"
     },
     "select": {
       "schema_label": "Schéma",
@@ -2540,7 +2561,7 @@
       "model_loading": "Chargement des modèles...",
       "model_none": "Aucun modèle disponible",
       "model_placeholder": "Sélectionner un modèle",
-      "model_help_tooltip": "Le modèle d'IA utilisé pour l'extraction, indiqué par l'identifiant brut que renvoie votre point de terminaison LLM (par défaut du système ou vos paramètres API personnalisés). Sa capacité à produire du JSON structuré pour votre schéma est vérifiée automatiquement au démarrage de l'essai."
+      "model_help_tooltip": "Le modèle d'IA utilisé pour l'extraction, indiqué par l'identifiant brut que renvoie votre point de terminaison LLM (par défaut du système ou vos paramètres API personnalisés). Sa capacité à produire du JSON structuré pour votre schéma est vérifiée automatiquement au démarrage de l'exécution."
     },
     "docsel": {
       "select_documents": "Sélectionner des documents",
@@ -2552,7 +2573,7 @@
         "load_groups_failed": "Échec du chargement des groupes de documents",
         "group_empty": "\"{name}\" ne contient aucun document",
         "load_group_docs_failed": "Échec du chargement des documents de ce groupe",
-        "loaded_from_trial": "{count} documents chargés depuis l'essai précédent",
+        "loaded_from_trial": "{count} documents chargés depuis l'exécution précédente",
         "selected_all": "Tous les {count} documents correspondants sélectionnés",
         "select_all_failed": "Impossible de sélectionner tous les documents",
         "selected_recent": "{count} documents sélectionnés des {days} derniers jours",
@@ -2583,8 +2604,8 @@
       "next": "Suiv."
     },
     "smart": {
-      "load_from_trial": "Charger depuis un essai précédent",
-      "select_trial": "Sélectionner un essai précédent...",
+      "load_from_trial": "Charger depuis une exécution précédente",
+      "select_trial": "Sélectionner une exécution précédente...",
       "trial_option": "{name} - {date} ({count} doc.)",
       "filter_by_date": "Filtrer par plage de dates",
       "last_7_days": "7 derniers jours",
@@ -2625,10 +2646,10 @@
     "model_test": {
       "title": "Compatibilité modèle et schéma",
       "test_now": "Tester maintenant",
-      "warning_help": "Le modèle est vérifié automatiquement lorsque vous lancez l'essai — ou testez-le maintenant pour confirmer la compatibilité au préalable."
+      "warning_help": "Le modèle est vérifié automatiquement lorsque vous lancez l'exécution — ou testez-le maintenant pour confirmer la compatibilité au préalable."
     },
     "results": {
-      "aria": "Résultats de l'essai",
+      "aria": "Résultats de l'exécution d'extraction",
       "n_results": "{count} résultats",
       "model_label": "Modèle :",
       "prompt_label": "Prompt :",
@@ -2642,11 +2663,11 @@
       "first_result": "Premier résultat",
       "next_title": "Document suivant (→)",
       "last_result": "Dernier résultat",
-      "loading": "Chargement des résultats de l'essai…",
-      "not_found": "Essai introuvable",
-      "return": "Retour aux essais",
-      "no_results_title": "Aucun résultat disponible pour cet essai.",
-      "wait": "Veuillez attendre la fin de l'essai.",
+      "loading": "Chargement des résultats de l'exécution…",
+      "not_found": "Exécution d'extraction introuvable",
+      "return": "Retour aux exécutions d'extraction",
+      "no_results_title": "Aucun résultat disponible pour cette exécution d'extraction.",
+      "wait": "Veuillez attendre la fin de l'exécution.",
       "search_placeholder": "Rechercher des documents…",
       "all_statuses": "Tous les statuts",
       "no_match": "Aucun résultat ne correspond à vos filtres.",
@@ -2680,7 +2701,7 @@
         "no_loaded_result": "Aucun résultat chargé pour ce document — il a peut-être échoué avant d'en produire un, ou se trouve sur une autre page."
       },
       "errors": {
-        "load_trial": "Échec du chargement des données de l'essai"
+        "load_trial": "Échec du chargement des données de l'exécution"
       }
     },
     "viewer": {
@@ -2729,12 +2750,12 @@
       "docs_progress": "{done}/{total} doc.",
       "elapsed": "{duration} écoulées",
       "eta": "• ≈ {duration} restantes",
-      "progress_aria": "Progression de l'essai",
+      "progress_aria": "Progression de l'exécution d'extraction",
       "results_ready": "Résultats prêts",
       "failed_details": "Échoué — voir les détails dans Résultats",
       "cancel": "Annuler",
       "results": "Résultats",
-      "download_partial_title": "Cet essai ne s'est pas terminé — seuls les documents extraits avec succès sont inclus.",
+      "download_partial_title": "Cette exécution d'extraction ne s'est pas terminée — seuls les documents extraits avec succès sont inclus.",
       "download": "Télécharger",
       "download_partial": "Télécharger partiellement",
       "retry": "Relancer",
@@ -2745,41 +2766,41 @@
       "count": "{count} erreur de document | {count} erreurs de document",
       "view_details": "Voir les détails des erreurs",
       "show_in_viewer_title": "Afficher ce document dans la visionneuse",
-      "trial_name": "Essai",
+      "trial_name": "Exécution",
       "doc_fallback": "Doc. {id}"
     },
     "rename": {
-      "title": "Renommer l'essai",
+      "title": "Renommer l'exécution d'extraction",
       "name_label": "Nom",
       "description_label": "Description",
       "cancel": "Annuler",
       "save": "Enregistrer"
     },
     "cancel_modal": {
-      "title": "Annuler l'essai",
-      "message": "Annuler cet essai en cours ? Les documents encore en traitement seront arrêtés.",
+      "title": "Annuler l'exécution d'extraction",
+      "message": "Annuler cette exécution en cours ? Les documents encore en traitement seront arrêtés.",
       "keep_label": "Conserver les résultats déjà traités",
       "keep_yes": "Les résultats extraits jusqu'à présent restent disponibles (téléchargement partiel et consultation).",
       "keep_no": "Les résultats extraits jusqu'à présent seront supprimés et ne pourront pas être récupérés.",
       "keep_running": "Continuer l'exécution",
-      "confirm": "Annuler l'essai"
+      "confirm": "Annuler l'exécution"
     },
     "retry_modal": {
-      "title": "Relancer l'essai",
-      "message": "Lancer un nouvel essai avec la même configuration ? Cela consommera des crédits LLM.",
+      "title": "Relancer l'exécution d'extraction",
+      "message": "Lancer une nouvelle exécution avec la même configuration ? Cela consommera des crédits LLM.",
       "failed_only": "Relancer uniquement les documents en échec",
-      "failed_only_desc": "Crée un nouvel essai qui ne traite que les documents ayant échoué.",
+      "failed_only_desc": "Crée une nouvelle exécution qui ne traite que les documents ayant échoué.",
       "all": "Réexécuter tous les documents",
       "all_desc": "Traite à nouveau chaque document, y compris ceux qui ont déjà réussi.",
       "cancel": "Annuler",
-      "confirm": "Relancer l'essai"
+      "confirm": "Relancer l'exécution"
     },
     "download": {
-      "title": "Télécharger les résultats de l'essai",
-      "partial_note": "Cet essai ne s'est pas terminé avec succès. Le téléchargement ne contient que les {count} document(s) qui ont été extraits — les documents ayant échoué ne sont pas inclus.",
-      "format_json_zip": "<strong>JSON (par document) :</strong> Télécharge une <b>archive ZIP</b> avec un fichier JSON par document.<span class=\"block\">Chaque fichier inclut tous les résultats extraits, les métadonnées complètes du document, la configuration de prétraitement et la configuration de l'essai.</span>",
-      "format_csv_zip": "<strong>CSV (avec fichiers) :</strong> Télécharge une <b>archive ZIP</b> avec le CSV et les fichiers joints.<span class=\"block\">Le CSV inclut tous les résultats extraits, les métadonnées complètes du document, la configuration de prétraitement et la configuration de l'essai.</span>",
-      "format_csv_flat": "<strong>CSV (plat) :</strong> Télécharge un seul fichier CSV, une ligne par document.<br />Inclut tous les résultats extraits, les métadonnées du document, la configuration de prétraitement et la configuration de l'essai.",
+      "title": "Télécharger les résultats de l'exécution",
+      "partial_note": "Cette exécution d'extraction ne s'est pas terminée avec succès. Le téléchargement ne contient que les {count} document(s) qui ont été extraits — les documents ayant échoué ne sont pas inclus.",
+      "format_json_zip": "<strong>JSON (par document) :</strong> Télécharge une <b>archive ZIP</b> avec un fichier JSON par document.<span class=\"block\">Chaque fichier inclut tous les résultats extraits, les métadonnées complètes du document, la configuration de prétraitement et la configuration de l'exécution.</span>",
+      "format_csv_zip": "<strong>CSV (avec fichiers) :</strong> Télécharge une <b>archive ZIP</b> avec le CSV et les fichiers joints.<span class=\"block\">Le CSV inclut tous les résultats extraits, les métadonnées complètes du document, la configuration de prétraitement et la configuration de l'exécution.</span>",
+      "format_csv_flat": "<strong>CSV (plat) :</strong> Télécharge un seul fichier CSV, une ligne par document.<br />Inclut tous les résultats extraits, les métadonnées du document, la configuration de prétraitement et la configuration de l'exécution.",
       "format_label": "Format",
       "format_json_option": "JSON (par document, ZIP)",
       "format_csv_option": "CSV (tableau, avec fichiers facultatifs)",
@@ -2793,9 +2814,9 @@
       "include_usage": "Inclure l'utilisation des tokens",
       "include_usage_title": "Si coché : chaque résultat inclut aussi les statistiques de tokens (tokens de prompt/complétion/total) et la raison de fin.",
       "include_usage_hint": "(ajoute le nombre de tokens et la raison de fin)",
-      "note_csv_content": "Inclura les fichiers originaux et le texte complet du document dans un ZIP.<br /><b>Remarque :</b> Le téléchargement peut être volumineux si votre essai contient de nombreux fichiers.",
+      "note_csv_content": "Inclura les fichiers originaux et le texte complet du document dans un ZIP.<br /><b>Remarque :</b> Le téléchargement peut être volumineux si votre exécution contient de nombreux fichiers.",
       "note_csv_only": "Un seul CSV sera téléchargé (aucun fichier/texte inclus).",
-      "note_json_content": "Chaque JSON par document contiendra le texte extrait du document, et les fichiers sources originaux sont regroupés dans un dossier <code>files/</code> à l'intérieur du ZIP.<br /><b>Remarque :</b> Le téléchargement peut être volumineux si votre essai contient de nombreux fichiers.",
+      "note_json_content": "Chaque JSON par document contiendra le texte extrait du document, et les fichiers sources originaux sont regroupés dans un dossier <code>files/</code> à l'intérieur du ZIP.<br /><b>Remarque :</b> Le téléchargement peut être volumineux si votre exécution contient de nombreux fichiers.",
       "note_json_only": "Les fichiers JSON ne contiennent que les résultats extraits et les métadonnées — aucun texte de document ni fichier source.",
       "cancel": "Annuler",
       "downloading": "Téléchargement...",
@@ -2806,18 +2827,18 @@
       }
     },
     "selector": {
-      "title": "Évaluer l'essai",
+      "title": "Évaluer une exécution d'extraction",
       "retry": "Réessayer",
       "eval_error_heading": "Erreur d'évaluation",
       "mappings_required_title": "Correspondances de champs spécifiques au schéma requises",
-      "mappings_required_body": "Chaque essai nécessite des correspondances de champs pour son schéma spécifique. Les essais sans correspondances seront grisés.",
+      "mappings_required_body": "Chaque exécution d'extraction nécessite des correspondances de champs pour son schéma spécifique. Les exécutions sans correspondances seront grisées.",
       "configure_mappings": "Configurer les correspondances",
-      "loading_trials": "Chargement des essais et vérification des correspondances...",
-      "empty_title": "Aucun essai terminé disponible pour l'évaluation",
-      "empty_desc": "Lancez d'abord quelques essais pour les évaluer par rapport à la vérité terrain",
-      "select_heading": "Sélectionnez un essai à évaluer",
-      "select_desc": "Choisissez parmi les essais terminés à comparer avec vos données de vérité terrain.",
-      "total_trials": "Total des essais :",
+      "loading_trials": "Chargement des exécutions et vérification des correspondances...",
+      "empty_title": "Aucune exécution d'extraction terminée disponible pour l'évaluation",
+      "empty_desc": "Lancez d'abord quelques extractions pour les évaluer par rapport à la vérité terrain",
+      "select_heading": "Sélectionnez une exécution d'extraction à évaluer",
+      "select_desc": "Choisissez parmi les exécutions terminées à comparer avec vos données de vérité terrain.",
+      "total_trials": "Total des exécutions :",
       "ready_for_eval": "Prêts pour l'évaluation :",
       "missing_mappings": "Correspondances manquantes :",
       "checking_mappings": "Vérification des correspondances de champs...",
@@ -2835,30 +2856,30 @@
       "configure_to_enable": "Configurez les correspondances de champs pour le schéma \"{schema}\" afin d'activer l'évaluation",
       "already_evaluated": "Déjà évalué",
       "n_results": "{count} résultats",
-      "item_label": "essais",
+      "item_label": "exécutions d'extraction",
       "cancel": "Annuler",
       "evaluating": "Évaluation...",
       "evaluate_named": "Évaluer {name}",
-      "select_first": "Sélectionnez d'abord un essai",
-      "already_eval_title": "Essai déjà évalué",
+      "select_first": "Sélectionnez d'abord une exécution",
+      "already_eval_title": "Exécution d'extraction déjà évaluée",
       "create_another": "Créer une autre évaluation",
       "schema_fallback": "Schéma {id}",
       "op_retry": "Réessayer",
-      "op_loading_data": "Chargement des données de l'essai",
-      "op_evaluation": "Évaluation de l'essai",
+      "op_loading_data": "Chargement des données de l'exécution",
+      "op_evaluation": "Évaluation de l'exécution",
       "op_refreshing_mappings": "Actualisation du statut des correspondances",
       "validation": {
-        "select_trial": "Veuillez sélectionner un essai à évaluer",
+        "select_trial": "Veuillez sélectionner une exécution d'extraction à évaluer",
         "requires_mappings": "{name} nécessite des correspondances de champs pour le schéma \"{schema}\"",
         "gt_required": "Un fichier de vérité terrain est requis",
-        "no_results": "L'essai sélectionné n'a aucun résultat à évaluer"
+        "no_results": "L'exécution sélectionnée n'a aucun résultat à évaluer"
       },
       "reeval_on": " le {date}",
-      "reeval_message": "Cet essai a déjà été évalué{when} par rapport à cette vérité terrain. Créer une autre évaluation ?",
-      "cannot_evaluate": "Impossible d'évaluer l'essai : {errors}",
+      "reeval_message": "Cette exécution d'extraction a déjà été évaluée{when} par rapport à cette vérité terrain. Créer une autre évaluation ?",
+      "cannot_evaluate": "Impossible d'évaluer l'exécution d'extraction : {errors}",
       "mappings_removed": "Les correspondances de champs pour le schéma \"{schema}\" ne sont pas configurées ou ont été supprimées",
       "mappings_missing": "Correspondances de champs manquantes : {detail}",
-      "no_results_run_first": "L'essai n'a aucun résultat à évaluer. Veuillez d'abord lancer l'essai.",
+      "no_results_run_first": "L'exécution d'extraction n'a aucun résultat à évaluer. Veuillez d'abord la lancer.",
       "data_consistency": "Problème de cohérence des données détecté. Certains documents ou entrées de vérité terrain sont manquants.",
       "eval_failed": "Échec de l'évaluation : {detail}",
       "toast": {
@@ -2878,7 +2899,7 @@
       "coverage": "{found}/{total} localisées",
       "coverage_title": "Provenance des valeurs",
       "coverage_help": "Les valeurs sont localisées par recherche dans le texte extrait. Les correspondances proviennent d’une recherche textuelle, pas du modèle — vérifiez avant de vous y fier.",
-      "coverage_evidence_mode": "Cet essai a utilisé les citations sources : le modèle devait citer le texte d’où provient chaque valeur.",
+      "coverage_evidence_mode": "Cette exécution d'extraction a utilisé les citations sources : le modèle devait citer le texte d’où provient chaque valeur.",
       "coverage_missing": "Sans citation : {fields}",
       "prev_match": "Occurrence précédente",
       "next_match": "Occurrence suivante",
@@ -2946,21 +2967,21 @@
       "project_documents_forbidden": "Vous n'êtes pas autorisé à accéder aux documents de ce projet",
       "document_not_found": "Document introuvable",
       "version_already_latest": "Cette version est déjà la plus récente.",
-      "document_in_trial": "Le document est référencé dans l'essai « {trial} ». Retirez-le d'abord du ou des essais.",
-      "document_in_trial_result": "Le document est référencé dans un résultat d'essai. Supprimez d'abord les résultats/essais.",
-      "document_in_evaluation_metric": "Le document est référencé dans des métriques d'évaluation. Supprimez d'abord l'évaluation/l'essai associé.",
+      "document_in_trial": "Le document est référencé dans l'exécution d'extraction « {trial} ». Retirez-le d'abord de la ou des exécutions.",
+      "document_in_trial_result": "Le document est référencé dans un résultat d'exécution d'extraction. Supprimez d'abord les résultats/exécutions.",
+      "document_in_evaluation_metric": "Le document est référencé dans des métriques d'évaluation. Supprimez d'abord l'évaluation/l'exécution associée.",
       "document_in_sets": "Le document fait partie de {count} groupes de documents. Retirez-le d'abord des groupes.",
       "create_set_forbidden": "Vous n'êtes pas autorisé à créer des groupes de documents pour ce projet",
-      "trial_not_found_in_project": "Essai introuvable dans ce projet",
+      "trial_not_found_in_project": "Exécution d'extraction introuvable dans ce projet",
       "document_set_not_found": "Groupe de documents introuvable",
-      "set_referenced_by_trials": "Impossible de supprimer le groupe de documents : un ou plusieurs essais y font référence.",
-      "trial_not_found": "Essai introuvable"
+      "set_referenced_by_trials": "Impossible de supprimer le groupe de documents : une ou plusieurs exécutions d'extraction y font référence.",
+      "trial_not_found": "Exécution d'extraction introuvable"
     },
     "evaluations": {
       "project_not_found": "Projet introuvable",
       "not_authorized_access": "Non autorisé à accéder aux évaluations de ce projet",
       "not_authorized_delete": "Non autorisé à supprimer les évaluations de ce projet",
-      "not_authorized_evaluate": "Non autorisé à évaluer les essais de ce projet",
+      "not_authorized_evaluate": "Non autorisé à évaluer les exécutions d'extraction de ce projet",
       "groundtruth_not_found": "Vérité terrain introuvable",
       "evaluation_not_found": "Évaluation introuvable",
       "evaluation_not_found_for_project": "Évaluation introuvable pour ce projet",
@@ -2968,7 +2989,7 @@
       "document_not_found": "Document introuvable dans l'évaluation",
       "too_many_compare": "Impossible de comparer plus de {max_evaluations} évaluations à la fois (demandé : {requested}).",
       "too_many_download": "Impossible de télécharger plus de {max_evaluations} évaluations à la fois (demandé : {requested}).",
-      "too_many_trials": "Impossible d'évaluer plus de {max_trials} essais à la fois (demandé : {requested}).",
+      "too_many_trials": "Impossible d'évaluer plus de {max_trials} exécutions d'extraction à la fois (demandé : {requested}).",
       "invalid_evaluation_ids": "evaluation_ids invalides",
       "no_evaluation_ids": "Aucun evaluation_ids fourni",
       "all_evaluations_failed": "Toutes les évaluations ont échoué : {errors}"
@@ -3013,7 +3034,9 @@
       "no_file_provided": "Aucun fichier fourni",
       "name_required": "Un nom est requis lorsqu'aucun fichier unique n'est fourni",
       "id_column_too_long": "Le nom de la colonne d'identifiant est trop long (200 caractères maximum).",
-      "invalid_schema_paths": "Chemin(s) de champ de schéma introuvable(s) dans le schéma : {paths}. Utilisez un chemin terminal du schéma (par exemple 'patient.age' ou 'lab_results[].value')."
+      "invalid_schema_paths": "Chemin(s) de champ de schéma introuvable(s) dans le schéma : {paths}. Utilisez un chemin terminal du schéma (par exemple 'patient.age' ou 'lab_results[].value').",
+      "match_preview_parse_failed": "{error}",
+      "match_preview_load_failed": "Impossible de charger la Ground Truth. Consultez les journaux du serveur pour plus de détails."
     },
     "preprocess": {
       "project_not_found": "Projet introuvable",
@@ -3044,7 +3067,7 @@
       "not_found": "Prompt introuvable",
       "update_forbidden": "Vous n'êtes pas autorisé à mettre à jour les prompts de ce projet",
       "delete_forbidden": "Vous n'êtes pas autorisé à supprimer des prompts de ce projet",
-      "referenced_by_trial": "Impossible de supprimer un prompt référencé par un essai"
+      "referenced_by_trial": "Impossible de supprimer un prompt référencé par une exécution d'extraction"
     },
     "schemas": {
       "required_without_property": "Le schéma déclare des champs obligatoires qui ne sont pas définis dans « properties » ; le modèle ne pourra jamais les renvoyer : {details}",
@@ -3057,7 +3080,7 @@
       "not_authorized_delete": "Vous n'êtes pas autorisé à supprimer des schémas de ce projet",
       "invalid_json_schema": "Schéma JSON non valide",
       "not_found": "Schéma introuvable",
-      "referenced_by_trial": "Impossible de supprimer un schéma référencé par un essai"
+      "referenced_by_trial": "Impossible de supprimer un schéma référencé par une exécution d'extraction"
     },
     "sso": {
       "slug_no_alphanumeric": "Le nom du fournisseur doit contenir des caractères alphanumériques.",
@@ -3092,10 +3115,10 @@
     },
     "trials": {
       "required_without_property": "Ce schéma déclare des champs obligatoires qui ne sont pas définis dans « properties » ; chaque document échouerait à la validation : {details}",
-      "schema_definition_invalid": "Le schéma de cet essai n'est pas un JSON Schema valide : {details}",
+      "schema_definition_invalid": "Le schéma de cette exécution d'extraction n'est pas un JSON Schema valide : {details}",
       "project_not_found": "Projet introuvable",
       "not_authorized_project_action": "Vous n'êtes pas autorisé à effectuer l'action {permission} sur ce projet",
-      "not_authorized_create": "Vous n'êtes pas autorisé à créer des essais pour ce projet",
+      "not_authorized_create": "Vous n'êtes pas autorisé à créer des exécutions d'extraction pour ce projet",
       "schema_not_found": "Schéma introuvable",
       "prompt_not_found": "Invite introuvable",
       "document_set_not_found": "Ensemble de documents introuvable dans ce projet",
@@ -3105,19 +3128,19 @@
       "llm_config_incomplete": "La configuration du LLM est incomplète",
       "llm_endpoint_not_allowed": "L'URL de point de terminaison LLM fournie n'est pas autorisée.",
       "bypass_celery_admin_only": "Seuls les administrateurs peuvent définir bypass_celery",
-      "celery_disabled": "Le traitement en arrière-plan est désactivé sur ce serveur (DISABLE_CELERY). Activez Celery ou exécutez l'essai avec bypass_celery (administrateurs uniquement).",
-      "dispatch_failed": "Impossible de mettre l'essai en file d'attente pour le traitement en arrière-plan. Veuillez réessayer plus tard.",
-      "trial_not_found": "Essai introuvable",
-      "no_failed_documents": "L'essai ne comporte aucun document en échec à relancer",
-      "not_authorized_access": "Vous n'êtes pas autorisé à accéder aux essais de ce projet",
+      "celery_disabled": "Le traitement en arrière-plan est désactivé sur ce serveur (DISABLE_CELERY). Activez Celery ou exécutez l'extraction avec bypass_celery (administrateurs uniquement).",
+      "dispatch_failed": "Impossible de mettre l'exécution d'extraction en file d'attente pour le traitement en arrière-plan. Veuillez réessayer plus tard.",
+      "trial_not_found": "Exécution d'extraction introuvable",
+      "no_failed_documents": "L'exécution d'extraction ne comporte aucun document en échec à relancer",
+      "not_authorized_access": "Vous n'êtes pas autorisé à accéder aux exécutions d'extraction de ce projet",
       "invalid_status_filter": "Filtre de statut invalide : {status}",
-      "not_authorized_update": "Vous n'êtes pas autorisé à mettre à jour les essais de ce projet",
+      "not_authorized_update": "Vous n'êtes pas autorisé à mettre à jour les exécutions d'extraction de ce projet",
       "no_updatable_fields": "Aucun champ modifiable fourni",
-      "cannot_cancel": "L'essai ne peut pas être annulé",
-      "not_authorized_delete": "Vous n'êtes pas autorisé à supprimer les essais de ce projet",
-      "still_running": "L'essai est toujours en cours. Annulez-le avant de le supprimer.",
-      "no_results": "Aucun résultat trouvé pour cet essai",
-      "not_authorized_evaluate": "Vous n'êtes pas autorisé à évaluer les essais de ce projet",
+      "cannot_cancel": "L'exécution d'extraction ne peut pas être annulée",
+      "not_authorized_delete": "Vous n'êtes pas autorisé à supprimer les exécutions d'extraction de ce projet",
+      "still_running": "L'exécution d'extraction est toujours en cours. Annulez-la avant de la supprimer.",
+      "no_results": "Aucun résultat trouvé pour cette exécution d'extraction",
+      "not_authorized_evaluate": "Vous n'êtes pas autorisé à évaluer les exécutions d'extraction de ce projet",
       "groundtruth_not_found": "Données de référence introuvables",
       "validation_failed": "La validation a échoué. Consultez les journaux du serveur pour plus de détails.",
       "evaluation_value_error": "{error}"

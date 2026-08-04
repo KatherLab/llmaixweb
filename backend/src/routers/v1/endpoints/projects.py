@@ -302,6 +302,12 @@ def get_projects(
     )
     # Subqueries for the other workflow-step counts (drives the frontend's
     # per-step "done" check mark in the project nav bar)
+    file_count_subq = (
+        select(func.count(models.File.id))
+        .where(models.File.project_id == models.Project.id)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
     schema_count_subq = (
         select(func.count(models.Schema.id))
         .where(models.Schema.project_id == models.Project.id)
@@ -331,6 +337,7 @@ def get_projects(
 
     stmt = stmt.add_columns(
         doc_count_subq.label("document_count"),
+        file_count_subq.label("file_count"),
         schema_count_subq.label("schema_count"),
         prompt_count_subq.label("prompt_count"),
         trial_count_subq.label("trial_count"),
@@ -355,6 +362,7 @@ def get_projects(
     for (
         project,
         doc_count,
+        file_count,
         schema_count,
         prompt_count,
         trial_count,
@@ -368,6 +376,7 @@ def get_projects(
             "owner_id": project.owner_id,
             "owner": project.owner,
             "document_count": doc_count or 0,
+            "file_count": file_count or 0,
             "schema_count": schema_count or 0,
             "prompt_count": prompt_count or 0,
             "trial_count": trial_count or 0,
@@ -395,6 +404,12 @@ def get_project(
         select(func.count(models.Document.id))
         .where(models.Document.project_id == models.Project.id)
         .where(models.Document.is_latest)
+        .correlate(models.Project)
+        .scalar_subquery()
+    )
+    file_count_subq = (
+        select(func.count(models.File.id))
+        .where(models.File.project_id == models.Project.id)
         .correlate(models.Project)
         .scalar_subquery()
     )
@@ -429,6 +444,7 @@ def get_project(
         select(
             models.Project,
             doc_count_subq.label("document_count"),
+            file_count_subq.label("file_count"),
             schema_count_subq.label("schema_count"),
             prompt_count_subq.label("prompt_count"),
             trial_count_subq.label("trial_count"),
@@ -445,7 +461,15 @@ def get_project(
 
     if row is None:
         raise api_error("projects.not_found", 404, "Project not found")
-    project, doc_count, schema_count, prompt_count, trial_count, eval_count = row
+    (
+        project,
+        doc_count,
+        file_count,
+        schema_count,
+        prompt_count,
+        trial_count,
+        eval_count,
+    ) = row
 
     if not can_access_project(current_user, project):
         raise api_error(
@@ -463,6 +487,7 @@ def get_project(
         "owner_id": project.owner_id,
         "owner": project.owner,
         "document_count": doc_count or 0,
+        "file_count": file_count or 0,
         "schema_count": schema_count or 0,
         "prompt_count": prompt_count or 0,
         "trial_count": trial_count or 0,

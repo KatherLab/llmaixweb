@@ -4,7 +4,7 @@ LLMAIx Web keeps state in two places. **Both** must be backed up together to get
 a consistent restore point:
 
 1. **The database** (PostgreSQL in production) — projects, files metadata,
-   documents, schemas, prompts, trials, results, evaluations, users, settings.
+   documents, schemas, prompts, extraction runs, results, evaluations, users, settings.
 2. **Object / file storage** — the actual uploaded files and generated
    artifacts, stored either in the local storage directory or an S3-compatible
    bucket under UUID-based filenames.

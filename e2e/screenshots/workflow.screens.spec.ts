@@ -451,7 +451,7 @@ test('documentation screenshots: full workflow', async ({ page }) => {
     // Trials: the full create-trial modal
     await extra('trial-create-modal', async () => {
       await tab('trials')
-      await page.getByRole('button', { name: 'Start New Trial' }).first().click()
+      await page.getByRole('button', { name: 'Start Extraction Run' }).first().click()
       await expect(dialog()).toBeVisible({ timeout: 5000 })
       await page.waitForTimeout(800)
       // Scroll the model selector into view: the modal is taller than the

@@ -72,6 +72,58 @@
         @update:id-column="updateIdColumn"
         @update:json-id-field="updateJsonIdField"
       />
+      <BaseButton
+        v-if="showIdSelector"
+        variant="secondary"
+        size="sm"
+        class="text-xs font-semibold self-center"
+        :loading="matchCheckLoading"
+        @click="runMatchCheck"
+      >
+        {{ $t('groundtruth.match_check.button') }}
+      </BaseButton>
+      <!-- Inline match-check result for the CURRENT (unsaved) ID selection.
+           Cleared whenever the selection changes; never auto-fires. -->
+      <div
+        v-if="matchCheckError"
+        class="w-full flex items-start gap-1.5 text-xs text-red-600 dark:text-red-400"
+      >
+        <CircleAlert class="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <span>{{ $t('groundtruth.match_check.failed', { error: matchCheckError }) }}</span>
+      </div>
+      <div
+        v-else-if="matchCheck"
+        class="w-full flex items-start gap-1.5 text-xs"
+        :class="{
+          'text-green-700 dark:text-green-400': matchCheckState === 'success',
+          'text-amber-700 dark:text-amber-400': matchCheckState === 'partial',
+          'text-red-600 dark:text-red-400': matchCheckState === 'none',
+        }"
+      >
+        <CircleCheck v-if="matchCheckState === 'success'" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <CircleAlert v-else class="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <span v-if="matchCheckState === 'success'">
+          {{
+            $t('groundtruth.match_check.success', {
+              matched: matchCheck.matched_count,
+              total: matchCheck.total_rows,
+            })
+          }}
+        </span>
+        <span v-else-if="matchCheckState === 'partial'">
+          {{
+            $t('groundtruth.match_check.partial', {
+              matched: matchCheck.matched_count,
+              total: matchCheck.total_rows,
+            })
+          }}
+          <span class="font-mono">{{ matchCheck.unmatched_examples.join(', ') }}</span>
+        </span>
+        <span v-else>
+          {{ $t('groundtruth.match_check.none', { total: matchCheck.total_rows }) }}
+          {{ $t('groundtruth.match_check.hint') }}
+        </span>
+      </div>
     </section>
 
     <!-- MAIN CONTENT: EVEN 3 COLUMNS, SCROLLS IF NEEDED -->
@@ -298,7 +350,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
-import { ArrowRight, Check, CircleAlert, FileText, Plus, Sparkles } from '@lucide/vue'
+import { ArrowRight, Check, CircleAlert, CircleCheck, FileText, Plus, Sparkles } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import FieldTree from '@/components/groundtruth/FieldTree.vue'
@@ -310,7 +362,14 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import { schemasApi } from '@/services/schemasApi'
 import { groundtruthApi } from '@/services/groundtruthApi'
 import { extractErrorMessage } from '@/utils/errors'
-import type { ComparisonMethod, FieldType, GroundTruth, Schema, SchemaDefinition } from '@/types'
+import type {
+  ComparisonMethod,
+  FieldType,
+  GroundTruth,
+  GroundTruthMatchPreview,
+  Schema,
+  SchemaDefinition,
+} from '@/types'
 
 interface MappingItem {
   schema_id: number
@@ -356,6 +415,53 @@ const mappings = ref<MappingItem[]>([])
 const loading = ref(false)
 const justSaved = ref(false)
 const saveDisabled = computed(() => !canSave.value || justSaved.value)
+
+// --- GT ↔ document ID match pre-check (manual, never auto-fires). The result
+// is display-only state — deliberately NOT part of the dirty-guard snapshot.
+const matchCheck = ref<GroundTruthMatchPreview | null>(null)
+const matchCheckError = ref('')
+const matchCheckLoading = ref(false)
+const matchCheckState = computed<'success' | 'partial' | 'none' | null>(() => {
+  const r = matchCheck.value
+  if (!r) return null
+  if (r.matched_count === 0) return 'none'
+  if (r.matched_count < r.total_rows) return 'partial'
+  return 'success'
+})
+
+function clearMatchCheck() {
+  matchCheck.value = null
+  matchCheckError.value = ''
+}
+
+// A stale result would misreport a different ID selection — clear it on change.
+watch([idColumn, jsonIdField], clearMatchCheck)
+
+/** The candidate id config the backend should check — mirrors saveIdColumn's
+ *  payload shape (JSON: the picked field or null-for-filename; tabular: the
+ *  selected column or null for the default heuristics). */
+function candidateIdColumn(): string | null {
+  if (isJsonFormat.value) {
+    return idColumn.value === '__field__' ? jsonIdField.value || null : null
+  }
+  return idColumn.value || null
+}
+
+async function runMatchCheck() {
+  if (matchCheckLoading.value) return
+  matchCheckLoading.value = true
+  clearMatchCheck()
+  try {
+    const res = await groundtruthApi.matchPreview(props.projectId!, props.groundTruth!.id, {
+      id_column: candidateIdColumn(),
+    })
+    matchCheck.value = res.data
+  } catch (err) {
+    matchCheckError.value = extractErrorMessage(err)
+  } finally {
+    matchCheckLoading.value = false
+  }
+}
 
 // --- Unsaved-changes tracking (snapshot compare, same pattern as
 // SchemaFormModal). The baseline is captured after open-initialization so the
@@ -455,6 +561,7 @@ watch(
       justSaved.value = false
       initialSnapshot.value = ''
       showDiscardConfirm.value = false
+      clearMatchCheck()
     }
   },
   { immediate: true },

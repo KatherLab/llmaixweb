@@ -119,7 +119,7 @@ Before running LLM extraction, users define:
 - `Prompt` (`models/project.py:448`) — `system_prompt` + `user_prompt`
 
 ### 5. Trials
-A **Trial** runs LLM-based extraction against a set of documents using a specific schema + prompt + LLM model combination. Results are stored as `TrialResult` objects (one per document).
+A **Trial** runs LLM-based extraction against a set of documents using a specific schema + prompt + LLM model combination. Results are stored as `TrialResult` objects (one per document). In the UI this entity is labeled **"Extraction Run"**; code, API routes, database tables, and i18n key names all keep the term "trial".
 
 **Key model:** `Trial` (`models/project.py:492`)
 - References `schema_id`, `prompt_id`, `document_set_id`

@@ -26,34 +26,6 @@ export function formatJSON(json: string | Record<string, unknown> | null | undef
   }
 }
 
-/**
- * Starter fields seeded for a brand-new schema (matches the fields the
- * SimpleSchemaEditor used to auto-insert on mount). Seeded here — instead
- * of in the editor's onMounted — so it only applies to new schemas, not to
- * every remount caused by toggling Simple/Advanced mode.
- */
-export const STARTER_SCHEMA: SchemaDefinition = {
-  type: 'object',
-  properties: {
-    patient_name: {
-      type: 'string',
-      title: 'Patient Name',
-      description: 'Full name of the patient',
-    },
-    date_of_birth: {
-      type: 'string',
-      format: 'date',
-      title: 'Date Of Birth',
-      description: 'Patient date of birth',
-    },
-    medical_record_number: {
-      type: 'string',
-      title: 'Medical Record Number',
-      description: 'Unique medical record ID',
-    },
-  },
-}
-
 // Schema templates for medical documents
 export const schemaTemplates: SchemaTemplate[] = [
   {

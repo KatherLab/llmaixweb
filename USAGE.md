@@ -8,7 +8,7 @@ This guide walks through a complete end-to-end example: from a CSV of medical re
 It mirrors the workflow tabs inside a project:
 
 ```
-Files & Preprocessing → Documents → Schemas & Prompts → Run Trials → Evaluation
+Files & Preprocessing → Documents → Schemas & Prompts → Extraction Runs → Evaluation
 ```
 
 ---
@@ -76,7 +76,7 @@ You can either build it in the **Visual Editor** tab or paste it into the **Raw 
 
 ## The Prompt
 
-Use the **simple mode** of the prompt editor. In simple mode you only write the **extraction instruction** (the user prompt) — the document text and the JSON schema are both injected automatically by the app when the trial runs, so you don't need a placeholder and you don't need to paste the schema into the prompt.
+Use the **simple mode** of the prompt editor. In simple mode you only write the **extraction instruction** (the user prompt) — the document text and the JSON schema are both injected automatically by the app when the extraction runs, so you don't need a placeholder and you don't need to paste the schema into the prompt.
 
 **Extraction instruction (user prompt):**
 
@@ -125,7 +125,7 @@ When preprocessing finishes, you'll have **8 documents** (one per report).
 
 ![The Documents tab listing the 8 documents produced by row-by-row import, one per report.](docs/assets/screenshots/documents-list.png)
 
-On the **Documents** tab you can review the 8 extracted documents and confirm the text looks correct. The tab has two sub-views: **All Documents** and **Document Groups**. A *document group* is a saved selection of documents you can run a trial against — select documents in the list and click **Create Group**, or create one from the **Document Groups** tab. This is optional: trials can also select documents individually.
+On the **Documents** tab you can review the 8 extracted documents and confirm the text looks correct. The tab has two sub-views: **All Documents** and **Document Groups**. A *document group* is a saved selection of documents you can start an extraction run against — select documents in the list and click **Create Group**, or create one from the **Document Groups** tab. This is optional: extraction runs can also select documents individually.
 
 ---
 
@@ -138,32 +138,32 @@ On the **Schemas & Prompts** tab, switch between the **JSON Schemas** and **Extr
 
 ![The schema editor in Advanced mode, Raw JSON tab, holding the 8-field lung-embolism schema.](docs/assets/screenshots/schema-editor.png)
 
-![The prompt editor in simple mode: just the extraction instruction — the document text and schema are appended automatically at trial time.](docs/assets/screenshots/prompt-editor.png)
+![The prompt editor in simple mode: just the extraction instruction — the document text and schema are appended automatically when the extraction runs.](docs/assets/screenshots/prompt-editor.png)
 
 ---
 
-## Step 4 — Run Trials
+## Step 4 — Extraction Runs
 
-On the **Run Trials** tab, click to start a new trial. The trial dialog has a **Simple**/**Advanced** toggle (Simple is the default). In order, pick:
+On the **Extraction Runs** tab (extraction runs were formerly called "trials"; the API and database still use the term `trial`), click **Start Extraction Run**. The dialog has a **Simple**/**Advanced** toggle (Simple is the default). In order, pick:
 
 1. **Prompt** — the extraction instruction from Step 3.
 2. **Schema** — the 8-field schema from Step 3.
 3. **LLM Model** — models are fetched from your configured LLM provider (the system default set in the admin panel). In Advanced mode you can override with custom API settings (base URL + API key) to point at any OpenAI-compatible endpoint.
 4. **Documents** — choose a selection mode: **Individual** (pick the 8 documents), **Groups** (pick a document group), or **Smart**.
 
-![The Start New Trial dialog: prompt, schema, and model selectors on the left; document selection (Individual / Groups / Smart) on the right.](docs/assets/screenshots/trial-create-modal.png)
+![The Start Extraction Run dialog: prompt, schema, and model selectors on the left; document selection (Individual / Groups / Smart) on the right.](docs/assets/screenshots/trial-create-modal.png)
 
-Then run the trial. The app sends each document's `report` text to the LLM and stores one **Trial Result** per document, containing the JSON the model produced.
+Then start the run. The app sends each document's `report` text to the LLM and stores one **result** per document, containing the JSON the model produced.
 
-After the trial completes, open it to inspect the per-document JSON output side-by-side with the source text.
+After the run completes, open it to inspect the per-document JSON output side-by-side with the source text.
 
-![The trial results viewer: the document list on the left, the source report and the extracted JSON side-by-side on the right.](docs/assets/screenshots/trial-results.png)
+![The extraction results viewer: the document list on the left, the source report and the extracted JSON side-by-side on the right.](docs/assets/screenshots/trial-results.png)
 
 ---
 
 ## Step 5 — Evaluation
 
-Now compare the trial's output against the ground-truth labels.
+Now compare the extraction run's output against the ground-truth labels.
 
 1. On the **Evaluation** tab, upload the ground truth: the same `reports_with_groundtruth.csv` file. (You can also reuse a ground-truth file you've uploaded before — uploaded files are listed and selectable.) Select it in the ground-truth list.
 2. Click **Configure mappings**. This opens a three-pane dialog — schema fields on the left, ground-truth columns on the right, and a center panel where you pair them. Here you:
@@ -185,7 +185,7 @@ Now compare the trial's output against the ground-truth labels.
    ![The Configure Ground Truth Mapping dialog: schema fields on the left, ground-truth columns on the right, a comparison method per field, and the Document ID column at the top.](docs/assets/screenshots/groundtruth-mapping.png)
 
 3. Save the mappings (they're stored on the ground-truth file, so you only do this once).
-4. Click **Evaluate Trial**, pick the trial you ran in Step 4, and run the evaluation. You get:
+4. Click **Evaluate Extraction Run**, pick the run you started in Step 4, and run the evaluation. You get:
    - **Overall metrics** — accuracy, plus precision, recall, and F1 (a wrong value counts as both a false positive and a false negative; a missing value is a false negative; an extra value is a false positive).
    - **Per-field metrics** — accuracy, precision, recall, F1, and an error breakdown per field.
    - **Confusion matrices** for categorical fields (`location`, `side`).
@@ -203,9 +203,9 @@ Now compare the trial's output against the ground-truth labels.
 | Step | What you do | Result |
 |---|---|---|
 | **Files & Preprocessing** | Upload CSV, pick `report` as text column, `id` as case ID, row-by-row | 8 text documents |
-| **Documents** | Review / optionally group into a document group | Documents (or a group) to trial on |
+| **Documents** | Review / optionally group into a document group | Documents (or a group) to run extraction on |
 | **Schemas & Prompts** | Add the 8-field JSON schema + extraction prompt | Reusable schema & prompt |
-| **Run Trials** | Run extraction over the 8 documents with your LLM | 8 JSON results |
+| **Extraction Runs** | Run extraction over the 8 documents with your LLM | 8 JSON results |
 | **Evaluation** | Upload the same CSV as ground truth, pick ID column, map fields + comparison methods | Accuracy/P/R/F1 + per-field/per-document metrics + confusion matrices |
 
 This is the same scenario the original LLMAIx tutorial demonstrates — now with persistent projects, user management, and a structured evaluation view.

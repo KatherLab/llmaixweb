@@ -18,6 +18,10 @@
       >
         <h4 class="font-medium text-content">{{ template.name }}</h4>
         <p class="text-sm text-content-muted mt-1">{{ template.description }}</p>
+        <!-- Compact field preview so users see what they'd get before applying -->
+        <div class="mt-3 pt-3 border-t border-default max-h-44 overflow-y-auto">
+          <SchemaFieldList :schema-definition="template.schema" />
+        </div>
       </button>
     </div>
 
@@ -32,6 +36,7 @@
 <script setup lang="ts">
 import BaseModal from '@/components/common/BaseModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import SchemaFieldList from './SchemaFieldList.vue'
 import type { SchemaTemplate } from '@/utils/schemaTemplates'
 
 interface Props {

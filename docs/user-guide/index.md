@@ -5,7 +5,7 @@ step of the workflow and describes every control, option, and non-obvious
 behavior on that screen.
 
 ```
-Files → Preprocessing → Documents → Schemas + Prompts → Trials → Evaluation
+Files → Preprocessing → Documents → Schemas + Prompts → Extraction Runs → Evaluation
 ```
 
 | Page | What you do there |
@@ -14,9 +14,9 @@ Files → Preprocessing → Documents → Schemas + Prompts → Trials → Evalu
 | **[Preprocessing](preprocessing.md)** | Turn files into text with an OCR / extraction engine. |
 | **[Documents](documents.md)** | Browse extracted text, group documents, compare versions. |
 | **[Schemas & prompts](schemas-and-prompts.md)** | Define the output structure and the LLM instructions. |
-| **[Trials](trials.md)** | Run LLM extraction and inspect the results. |
+| **[Extraction runs](trials.md)** | Run LLM extraction and inspect the results. |
 | **[Ground truth](ground-truth.md)** | Upload known-correct values and map them to schema fields. |
-| **[Evaluation](evaluation.md)** | Compare a trial against ground truth and read the metrics. |
+| **[Evaluation](evaluation.md)** | Compare an extraction run against ground truth and read the metrics. |
 | **[Account settings](account.md)** | Manage your profile, password, and connected accounts. |
 
 !!! note "Administrators"

@@ -18,7 +18,7 @@ Size on these, not on login count:
 - **Concurrent processing jobs** — preprocessing and extraction run as Celery
   background jobs, largely serialized per worker.
 - **Document volume** — object storage and Postgres grow with cumulative files,
-  extracted text, and trial results.
+  extracted text, and extraction results.
 
 ## Minimum
 
@@ -154,7 +154,7 @@ for OCR-heavy documents.
 - **Object storage (rustfs / S3)** — uploaded files plus generated artifacts
   (per-page OCR images, row-split CSV documents). Budget corpus size × a
   multiple.
-- **Postgres** — extracted text, trial results, evaluation metrics, audit/error
+- **Postgres** — extracted text, extraction-run results, evaluation metrics, audit/error
   logs. Smaller than object storage but keep on SSD and back up.
 
 Both grow with cumulative usage. See [Data retention](../DATA_RETENTION.md) and

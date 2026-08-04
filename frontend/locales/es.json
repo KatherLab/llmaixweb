@@ -139,9 +139,9 @@
       "dismiss_task": "Descartar tarea",
       "processing": "Procesando…",
       "preprocessing_progress": "Progreso del preprocesamiento",
-      "trials_count": "Pruebas ({count})",
-      "view_trial": "Ver prueba {name}",
-      "dismiss_trial": "Descartar prueba",
+      "trials_count": "Ejecuciones de extracción ({count})",
+      "view_trial": "Ver ejecución {name}",
+      "dismiss_trial": "Descartar ejecución",
       "docs_progress": "{done}/{total} docs",
       "view_all": "Ver toda la actividad",
       "files_processing": "{completed}/{total} archivos procesados",
@@ -265,7 +265,7 @@
       "permanently_delete": "Eliminar permanentemente",
       "delete_invitation_title": "Eliminar invitación",
       "delete": "Eliminar",
-      "delete_user_message": "Esto eliminará permanentemente la cuenta de usuario y todos los datos asociados, incluidos todos los proyectos de este usuario (archivos, documentos, esquemas, prompts, pruebas, evaluaciones), y los archivos subidos se eliminarán del almacenamiento.\n\n¿Seguro que desea eliminar este usuario?\n{name} ({email})",
+      "delete_user_message": "Esto eliminará permanentemente la cuenta de usuario y todos los datos asociados, incluidos todos los proyectos de este usuario (archivos, documentos, esquemas, prompts, ejecuciones de extracción, evaluaciones), y los archivos subidos se eliminarán del almacenamiento.\n\n¿Seguro que desea eliminar este usuario?\n{name} ({email})",
       "delete_invitation_message": "¿Seguro que desea eliminar esta invitación? Esta acción no se puede deshacer.\n{email}",
       "toast": {
         "user_deleted": "Usuario \"{name}\" eliminado correctamente.",
@@ -498,7 +498,8 @@
       "create_account": "Crear cuenta",
       "have_account": "¿Ya tiene una cuenta?",
       "sign_in_here": "Inicie sesión aquí",
-      "success_toast": "¡Registro exitoso! Iniciando sesión..."
+      "success_toast": "¡Registro exitoso! Iniciando sesión...",
+      "closed_hint": "El registro es solo por invitación: pida un enlace de invitación a un administrador."
     },
     "first_admin": {
       "welcome_to": "Bienvenido a",
@@ -690,15 +691,15 @@
       "count": "ningún grupo | un grupo | {count} grupos",
       "empty_title": "No hay grupos de documentos",
       "empty_search": "Prueba a ajustar tu búsqueda",
-      "empty_description": "Un grupo es un conjunto de documentos con nombre sobre el que puedes ejecutar una prueba. Crea uno para ejecutar una extracción sobre una selección específica de documentos.",
+      "empty_description": "Un grupo es un conjunto de documentos con nombre sobre el que puedes iniciar una ejecución de extracción. Crea uno para ejecutar una extracción sobre una selección específica de documentos.",
       "item_label": "grupos",
       "auto": "Auto",
       "auto_generated_tooltip": "Generado automáticamente durante el preprocesamiento",
       "mixed": "Mixto",
       "type_auto": "Generado automáticamente",
       "type_manual": "Manual",
-      "cannot_delete_tooltip": "No se puede eliminar: este grupo lo usa una prueba",
-      "cannot_delete_aria": "No se puede eliminar: usado por una prueba",
+      "cannot_delete_tooltip": "No se puede eliminar: este grupo lo usa una ejecución de extracción",
+      "cannot_delete_aria": "No se puede eliminar: usado por una ejecución de extracción",
       "delete_title": "Eliminar grupo de documentos",
       "also_delete_documents": "Eliminar también todos los documentos de este grupo (si no se referencian en otro lugar)",
       "col_name": "Nombre del grupo",
@@ -713,7 +714,7 @@
     "group_form": {
       "edit_title": "Editar grupo de documentos",
       "create_title": "Crear grupo de documentos",
-      "purpose_hint": "Un grupo es un conjunto de documentos con nombre sobre el que puedes ejecutar una prueba: úsalo para ejecutar una extracción sobre una selección específica de documentos.",
+      "purpose_hint": "Un grupo es un conjunto de documentos con nombre sobre el que puedes iniciar una ejecución de extracción: úsalo para ejecutar una extracción sobre una selección específica de documentos.",
       "name_label": "Nombre del grupo",
       "name_placeholder": "p. ej., Informes financieros del T4",
       "description_label": "Descripción",
@@ -837,7 +838,7 @@
     },
     "batch": {
       "entity_document": "documento | documentos",
-      "entity_trial": "prueba | pruebas",
+      "entity_trial": "ejecución de extracción | ejecuciones de extracción",
       "entity_file": "archivo | archivos",
       "selected": "{count} {entity} seleccionados",
       "force_reprocess": "Forzar reprocesamiento (ignorar los resultados existentes)",
@@ -867,13 +868,13 @@
       "button_export": "Exportar",
       "button_delete": "Eliminar {entity}",
       "button_confirm": "Confirmar",
-      "cascade_files": "Eliminar también los documentos generados y sus pruebas y resultados de extracción, y quitarlos de los grupos",
-      "cascade_default": "Eliminar también las pruebas y los resultados de extracción relacionados, y quitar los documentos de los grupos",
-      "warn_trials": "Las pruebas seleccionadas y sus resultados se eliminarán de forma permanente.",
+      "cascade_files": "Eliminar también los documentos generados y sus ejecuciones de extracción y resultados, y quitarlos de los grupos",
+      "cascade_default": "Eliminar también las ejecuciones de extracción y los resultados relacionados, y quitar los documentos de los grupos",
+      "warn_trials": "Las ejecuciones de extracción seleccionadas y sus resultados se eliminarán de forma permanente.",
       "warn_files": "Los archivos seleccionados y sus resultados de preprocesamiento se eliminarán de forma permanente.",
       "warn_documents": "Los documentos seleccionados y sus resultados de preprocesamiento se eliminarán de forma permanente.",
       "impact_document": "{count} documento | {count} documentos",
-      "impact_trial": "{count} prueba | {count} pruebas",
+      "impact_trial": "{count} ejecución de extracción | {count} ejecuciones de extracción",
       "impact_group_membership": "{count} pertenencia a grupo | {count} pertenencias a grupos",
       "impact_extraction_result": "{count} resultado de extracción | {count} resultados de extracción",
       "impact_evaluation_metric": "{count} métrica de evaluación | {count} métricas de evaluación",
@@ -904,7 +905,7 @@
       "start_reprocessing_failed": "No se pudo iniciar el reprocesamiento",
       "load_documents_failed": "No se pudieron cargar los documentos",
       "load_groups_failed": "No se pudieron cargar los grupos de documentos",
-      "cannot_delete_group": "No se puede eliminar el grupo: lo usa una prueba",
+      "cannot_delete_group": "No se puede eliminar el grupo: lo usa una ejecución de extracción",
       "group_and_docs_deleted": "Grupo y {count} documento eliminados | Grupo y {count} documentos eliminados",
       "group_deleted_docs_referenced": "Grupo eliminado, pero no se pudieron eliminar los documentos (referenciados en otro lugar).",
       "group_deleted": "Grupo de documentos eliminado",
@@ -918,12 +919,12 @@
       "retrying": "Reintentando...",
       "retry": "Reintentar",
       "title": "Evaluación",
-      "subtitle": "Comparar los resultados de los trials con los datos Ground Truth",
+      "subtitle": "Comparar los resultados de las ejecuciones de extracción con los datos Ground Truth",
       "upload_ground_truth": "Subir Ground Truth",
       "export_results": "Exportar resultados",
       "loading_ground_truth": "Cargando archivos Ground Truth...",
       "empty_gt_title": "Aún no hay archivos Ground Truth",
-      "empty_gt_description": "Suba datos Ground Truth para evaluar los resultados de sus trials",
+      "empty_gt_description": "Suba datos Ground Truth para evaluar los resultados de sus ejecuciones de extracción",
       "ground_truth_files": "Archivos Ground Truth",
       "manage": "Gestionar",
       "ground_truth_number": "Ground Truth #{number}",
@@ -935,18 +936,18 @@
       "show_explainer": "Mostrar cómo funciona la evaluación",
       "hide_help": "Ocultar ayuda",
       "how_it_works": "Cómo funciona",
-      "evaluate_trial": "Evaluar el trial",
+      "evaluate_trial": "Evaluar ejecución de extracción",
       "edit_mappings": "Editar asignaciones",
       "configure_mappings": "Configurar asignaciones",
       "hide": "Ocultar",
       "setup_required": "Configuración necesaria",
-      "no_evaluations": "Aún no hay evaluaciones. Seleccione un trial para evaluar.",
+      "no_evaluations": "Aún no hay evaluaciones. Seleccione una ejecución de extracción para evaluar.",
       "item_label": "evaluaciones"
     },
     "concepts": {
       "title": "Cómo funciona la evaluación",
       "ground_truth_term": "Ground Truth",
-      "ground_truth_desc": "— un archivo con los valores extraídos correctos con los que comparar los resultados de los trials.",
+      "ground_truth_desc": "— un archivo con los valores extraídos correctos con los que comparar los resultados de las ejecuciones de extracción.",
       "field_mapping_term": "Asignación de campo",
       "field_mapping_desc": "— vincula cada columna del Ground Truth con el campo de esquema correspondiente para poder comparar los valores.",
       "id_field_term": "Campo de ID",
@@ -966,11 +967,11 @@
     },
     "delete": {
       "title": "¿Eliminar evaluación?",
-      "message": "Esto elimina las métricas calculadas de {trial}. El trial y sus resultados se conservan; puede volver a evaluar en cualquier momento.",
+      "message": "Esto elimina las métricas calculadas de {trial}. La ejecución de extracción y sus resultados se conservan; puede volver a evaluar en cualquier momento.",
       "confirm": "Eliminar"
     },
     "columns": {
-      "trial": "Trial",
+      "trial": "Ejecución",
       "model": "Modelo",
       "overall_accuracy": "Exactitud global",
       "documents": "Documentos",
@@ -1002,7 +1003,7 @@
     },
     "analysis": {
       "back": "Volver a las evaluaciones",
-      "trial_number": "Trial #{number}",
+      "trial_number": "Ejecución #{number}",
       "export": "Exportar",
       "overall_metrics": "Métricas globales",
       "matched_only_tooltip": "La exactitud se calcula solo sobre los documentos asociados. Los documentos no asociados se enumeran en la tabla siguiente.",
@@ -1208,7 +1209,13 @@
       "select_different": "Seleccionar otros archivos",
       "start_processing": "Iniciar procesamiento",
       "tesseract_language": "Idioma de Tesseract",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "what_happens": "El preprocesamiento convierte sus archivos en texto plano que la IA puede leer. Los PDF con texto incrustado se leen directamente; los escaneos e imágenes necesitan OCR.",
+      "engine_desc": {
+        "docling_tesseract": "Se ejecuta en este servidor: gratuito, sus datos permanecen locales, ideal para escaneos limpios",
+        "mistral_ocr": "Envía las páginas a una API de OCR externa: mejor con diseños complejos y escritura a mano",
+        "llm_vision": "Envía imágenes de las páginas a un modelo de IA de visión: el más flexible, ideal para documentos difíciles"
+      }
     },
     "dropzone": {
       "aria_label": "Subir archivos — suelte los archivos aquí o active para explorar",
@@ -1460,14 +1467,20 @@
       "succeeded": "{count} correcto(s)",
       "title": "Subir archivos",
       "uploading_file": "Subiendo archivo {current} de {total}"
+    },
+    "first_run": {
+      "title": "Cómo funciona este proyecto",
+      "step_upload": "Suba sus documentos (PDF, escaneos, hojas de cálculo)",
+      "step_preprocess": "Preprocéselos para extraer su texto",
+      "step_review": "Revise los documentos resultantes y defina después qué extraer"
     }
   },
   "groundtruth": {
     "manager": {
       "title": "Gestionar archivos Ground Truth",
-      "subtitle": "Los archivos Ground Truth contienen los valores extraídos correctos con los que compara los resultados de las pruebas. Configure las asignaciones de campos para vincular cada columna Ground Truth con un campo del esquema.",
+      "subtitle": "Los archivos Ground Truth contienen los valores extraídos correctos con los que compara los resultados de las ejecuciones de extracción. Configure las asignaciones de campos para vincular cada columna Ground Truth con un campo del esquema.",
       "empty_title": "Aún no se han subido archivos Ground Truth",
-      "empty_description": "Suba un archivo con los valores correctos (CSV, XLSX o JSON) para empezar a evaluar la precisión de las pruebas.",
+      "empty_description": "Suba un archivo con los valores correctos (CSV, XLSX o JSON) para empezar a evaluar la precisión de las extracciones.",
       "default_name": "Ground Truth n.º {number}",
       "mappings_count": "{count} asignación | {count} asignaciones",
       "created": "Creado: {date}",
@@ -1607,7 +1620,15 @@
       "use_filename": "Usar el nombre de archivo del documento",
       "use_field": "Usar campo:",
       "select_field": "Seleccionar campo...",
-      "match_hint": "Controla cómo se asocian los documentos con los resultados de las pruebas para la evaluación."
+      "match_hint": "Controla cómo se asocian los documentos con los resultados de las ejecuciones de extracción para la evaluación."
+    },
+    "match_check": {
+      "button": "Comprobar coincidencias",
+      "success": "{matched} de {total} filas de Ground Truth coinciden con un documento",
+      "partial": "{matched} de {total} filas de Ground Truth coinciden con un documento. Ejemplos sin coincidencia:",
+      "none": "Ninguna de las {total} filas de Ground Truth coincide con un documento.",
+      "hint": "Compruebe que los valores de esta columna coinciden con los nombres o los ID de sus documentos.",
+      "failed": "Error en la comprobación de coincidencias: {error}"
     }
   },
   "landing": {
@@ -1618,11 +1639,11 @@
     },
     "hero": {
       "badge": "Plataforma de extracción de documentos a JSON",
-      "description": "Convierta documentos médicos y de laboratorio no estructurados en JSON estructurado y validado. Defina su esquema, ejecute ensayos de extracción con LLM y mida la precisión frente a datos de referencia — con cualquier modelo compatible con OpenAI, local o alojado."
+      "description": "Convierta documentos médicos y de laboratorio no estructurados en JSON estructurado y validado. Defina su esquema, ejecute extracciones con LLM y mida la precisión frente a datos de referencia — con cualquier modelo compatible con OpenAI, local o alojado."
     },
     "cta": {
       "title": "Empiece a extraer datos estructurados",
-      "subtitle": "Suba sus documentos, defina un esquema y ejecute su primer ensayo de extracción.",
+      "subtitle": "Suba sus documentos, defina un esquema e inicie su primera ejecución de extracción.",
       "go_to_projects": "Ir a los proyectos",
       "get_started": "Empezar",
       "login": "Iniciar sesión",
@@ -1647,12 +1668,12 @@
         "description": "Compare los valores extraídos con un archivo de referencia campo por campo, con métricas por campo y por documento y matrices de confusión."
       },
       "trials": {
-        "title": "Ensayos reproducibles",
+        "title": "Ejecuciones reproducibles",
         "description": "Ejecute la extracción en conjuntos de documentos con prompts, esquemas, modelos, temperatura y límites de tokens configurables. Compare ejecuciones en paralelo."
       },
       "api": {
         "title": "API compatibles con OpenAI",
-        "description": "Dirija los ensayos a cualquier endpoint compatible con OpenAI — OpenAI, Mistral, vLLM, Ollama o llama.cpp. Combínelos como quiera por ensayo."
+        "description": "Dirija las ejecuciones de extracción a cualquier endpoint compatible con OpenAI — OpenAI, Mistral, vLLM, Ollama o llama.cpp. Combínelas como quiera por ejecución."
       }
     },
     "pipeline": {
@@ -1675,7 +1696,7 @@
           "subtitle": "Definir la estructura"
         },
         "trials": {
-          "title": "Ejecutar ensayos",
+          "title": "Ejecutar extracciones",
           "subtitle": "Extracción con LLM"
         },
         "evaluation": {
@@ -1731,8 +1752,8 @@
       "step3": {
         "title": "Gestión de documentos",
         "organization": "Organización",
-        "selection_for_trials": "Selección para ensayos",
-        "choose_documents": "Elija documentos para un ensayo de dos maneras:",
+        "selection_for_trials": "Selección para ejecuciones de extracción",
+        "choose_documents": "Elija documentos para una ejecución de extracción de dos maneras:",
         "document_features": {
           "sets": "Agrupar documentos en conjuntos reutilizables",
           "filter": "Filtrar y buscar por metadatos",
@@ -1742,11 +1763,11 @@
         "selection_options": {
           "sets": {
             "name": "Conjuntos de documentos",
-            "description": "Ejecutar un ensayo sobre un grupo entero de una sola vez"
+            "description": "Ejecutar una extracción sobre un grupo entero de una sola vez"
           },
           "individual": {
             "name": "Selección individual",
-            "description": "Elegir manualmente documentos específicos para un ensayo"
+            "description": "Elegir manualmente documentos específicos para una ejecución de extracción"
           }
         }
       },
@@ -1765,7 +1786,7 @@
       "step5": {
         "title": "Extracción impulsada por LLM",
         "compatible_providers": "Proveedores compatibles",
-        "trial_configuration": "Configuración del ensayo",
+        "trial_configuration": "Configuración de la ejecución",
         "flow": {
           "document": "Documento",
           "prompt": "Prompt",
@@ -1791,7 +1812,7 @@
           "limits": "Establecer temperatura y límites de tokens",
           "sets": "Ejecutar sobre conjuntos de documentos completos",
           "compare": "Comparar prompts, esquemas y modelos",
-          "tokens": "Seguir el uso de tokens por ensayo"
+          "tokens": "Seguir el uso de tokens por ejecución"
         }
       },
       "step6": {
@@ -1856,17 +1877,17 @@
       "files": "Archivos y preprocesamiento",
       "documents": "Documentos",
       "schemas": "Esquemas e instrucciones",
-      "trials": "Ejecutar pruebas",
+      "trials": "Ejecuciones de extracción",
       "evaluation": "Evaluación"
     },
     "hints": {
       "no_documents": {
         "title": "Aún no hay documentos",
-        "body": "Preprocese los archivos cargados para generar documentos. Los documentos son el texto extraído que el LLM lee durante una prueba."
+        "body": "Preprocese los archivos cargados para generar documentos. Los documentos son el texto extraído que el LLM lee durante una ejecución de extracción."
       },
       "no_trial_documents": {
-        "title": "No hay documentos para ejecutar una prueba",
-        "body": "Una prueba extrae datos estructurados de sus documentos. Preprocese primero los archivos para generar documentos."
+        "title": "No hay documentos para ejecutar una extracción",
+        "body": "Una ejecución de extracción extrae datos estructurados de sus documentos. Preprocese primero los archivos para generar documentos."
       },
       "no_schema": {
         "title": "Aún no hay esquema"
@@ -1875,11 +1896,11 @@
         "title": "Aún no hay instrucción"
       },
       "schema_prompt": {
-        "body": "Una prueba necesita un esquema (los campos a extraer) y una instrucción (las indicaciones de extracción). Cree ambos antes de ejecutar una prueba."
+        "body": "Una ejecución de extracción necesita un esquema (los campos a extraer) y una instrucción (las indicaciones de extracción). Cree ambos antes de iniciar una ejecución."
       },
       "no_trials": {
-        "title": "No hay pruebas para evaluar",
-        "body": "La evaluación compara los resultados de las pruebas con los datos de referencia. Ejecute primero una prueba para producir resultados que evaluar."
+        "title": "No hay ejecuciones de extracción para evaluar",
+        "body": "La evaluación compara los resultados de las extracciones con los datos de referencia. Ejecute primero una extracción para producir resultados que evaluar."
       }
     },
     "create": {
@@ -1910,7 +1931,7 @@
       "impact_document": "{count} documento | {count} documentos",
       "impact_schema": "{count} esquema | {count} esquemas",
       "impact_prompt": "{count} instrucción | {count} instrucciones",
-      "impact_trial": "{count} prueba | {count} pruebas",
+      "impact_trial": "{count} ejecución de extracción | {count} ejecuciones de extracción",
       "impact_evaluation": "{count} evaluación | {count} evaluaciones"
     },
     "grid": {
@@ -1934,12 +1955,11 @@
       },
       "load_failed": "No se pudieron cargar los proyectos.",
       "workflow": {
-        "upload": "Cargar archivos",
-        "preprocess": "Preprocesar",
-        "documents": "Documentos",
-        "schemas": "Esquemas",
-        "trials": "Ejecutar pruebas",
-        "evaluate": "Evaluar"
+        "files_desc": "Suba PDF, escaneos y hojas de cálculo y conviértalos en texto legible",
+        "documents_desc": "Revise el texto extraído antes de ejecutar la extracción",
+        "schemas_desc": "Defina los campos a extraer y las instrucciones para la IA",
+        "trials_desc": "Ejecute la extracción en sus documentos con un LLM",
+        "evaluation_desc": "Compare los resultados con la Ground Truth para medir la precisión"
       }
     },
     "settings": {
@@ -1991,11 +2011,12 @@
       "delete": "Eliminar esquema",
       "col_name": "Nombre",
       "col_created": "Creado",
-      "search_chip": "Búsqueda: \"{query}\""
+      "search_chip": "Búsqueda: \"{query}\"",
+      "start_from_template": "Empezar desde una plantilla"
     },
     "view": {
       "snapshot": "Instantánea",
-      "snapshot_title": "Copia congelada del esquema tal como estaba cuando se ejecutó la prueba",
+      "snapshot_title": "Copia congelada del esquema tal como estaba cuando se inició la ejecución de extracción",
       "copy": "Copiar",
       "close": "Cerrar",
       "copied": "Esquema copiado"
@@ -2079,7 +2100,7 @@
       "item_label": "prompts",
       "search_placeholder": "Buscar prompts...",
       "no_match": "Ningún prompt coincide con su búsqueda",
-      "auto_injected_tooltip": "Sin marcador de posición {ph} — el texto del documento se añade automáticamente cuando se ejecuta la prueba.",
+      "auto_injected_tooltip": "Sin marcador de posición {ph} — el texto del documento se añade automáticamente cuando se ejecuta la extracción.",
       "auto_injected": "Insertado automáticamente",
       "view": "Ver prompt",
       "edit": "Editar prompt",
@@ -2091,7 +2112,7 @@
     },
     "view": {
       "snapshot": "Instantánea",
-      "snapshot_title": "Copia congelada del prompt tal como estaba cuando se ejecutó la prueba",
+      "snapshot_title": "Copia congelada del prompt tal como estaba cuando se inició la ejecución de extracción",
       "copy": "Copiar",
       "close": "Cerrar",
       "copied": "Prompt copiado"
@@ -2108,12 +2129,12 @@
       "description_placeholder": "Describa qué debe extraer este prompt...",
       "instruction_label": "Instrucción de extracción",
       "instruction_placeholder": "Según el contenido del documento, extraiga estos campos:",
-      "instruction_help": "Esto se usará como prompt del usuario. El texto del documento y el esquema seleccionado se añaden automáticamente cuando se ejecuta la prueba.",
+      "instruction_help": "Esto se usará como prompt del usuario. El texto del documento y el esquema seleccionado se añaden automáticamente cuando se ejecuta la extracción.",
       "system_from_advanced": "Este prompt tiene un prompt del sistema del modo Avanzado. Se conserva mientras edita, pero no se guardará mientras esté seleccionado el modo Simple.",
       "hide": "Ocultar",
       "preview": "Vista previa",
       "preview_with_sample": "Vista previa con documento de ejemplo",
-      "simple_preview_help": "En el modo Simple no se envía ningún mensaje del sistema — su instrucción se convierte en el mensaje del usuario, con el documento y el esquema de la prueba añadidos:",
+      "simple_preview_help": "En el modo Simple no se envía ningún mensaje del sistema — su instrucción se convierte en el mensaje del usuario, con el documento y el esquema de la ejecución de extracción añadidos:",
       "user_message_preview": "Vista previa del mensaje del usuario",
       "system_message_preview": "Vista previa del mensaje del sistema",
       "callout_title": "Cómo funcionan los prompts",
@@ -2123,7 +2144,7 @@
       "callout_user_text": "— instrucciones por documento, donde",
       "callout_replaced": "se reemplaza por el texto del documento.",
       "callout_schema_label": "El esquema seleccionado se incluye automáticamente",
-      "callout_schema_text": "cuando se ejecuta la prueba, para que el modelo sepa qué campos extraer. No necesita pegar el JSON del esquema en su prompt — hacerlo lo duplicaría.",
+      "callout_schema_text": "cuando se ejecuta la extracción, para que el modelo sepa qué campos extraer. No necesita pegar el JSON del esquema en su prompt — hacerlo lo duplicaría.",
       "insert_placeholder_title": "Insertar {ph} en el cursor",
       "insert_placeholder": "+ Insertar {ph}",
       "system_placeholder": "Eres un asistente de IA especializado en extraer información estructurada de documentos...",
@@ -2363,22 +2384,22 @@
     }
   },
   "trials": {
-    "title": "Ensayos",
-    "subtitle": "Ejecute un modelo de IA sobre sus documentos para extraer datos estructurados y luego compare los resultados entre ensayos.",
-    "count": "{count} ensayo | {count} ensayos",
+    "title": "Ejecuciones de extracción",
+    "subtitle": "Ejecute un modelo de IA sobre sus documentos para extraer datos estructurados y luego compare los resultados entre ejecuciones.",
+    "count": "{count} ejecución | {count} ejecuciones",
     "actions": {
-      "start_new": "Iniciar nuevo ensayo",
+      "start_new": "Iniciar ejecución de extracción",
       "delete": "Eliminar"
     },
     "batch": {
-      "item_label": "ensayo"
+      "item_label": "ejecución de extracción"
     },
     "empty": {
-      "none_title": "Aún no hay ensayos",
-      "none_description": "Ejecute su primer ensayo de extracción para ver los resultados aquí.",
-      "none_action": "Iniciar un ensayo",
-      "no_match_title": "Ningún ensayo coincide con sus filtros",
-      "no_match_description": "Intente ajustar o borrar sus filtros para ver más ensayos.",
+      "none_title": "Aún no hay ejecuciones de extracción",
+      "none_description": "Inicie su primera ejecución de extracción para ver los resultados aquí.",
+      "none_action": "Iniciar una ejecución",
+      "no_match_title": "Ninguna ejecución de extracción coincide con sus filtros",
+      "no_match_description": "Intente ajustar o borrar sus filtros para ver más ejecuciones.",
       "clear_all": "Borrar todos los filtros"
     },
     "confirm": {
@@ -2386,50 +2407,50 @@
     },
     "disabled_reason": {
       "loading": "Cargando recursos del proyecto…",
-      "no_schema": "Necesita al menos un esquema para iniciar un ensayo.",
-      "no_document": "Debe subir al menos un documento para iniciar un ensayo.",
-      "no_prompt": "Debe crear al menos un prompt para iniciar un ensayo."
+      "no_schema": "Necesita al menos un esquema para iniciar una ejecución de extracción.",
+      "no_document": "Necesita al menos un documento preprocesado para iniciar una ejecución de extracción. Primero suba archivos y ejecute el preprocesamiento.",
+      "no_prompt": "Debe crear al menos un prompt para iniciar una ejecución de extracción."
     },
     "errors": {
-      "load_trials": "No se pudieron cargar los ensayos",
+      "load_trials": "No se pudieron cargar las ejecuciones de extracción",
       "load": "No se pudo cargar"
     },
     "toast": {
-      "created": "Ensayo creado",
-      "create_failed": "No se pudo crear el ensayo",
-      "renamed": "Ensayo renombrado",
-      "rename_failed": "No se pudo renombrar el ensayo",
-      "cancelled_kept": "Ensayo cancelado — se conservaron los resultados ya procesados",
-      "cancelled_discarded": "Ensayo cancelado — se descartaron los resultados en curso",
-      "cancel_failed": "No se pudo cancelar el ensayo",
-      "deleted": "Ensayo eliminado",
-      "delete_failed": "No se pudo eliminar el ensayo",
+      "created": "Ejecución de extracción creada",
+      "create_failed": "No se pudo crear la ejecución de extracción",
+      "renamed": "Ejecución de extracción renombrada",
+      "rename_failed": "No se pudo renombrar la ejecución de extracción",
+      "cancelled_kept": "Ejecución de extracción cancelada — se conservaron los resultados ya procesados",
+      "cancelled_discarded": "Ejecución de extracción cancelada — se descartaron los resultados en curso",
+      "cancel_failed": "No se pudo cancelar la ejecución de extracción",
+      "deleted": "Ejecución de extracción eliminada",
+      "delete_failed": "No se pudo eliminar la ejecución de extracción",
       "retry_failed_docs": "Reintentando los documentos fallidos",
-      "restarted": "Ensayo reiniciado",
-      "restart_failed": "No se pudo reiniciar el ensayo"
+      "restarted": "Ejecución de extracción reiniciada",
+      "restart_failed": "No se pudo reiniciar la ejecución de extracción"
     },
     "delete_dialog": {
-      "title": "Eliminar ensayo",
-      "message": "Al eliminar este ensayo también se eliminan sus resultados de extracción y todas las evaluaciones basadas en él. Esta acción no se puede deshacer.",
+      "title": "Eliminar ejecución de extracción",
+      "message": "Al eliminar esta ejecución de extracción también se eliminan sus resultados y todas las evaluaciones basadas en ella. Esta acción no se puede deshacer.",
       "confirm": "Eliminar"
     },
     "retry_dialog": {
-      "title": "Reintentar ensayo",
-      "message": "¿Iniciar un nuevo ensayo con la misma configuración? Esto consumirá créditos de LLM y procesará todos los documentos de nuevo.",
-      "confirm": "Reintentar ensayo"
+      "title": "Reintentar ejecución de extracción",
+      "message": "¿Iniciar una nueva ejecución con la misma configuración? Esto consumirá créditos de LLM y procesará todos los documentos de nuevo.",
+      "confirm": "Reintentar ejecución"
     },
     "table": {
-      "item_label": "ensayos",
-      "empty_title": "No se encontraron ensayos",
+      "item_label": "ejecuciones de extracción",
+      "empty_title": "No se encontraron ejecuciones de extracción",
       "processed_results": "Resultados procesados",
       "results_short": "{count} res.",
       "documents_with_errors": "Documentos con errores",
       "errors_short": "{count} err.",
-      "progress_aria": "Progreso del ensayo",
+      "progress_aria": "Progreso de la ejecución de extracción",
       "ready": "Listo",
       "failed": "Fallido",
       "results_action": "Resultados",
-      "col_name": "Ensayo",
+      "col_name": "Ejecución",
       "col_schema": "Esquema",
       "col_prompt": "Prompt",
       "col_model": "Modelo",
@@ -2445,8 +2466,8 @@
       "cancelled": "Cancelado"
     },
     "filters": {
-      "search_placeholder": "Buscar ensayos...",
-      "item_label": "ensayos",
+      "search_placeholder": "Buscar ejecuciones de extracción...",
+      "item_label": "ejecuciones de extracción",
       "all_status": "Todos los estados",
       "all_schemas": "Todos los esquemas",
       "all_prompts": "Todos los prompts",
@@ -2475,12 +2496,12 @@
       "chip_date": "Fecha: {value}"
     },
     "create": {
-      "title": "Iniciar nuevo ensayo",
+      "title": "Iniciar ejecución de extracción",
       "mode_simple": "Simple",
       "mode_advanced": "Avanzado",
-      "what_is_title": "¿Qué es un ensayo?",
-      "what_is_body": "Un ensayo ejecuta un modelo de IA sobre sus documentos para extraer datos estructurados. Necesita cuatro cosas: un <strong>Esquema</strong> (los campos a extraer), un <strong>Prompt</strong> (las instrucciones de extracción), un <strong>Modelo</strong> (la IA) y los <strong>Documentos</strong> a procesar. Su esquema se incluye automáticamente con el prompt — no necesita describir los campos manualmente.",
-      "help_text": "Un ensayo ejecuta un modelo de IA sobre sus documentos para extraer datos estructurados. Necesita un esquema, un prompt, un modelo y los documentos a procesar. El esquema se incluye automáticamente con el prompt.",
+      "what_is_title": "¿Qué es una ejecución de extracción?",
+      "what_is_body": "Una ejecución de extracción aplica un modelo de IA a sus documentos para extraer datos estructurados. Necesita cuatro cosas: un <strong>Esquema</strong> (los campos a extraer), un <strong>Prompt</strong> (las instrucciones de extracción), un <strong>Modelo</strong> (la IA) y los <strong>Documentos</strong> a procesar. Su esquema se incluye automáticamente con el prompt — no necesita describir los campos manualmente.",
+      "help_text": "Una ejecución de extracción aplica un modelo de IA a sus documentos para extraer datos estructurados. Necesita un esquema, un prompt, un modelo y los documentos a procesar. El esquema se incluye automáticamente con el prompt.",
       "name_notes_hide": "Ocultar nombre / notas",
       "name_notes_add": "Añadir nombre / notas",
       "advanced_settings_hide": "Ocultar ajustes avanzados",
@@ -2488,18 +2509,18 @@
       "custom_api_hide": "Ocultar ajustes de API personalizada",
       "custom_api_use": "Usar ajustes de API personalizada",
       "no_model_title": "Ningún modelo predeterminado configurado",
-      "no_model_body": "Este servidor no tiene ningún LLM configurado a nivel de sistema. Aún puede ejecutar un ensayo apuntando a cualquier API compatible con OpenAI (OpenAI, Ollama, vLLM, llama.cpp…).",
+      "no_model_body": "Este servidor no tiene ningún LLM configurado a nivel de sistema. Aún puede ejecutar una extracción apuntando a cualquier API compatible con OpenAI (OpenAI, Ollama, vLLM, llama.cpp…).",
       "custom_api_simple_hide": "Ocultar ajustes de API personalizada",
       "custom_api_simple_edit": "Editar ajustes de API personalizada",
       "custom_api_simple_use": "Usar una API diferente",
       "checking_title": "Comprobando la compatibilidad del modelo…",
-      "checking_body": "Verificando que {model} funciona con su esquema antes de iniciar el ensayo.",
+      "checking_body": "Verificando que {model} funciona con su esquema antes de iniciar la ejecución.",
       "the_model": "el modelo",
       "cancel": "Cancelar",
       "verifying": "Verificando…",
-      "start_trial": "Iniciar ensayo",
+      "start_trial": "Iniciar ejecución",
       "discard_title": "¿Descartar los cambios no guardados?",
-      "discard_message": "Se perderá la configuración de su ensayo.",
+      "discard_message": "Se perderá la configuración de su ejecución de extracción.",
       "discard_confirm": "Descartar",
       "discard_cancel": "Seguir editando",
       "status": {
@@ -2508,24 +2529,24 @@
         "select_documents": "Seleccione documentos para continuar.",
         "verified_ready": "Modelo verificado con este esquema — listo para iniciar.",
         "verification_failed": "Verificación fallida: {message}",
-        "will_check": "El modelo se comprobará cuando inicie el ensayo."
+        "will_check": "El modelo se comprobará cuando inicie la ejecución."
       },
       "toast": {
-        "start_failed": "No se pudo iniciar el ensayo. Inténtelo de nuevo."
+        "start_failed": "No se pudo iniciar la ejecución de extracción. Inténtelo de nuevo."
       },
       "intro_dismiss": "Entendido: no mostrar de nuevo",
       "large_run": {
-        "title": "¿Iniciar un ensayo grande?",
-        "message": "Este ensayo ejecutará la extracción LLM en {count} documentos. Cada documento es una llamada LLM independiente y puede consumir créditos de API."
+        "title": "¿Iniciar una ejecución grande?",
+        "message": "Esta ejecución realizará la extracción LLM en {count} documentos. Cada documento es una llamada LLM independiente y puede consumir créditos de API."
       },
-      "start_trial_count": "Iniciar ensayo ({count} documento) | Iniciar ensayo ({count} documentos)"
+      "start_trial_count": "Iniciar ejecución ({count} documento) | Iniciar ejecución ({count} documentos)"
     },
     "metadata": {
-      "name_label": "Nombre del ensayo",
+      "name_label": "Nombre de la ejecución",
       "optional": "(opcional)",
       "name_placeholder": "Ej.: Extracción de contratos T3",
       "description_label": "Descripción",
-      "description_placeholder": "Breve resumen de este ensayo (p. ej. tipo de documento, objetivo, cambios, etc.)"
+      "description_placeholder": "Breve resumen de esta ejecución (p. ej. tipo de documento, objetivo, cambios, etc.)"
     },
     "select": {
       "schema_label": "Esquema",
@@ -2540,7 +2561,7 @@
       "model_loading": "Cargando modelos...",
       "model_none": "No hay modelos disponibles",
       "model_placeholder": "Seleccionar un modelo",
-      "model_help_tooltip": "El modelo de IA utilizado para la extracción, indicado con el identificador sin procesar que informa su endpoint de LLM (predeterminado del sistema o sus ajustes de API personalizada). Si puede producir JSON estructurado acorde con su esquema se comprueba automáticamente al iniciar el ensayo."
+      "model_help_tooltip": "El modelo de IA utilizado para la extracción, indicado con el identificador sin procesar que informa su endpoint de LLM (predeterminado del sistema o sus ajustes de API personalizada). Si puede producir JSON estructurado acorde con su esquema se comprueba automáticamente al iniciar la ejecución."
     },
     "docsel": {
       "select_documents": "Seleccionar documentos",
@@ -2552,7 +2573,7 @@
         "load_groups_failed": "No se pudieron cargar los grupos de documentos",
         "group_empty": "\"{name}\" no tiene documentos",
         "load_group_docs_failed": "No se pudieron cargar los documentos de este grupo",
-        "loaded_from_trial": "Se cargaron {count} documentos del ensayo anterior",
+        "loaded_from_trial": "Se cargaron {count} documentos de la ejecución anterior",
         "selected_all": "Se seleccionaron los {count} documentos coincidentes",
         "select_all_failed": "No se pudieron seleccionar todos los documentos",
         "selected_recent": "Se seleccionaron {count} documentos de los últimos {days} días",
@@ -2583,8 +2604,8 @@
       "next": "Sig."
     },
     "smart": {
-      "load_from_trial": "Cargar desde un ensayo anterior",
-      "select_trial": "Seleccionar un ensayo anterior...",
+      "load_from_trial": "Cargar desde una ejecución anterior",
+      "select_trial": "Seleccionar una ejecución anterior...",
       "trial_option": "{name} - {date} ({count} doc.)",
       "filter_by_date": "Filtrar por rango de fechas",
       "last_7_days": "Últimos 7 días",
@@ -2625,10 +2646,10 @@
     "model_test": {
       "title": "Compatibilidad de modelo y esquema",
       "test_now": "Probar ahora",
-      "warning_help": "El modelo se comprueba automáticamente cuando inicia el ensayo — o pruébelo ahora para confirmar la compatibilidad de antemano."
+      "warning_help": "El modelo se comprueba automáticamente cuando inicia la ejecución — o pruébelo ahora para confirmar la compatibilidad de antemano."
     },
     "results": {
-      "aria": "Resultados del ensayo",
+      "aria": "Resultados de la ejecución de extracción",
       "n_results": "{count} resultados",
       "model_label": "Modelo:",
       "prompt_label": "Prompt:",
@@ -2642,11 +2663,11 @@
       "first_result": "Primer resultado",
       "next_title": "Documento siguiente (→)",
       "last_result": "Último resultado",
-      "loading": "Cargando los resultados del ensayo…",
-      "not_found": "Ensayo no encontrado",
-      "return": "Volver a los ensayos",
-      "no_results_title": "No hay resultados disponibles para este ensayo.",
-      "wait": "Espere a que finalice el ensayo.",
+      "loading": "Cargando los resultados de la ejecución…",
+      "not_found": "Ejecución de extracción no encontrada",
+      "return": "Volver a las ejecuciones de extracción",
+      "no_results_title": "No hay resultados disponibles para esta ejecución de extracción.",
+      "wait": "Espere a que finalice la ejecución.",
       "search_placeholder": "Buscar documentos…",
       "all_statuses": "Todos los estados",
       "no_match": "Ningún resultado coincide con sus filtros.",
@@ -2680,7 +2701,7 @@
         "no_loaded_result": "No hay ningún resultado cargado para este documento — puede que haya fallado antes de producir uno, o esté en otra página."
       },
       "errors": {
-        "load_trial": "No se pudieron cargar los datos del ensayo"
+        "load_trial": "No se pudieron cargar los datos de la ejecución"
       }
     },
     "viewer": {
@@ -2729,12 +2750,12 @@
       "docs_progress": "{done}/{total} doc.",
       "elapsed": "{duration} transcurridos",
       "eta": "• ≈ {duration} restantes",
-      "progress_aria": "Progreso del ensayo",
+      "progress_aria": "Progreso de la ejecución de extracción",
       "results_ready": "Resultados listos",
       "failed_details": "Fallido — ver detalles en Resultados",
       "cancel": "Cancelar",
       "results": "Resultados",
-      "download_partial_title": "Este ensayo no finalizó — solo se incluyen los documentos extraídos correctamente.",
+      "download_partial_title": "Esta ejecución de extracción no finalizó — solo se incluyen los documentos extraídos correctamente.",
       "download": "Descargar",
       "download_partial": "Descargar parcial",
       "retry": "Reintentar",
@@ -2745,41 +2766,41 @@
       "count": "{count} error de documento | {count} errores de documento",
       "view_details": "Ver detalles de los errores",
       "show_in_viewer_title": "Mostrar este documento en el visor",
-      "trial_name": "Ensayo",
+      "trial_name": "Ejecución",
       "doc_fallback": "Doc. {id}"
     },
     "rename": {
-      "title": "Renombrar ensayo",
+      "title": "Renombrar ejecución de extracción",
       "name_label": "Nombre",
       "description_label": "Descripción",
       "cancel": "Cancelar",
       "save": "Guardar"
     },
     "cancel_modal": {
-      "title": "Cancelar ensayo",
-      "message": "¿Cancelar este ensayo en curso? Los documentos que aún se están procesando se detendrán.",
+      "title": "Cancelar ejecución de extracción",
+      "message": "¿Cancelar esta ejecución en curso? Los documentos que aún se están procesando se detendrán.",
       "keep_label": "Conservar los resultados ya procesados",
       "keep_yes": "Los resultados extraídos hasta ahora siguen disponibles (descarga parcial y revisión).",
       "keep_no": "Los resultados extraídos hasta ahora se descartarán y no podrán recuperarse.",
       "keep_running": "Seguir ejecutando",
-      "confirm": "Cancelar ensayo"
+      "confirm": "Cancelar ejecución"
     },
     "retry_modal": {
-      "title": "Reintentar ensayo",
-      "message": "¿Iniciar un nuevo ensayo con la misma configuración? Esto consumirá créditos de LLM.",
+      "title": "Reintentar ejecución de extracción",
+      "message": "¿Iniciar una nueva ejecución con la misma configuración? Esto consumirá créditos de LLM.",
       "failed_only": "Reintentar solo los documentos fallidos",
-      "failed_only_desc": "Crea un nuevo ensayo que procesa únicamente los documentos que fallaron.",
+      "failed_only_desc": "Crea una nueva ejecución que procesa únicamente los documentos que fallaron.",
       "all": "Volver a ejecutar todos los documentos",
       "all_desc": "Procesa de nuevo cada documento, incluidos los que ya tuvieron éxito.",
       "cancel": "Cancelar",
-      "confirm": "Reintentar ensayo"
+      "confirm": "Reintentar ejecución"
     },
     "download": {
-      "title": "Descargar los resultados del ensayo",
-      "partial_note": "Este ensayo no finalizó correctamente. La descarga contiene únicamente los {count} documento(s) que se extrajeron — los documentos que fallaron no están incluidos.",
-      "format_json_zip": "<strong>JSON (por documento):</strong> Descarga un <b>archivo ZIP</b> con un archivo JSON por documento.<span class=\"block\">Cada archivo incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración del ensayo.</span>",
-      "format_csv_zip": "<strong>CSV (con archivos):</strong> Descarga un <b>archivo ZIP</b> con el CSV y los archivos adjuntos.<span class=\"block\">El CSV incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración del ensayo.</span>",
-      "format_csv_flat": "<strong>CSV (plano):</strong> Descarga un único archivo CSV, una fila por documento.<br />Incluye todos los resultados extraídos, los metadatos del documento, la configuración de preprocesamiento y la configuración del ensayo.",
+      "title": "Descargar los resultados de la ejecución",
+      "partial_note": "Esta ejecución de extracción no finalizó correctamente. La descarga contiene únicamente los {count} documento(s) que se extrajeron — los documentos que fallaron no están incluidos.",
+      "format_json_zip": "<strong>JSON (por documento):</strong> Descarga un <b>archivo ZIP</b> con un archivo JSON por documento.<span class=\"block\">Cada archivo incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración de la ejecución.</span>",
+      "format_csv_zip": "<strong>CSV (con archivos):</strong> Descarga un <b>archivo ZIP</b> con el CSV y los archivos adjuntos.<span class=\"block\">El CSV incluye todos los resultados extraídos, los metadatos completos del documento, la configuración de preprocesamiento y la configuración de la ejecución.</span>",
+      "format_csv_flat": "<strong>CSV (plano):</strong> Descarga un único archivo CSV, una fila por documento.<br />Incluye todos los resultados extraídos, los metadatos del documento, la configuración de preprocesamiento y la configuración de la ejecución.",
       "format_label": "Formato",
       "format_json_option": "JSON (por documento, ZIP)",
       "format_csv_option": "CSV (tabla, con archivos opcionales)",
@@ -2793,9 +2814,9 @@
       "include_usage": "Incluir uso de tokens",
       "include_usage_title": "Si se marca: cada resultado incluye también estadísticas de tokens (tokens de prompt/completado/total) y el motivo de finalización.",
       "include_usage_hint": "(añade el recuento de tokens y el motivo de finalización)",
-      "note_csv_content": "Incluirá los archivos originales y el texto completo del documento dentro de un ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ensayo contiene muchos archivos.",
+      "note_csv_content": "Incluirá los archivos originales y el texto completo del documento dentro de un ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ejecución contiene muchos archivos.",
       "note_csv_only": "Solo se descargará un único CSV (sin archivos/texto incluidos).",
-      "note_json_content": "Cada JSON por documento contendrá el texto extraído del documento, y los archivos fuente originales se agrupan en una carpeta <code>files/</code> dentro del ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ensayo contiene muchos archivos.",
+      "note_json_content": "Cada JSON por documento contendrá el texto extraído del documento, y los archivos fuente originales se agrupan en una carpeta <code>files/</code> dentro del ZIP.<br /><b>Nota:</b> La descarga puede ser grande si su ejecución contiene muchos archivos.",
       "note_json_only": "Los archivos JSON contienen solo los resultados extraídos y los metadatos — sin texto de documento ni archivos fuente.",
       "cancel": "Cancelar",
       "downloading": "Descargando...",
@@ -2806,18 +2827,18 @@
       }
     },
     "selector": {
-      "title": "Evaluar ensayo",
+      "title": "Evaluar ejecución de extracción",
       "retry": "Reintentar",
       "eval_error_heading": "Error de evaluación",
       "mappings_required_title": "Se requieren asignaciones de campos específicas del esquema",
-      "mappings_required_body": "Cada ensayo requiere asignaciones de campos para su esquema específico. Los ensayos sin asignaciones aparecerán atenuados.",
+      "mappings_required_body": "Cada ejecución de extracción requiere asignaciones de campos para su esquema específico. Las ejecuciones sin asignaciones aparecerán atenuadas.",
       "configure_mappings": "Configurar asignaciones",
-      "loading_trials": "Cargando ensayos y comprobando asignaciones...",
-      "empty_title": "No hay ensayos completados disponibles para evaluar",
-      "empty_desc": "Ejecute primero algunos ensayos para evaluarlos con la verdad de referencia",
-      "select_heading": "Seleccione un ensayo para evaluar",
-      "select_desc": "Elija entre los ensayos completados para compararlos con sus datos de verdad de referencia.",
-      "total_trials": "Total de ensayos:",
+      "loading_trials": "Cargando ejecuciones y comprobando asignaciones...",
+      "empty_title": "No hay ejecuciones de extracción completadas disponibles para evaluar",
+      "empty_desc": "Ejecute primero algunas extracciones para evaluarlas con la verdad de referencia",
+      "select_heading": "Seleccione una ejecución de extracción para evaluar",
+      "select_desc": "Elija entre las ejecuciones completadas para compararlas con sus datos de verdad de referencia.",
+      "total_trials": "Total de ejecuciones:",
       "ready_for_eval": "Listos para evaluar:",
       "missing_mappings": "Asignaciones faltantes:",
       "checking_mappings": "Comprobando asignaciones de campos...",
@@ -2835,30 +2856,30 @@
       "configure_to_enable": "Configure las asignaciones de campos para el esquema \"{schema}\" para habilitar la evaluación",
       "already_evaluated": "Ya evaluado",
       "n_results": "{count} resultados",
-      "item_label": "ensayos",
+      "item_label": "ejecuciones de extracción",
       "cancel": "Cancelar",
       "evaluating": "Evaluando...",
       "evaluate_named": "Evaluar {name}",
-      "select_first": "Seleccione primero un ensayo",
-      "already_eval_title": "Ensayo ya evaluado",
+      "select_first": "Seleccione primero una ejecución",
+      "already_eval_title": "Ejecución de extracción ya evaluada",
       "create_another": "Crear otra evaluación",
       "schema_fallback": "Esquema {id}",
       "op_retry": "Reintentar",
-      "op_loading_data": "Carga de los datos del ensayo",
-      "op_evaluation": "Evaluación del ensayo",
+      "op_loading_data": "Carga de los datos de la ejecución",
+      "op_evaluation": "Evaluación de la ejecución",
       "op_refreshing_mappings": "Actualización del estado de las asignaciones",
       "validation": {
-        "select_trial": "Seleccione un ensayo para evaluar",
+        "select_trial": "Seleccione una ejecución de extracción para evaluar",
         "requires_mappings": "{name} requiere asignaciones de campos para el esquema \"{schema}\"",
         "gt_required": "Se requiere un archivo de verdad de referencia",
-        "no_results": "El ensayo seleccionado no tiene resultados para evaluar"
+        "no_results": "La ejecución seleccionada no tiene resultados para evaluar"
       },
       "reeval_on": " el {date}",
-      "reeval_message": "Este ensayo ya se evaluó{when} con esta verdad de referencia. ¿Crear otra evaluación?",
-      "cannot_evaluate": "No se puede evaluar el ensayo: {errors}",
+      "reeval_message": "Esta ejecución de extracción ya se evaluó{when} con esta verdad de referencia. ¿Crear otra evaluación?",
+      "cannot_evaluate": "No se puede evaluar la ejecución de extracción: {errors}",
       "mappings_removed": "Las asignaciones de campos para el esquema \"{schema}\" no están configuradas o se han eliminado",
       "mappings_missing": "Faltan asignaciones de campos: {detail}",
-      "no_results_run_first": "El ensayo no tiene resultados para evaluar. Ejecute primero el ensayo.",
+      "no_results_run_first": "La ejecución de extracción no tiene resultados para evaluar. Ejecútela primero.",
       "data_consistency": "Se detectó un problema de coherencia de datos. Faltan algunos documentos o entradas de verdad de referencia.",
       "eval_failed": "Error en la evaluación: {detail}",
       "toast": {
@@ -2878,7 +2899,7 @@
       "coverage": "{found}/{total} localizados",
       "coverage_title": "Procedencia de los valores",
       "coverage_help": "Los valores se localizan buscando en el texto extraído. Las coincidencias provienen de una búsqueda de texto, no del modelo: verifíquelas antes de confiar en ellas.",
-      "coverage_evidence_mode": "Este ensayo usó citas de origen: se pidió al modelo que citara el texto del que procede cada valor.",
+      "coverage_evidence_mode": "Esta ejecución de extracción usó citas de origen: se pidió al modelo que citara el texto del que procede cada valor.",
       "coverage_missing": "Sin cita: {fields}",
       "prev_match": "Aparición anterior",
       "next_match": "Aparición siguiente",
@@ -2946,21 +2967,21 @@
       "project_documents_forbidden": "No está autorizado para acceder a los documentos de este proyecto",
       "document_not_found": "Documento no encontrado",
       "version_already_latest": "Esta versión ya es la más reciente.",
-      "document_in_trial": "El documento está referenciado en el ensayo '{trial}'. Quítelo primero del ensayo o los ensayos.",
-      "document_in_trial_result": "El documento está referenciado en un resultado de ensayo. Elimine primero los resultados/ensayos.",
-      "document_in_evaluation_metric": "El documento está referenciado en métricas de evaluación. Elimine primero la evaluación/el ensayo relacionado.",
+      "document_in_trial": "El documento está referenciado en la ejecución de extracción '{trial}'. Quítelo primero de la ejecución o las ejecuciones.",
+      "document_in_trial_result": "El documento está referenciado en un resultado de ejecución de extracción. Elimine primero los resultados/ejecuciones.",
+      "document_in_evaluation_metric": "El documento está referenciado en métricas de evaluación. Elimine primero la evaluación/la ejecución relacionada.",
       "document_in_sets": "El documento forma parte de {count} grupos de documentos. Quítelo primero de los grupos.",
       "create_set_forbidden": "No está autorizado para crear grupos de documentos para este proyecto",
-      "trial_not_found_in_project": "Ensayo no encontrado en este proyecto",
+      "trial_not_found_in_project": "Ejecución de extracción no encontrada en este proyecto",
       "document_set_not_found": "Grupo de documentos no encontrado",
-      "set_referenced_by_trials": "No se puede eliminar el grupo de documentos: uno o más ensayos hacen referencia a él.",
-      "trial_not_found": "Ensayo no encontrado"
+      "set_referenced_by_trials": "No se puede eliminar el grupo de documentos: una o más ejecuciones de extracción hacen referencia a él.",
+      "trial_not_found": "Ejecución de extracción no encontrada"
     },
     "evaluations": {
       "project_not_found": "Proyecto no encontrado",
       "not_authorized_access": "No autorizado para acceder a las evaluaciones de este proyecto",
       "not_authorized_delete": "No autorizado para eliminar las evaluaciones de este proyecto",
-      "not_authorized_evaluate": "No autorizado para evaluar los ensayos de este proyecto",
+      "not_authorized_evaluate": "No autorizado para evaluar las ejecuciones de extracción de este proyecto",
       "groundtruth_not_found": "Verdad de referencia no encontrada",
       "evaluation_not_found": "Evaluación no encontrada",
       "evaluation_not_found_for_project": "Evaluación no encontrada para este proyecto",
@@ -2968,7 +2989,7 @@
       "document_not_found": "Documento no encontrado en la evaluación",
       "too_many_compare": "No se pueden comparar más de {max_evaluations} evaluaciones a la vez (solicitadas: {requested}).",
       "too_many_download": "No se pueden descargar más de {max_evaluations} evaluaciones a la vez (solicitadas: {requested}).",
-      "too_many_trials": "No se pueden evaluar más de {max_trials} ensayos a la vez (solicitados: {requested}).",
+      "too_many_trials": "No se pueden evaluar más de {max_trials} ejecuciones de extracción a la vez (solicitados: {requested}).",
       "invalid_evaluation_ids": "evaluation_ids no válidos",
       "no_evaluation_ids": "No se proporcionaron evaluation_ids",
       "all_evaluations_failed": "Todas las evaluaciones fallaron: {errors}"
@@ -3013,7 +3034,9 @@
       "no_file_provided": "No se proporcionó ningún archivo",
       "name_required": "Se requiere un nombre cuando no se proporciona un único archivo",
       "id_column_too_long": "El nombre de la columna de identificador es demasiado largo (máximo 200 caracteres).",
-      "invalid_schema_paths": "Ruta(s) de campo de esquema no encontrada(s) en el esquema: {paths}. Utilice una ruta hoja del esquema (por ejemplo, 'patient.age' o 'lab_results[].value')."
+      "invalid_schema_paths": "Ruta(s) de campo de esquema no encontrada(s) en el esquema: {paths}. Utilice una ruta hoja del esquema (por ejemplo, 'patient.age' o 'lab_results[].value').",
+      "match_preview_parse_failed": "{error}",
+      "match_preview_load_failed": "No se pudo cargar la Ground Truth. Consulte los registros del servidor para más detalles."
     },
     "preprocess": {
       "project_not_found": "Proyecto no encontrado",
@@ -3044,7 +3067,7 @@
       "not_found": "Prompt no encontrado",
       "update_forbidden": "No está autorizado para actualizar los prompts de este proyecto",
       "delete_forbidden": "No está autorizado para eliminar prompts de este proyecto",
-      "referenced_by_trial": "No se puede eliminar un prompt referenciado por un ensayo"
+      "referenced_by_trial": "No se puede eliminar un prompt referenciado por una ejecución de extracción"
     },
     "schemas": {
       "required_without_property": "El esquema indica campos obligatorios que no están definidos en «properties», por lo que el modelo nunca podrá devolverlos: {details}",
@@ -3057,7 +3080,7 @@
       "not_authorized_delete": "No está autorizado para eliminar esquemas de este proyecto",
       "invalid_json_schema": "Esquema JSON no válido",
       "not_found": "Esquema no encontrado",
-      "referenced_by_trial": "No se puede eliminar un esquema referenciado por un ensayo"
+      "referenced_by_trial": "No se puede eliminar un esquema referenciado por una ejecución de extracción"
     },
     "sso": {
       "slug_no_alphanumeric": "El nombre del proveedor debe contener caracteres alfanuméricos.",
@@ -3092,7 +3115,7 @@
     },
     "trials": {
       "required_without_property": "Este esquema indica campos obligatorios que no están definidos en «properties», por lo que todos los documentos fallarían la validación: {details}",
-      "schema_definition_invalid": "El esquema de este ensayo no es un JSON Schema válido: {details}",
+      "schema_definition_invalid": "El esquema de esta ejecución de extracción no es un JSON Schema válido: {details}",
       "project_not_found": "Proyecto no encontrado",
       "not_authorized_project_action": "No tiene autorización para realizar la acción {permission} en este proyecto",
       "not_authorized_create": "No tiene autorización para crear ejecuciones en este proyecto",
@@ -3105,7 +3128,7 @@
       "llm_config_incomplete": "La configuración del LLM está incompleta",
       "llm_endpoint_not_allowed": "La URL del punto de conexión del LLM proporcionada no está permitida.",
       "bypass_celery_admin_only": "Solo los administradores pueden establecer bypass_celery",
-      "celery_disabled": "El procesamiento en segundo plano está deshabilitado en este servidor (DISABLE_CELERY). Habilite Celery o ejecute la ejecución con bypass_celery (solo administradores).",
+      "celery_disabled": "El procesamiento en segundo plano está deshabilitado en este servidor (DISABLE_CELERY). Habilite Celery o ejecute la extracción con bypass_celery (solo administradores).",
       "dispatch_failed": "No se pudo poner en cola la ejecución para el procesamiento en segundo plano. Inténtelo de nuevo más tarde.",
       "trial_not_found": "Ejecución no encontrada",
       "no_failed_documents": "La ejecución no tiene documentos fallidos que reintentar",

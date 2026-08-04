@@ -85,7 +85,7 @@ nav:
       - OCR engines: user-guide/ocr-engines.md
       - Documents: user-guide/documents.md
       - Schemas & prompts: user-guide/schemas-and-prompts.md
-      - Trials: user-guide/trials.md
+      - Extraction runs: user-guide/trials.md
       - Ground truth: user-guide/ground-truth.md
       - Evaluation: user-guide/evaluation.md
       - Account settings: user-guide/account.md

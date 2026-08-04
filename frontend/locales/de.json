@@ -498,7 +498,8 @@
       "create_account": "Konto erstellen",
       "have_account": "Sie haben bereits ein Konto?",
       "sign_in_here": "Hier anmelden",
-      "success_toast": "Registrierung erfolgreich! Sie werden angemeldet..."
+      "success_toast": "Registrierung erfolgreich! Sie werden angemeldet...",
+      "closed_hint": "Die Registrierung ist nur per Einladung möglich – bitten Sie einen Administrator um einen Einladungslink."
     },
     "first_admin": {
       "welcome_to": "Willkommen bei",
@@ -918,12 +919,12 @@
       "retrying": "Wird wiederholt...",
       "retry": "Wiederholen",
       "title": "Auswertung",
-      "subtitle": "Trial-Ergebnisse mit Ground-Truth-Daten vergleichen",
+      "subtitle": "Durchlaufergebnisse mit Ground-Truth-Daten vergleichen",
       "upload_ground_truth": "Ground Truth hochladen",
       "export_results": "Ergebnisse exportieren",
       "loading_ground_truth": "Ground-Truth-Dateien werden geladen...",
       "empty_gt_title": "Noch keine Ground-Truth-Dateien",
-      "empty_gt_description": "Laden Sie Ground-Truth-Daten hoch, um Ihre Trial-Ergebnisse auszuwerten",
+      "empty_gt_description": "Laden Sie Ground-Truth-Daten hoch, um Ihre Durchlaufergebnisse auszuwerten",
       "ground_truth_files": "Ground-Truth-Dateien",
       "manage": "Verwalten",
       "ground_truth_number": "Ground Truth #{number}",
@@ -935,18 +936,18 @@
       "show_explainer": "Zeigen, wie die Auswertung funktioniert",
       "hide_help": "Hilfe ausblenden",
       "how_it_works": "So funktioniert es",
-      "evaluate_trial": "Trial auswerten",
+      "evaluate_trial": "Durchlauf auswerten",
       "edit_mappings": "Zuordnungen bearbeiten",
       "configure_mappings": "Zuordnungen konfigurieren",
       "hide": "Ausblenden",
       "setup_required": "Einrichtung erforderlich",
-      "no_evaluations": "Noch keine Auswertungen. Wählen Sie einen Trial zur Auswertung aus.",
+      "no_evaluations": "Noch keine Auswertungen. Wählen Sie einen Durchlauf zur Auswertung aus.",
       "item_label": "Auswertungen"
     },
     "concepts": {
       "title": "So funktioniert die Auswertung",
       "ground_truth_term": "Ground Truth",
-      "ground_truth_desc": "— eine Datei mit den korrekten extrahierten Werten, mit denen die Trial-Ergebnisse verglichen werden.",
+      "ground_truth_desc": "— eine Datei mit den korrekten extrahierten Werten, mit denen die Durchlaufergebnisse verglichen werden.",
       "field_mapping_term": "Feldzuordnung",
       "field_mapping_desc": "— verknüpft jede Ground-Truth-Spalte mit dem passenden Schema-Feld, damit Werte verglichen werden können.",
       "id_field_term": "ID-Feld",
@@ -966,11 +967,11 @@
     },
     "delete": {
       "title": "Auswertung löschen?",
-      "message": "Dies entfernt die berechneten Metriken für {trial}. Der Trial und seine Ergebnisse bleiben erhalten; Sie können jederzeit erneut auswerten.",
+      "message": "Dies entfernt die berechneten Metriken für {trial}. Der Durchlauf und seine Ergebnisse bleiben erhalten; Sie können jederzeit erneut auswerten.",
       "confirm": "Löschen"
     },
     "columns": {
-      "trial": "Trial",
+      "trial": "Durchlauf",
       "model": "Modell",
       "overall_accuracy": "Gesamtgenauigkeit",
       "documents": "Dokumente",
@@ -1002,7 +1003,7 @@
     },
     "analysis": {
       "back": "Zurück zu den Auswertungen",
-      "trial_number": "Trial #{number}",
+      "trial_number": "Durchlauf #{number}",
       "export": "Exportieren",
       "overall_metrics": "Gesamtmetriken",
       "matched_only_tooltip": "Die Genauigkeit wird nur über zugeordnete Dokumente berechnet. Nicht zugeordnete Dokumente sind in der Tabelle unten aufgeführt.",
@@ -1208,7 +1209,13 @@
       "select_different": "Andere Dateien auswählen",
       "start_processing": "Verarbeitung starten",
       "tesseract_language": "Tesseract-Sprache",
-      "unknown": "Unbekannt"
+      "unknown": "Unbekannt",
+      "what_happens": "Die Vorverarbeitung wandelt Ihre Dateien in reinen Text um, den die KI lesen kann. PDFs mit eingebettetem Text werden direkt gelesen; Scans und Bilder benötigen OCR.",
+      "engine_desc": {
+        "docling_tesseract": "Läuft auf diesem Server – kostenlos, Daten bleiben lokal, am besten für saubere Scans",
+        "mistral_ocr": "Sendet Seiten an eine externe OCR-API – besser bei komplexen Layouts und Handschrift",
+        "llm_vision": "Sendet Seitenbilder an ein Vision-KI-Modell – am flexibelsten, am besten für schwierige Dokumente"
+      }
     },
     "dropzone": {
       "aria_label": "Dateien hochladen — Dateien hier ablegen oder aktivieren, um zu durchsuchen",
@@ -1460,14 +1467,20 @@
       "succeeded": "{count} erfolgreich",
       "title": "Dateien hochladen",
       "uploading_file": "Datei {current} von {total} wird hochgeladen"
+    },
+    "first_run": {
+      "title": "So funktioniert dieses Projekt",
+      "step_upload": "Laden Sie Ihre Dokumente hoch (PDFs, Scans, Tabellen)",
+      "step_preprocess": "Führen Sie die Vorverarbeitung aus, um den Text zu extrahieren",
+      "step_review": "Prüfen Sie die erzeugten Dokumente und legen Sie dann fest, was extrahiert werden soll"
     }
   },
   "groundtruth": {
     "manager": {
       "title": "Ground-Truth-Dateien verwalten",
-      "subtitle": "Ground-Truth-Dateien enthalten die korrekten extrahierten Werte, mit denen Sie Trial-Ergebnisse vergleichen. Konfigurieren Sie Feldzuordnungen, um jede Ground-Truth-Spalte mit einem Schemafeld zu verknüpfen.",
+      "subtitle": "Ground-Truth-Dateien enthalten die korrekten extrahierten Werte, mit denen Sie Durchlaufergebnisse vergleichen. Konfigurieren Sie Feldzuordnungen, um jede Ground-Truth-Spalte mit einem Schemafeld zu verknüpfen.",
       "empty_title": "Noch keine Ground-Truth-Dateien hochgeladen",
-      "empty_description": "Laden Sie eine Datei mit den korrekten Werten (CSV, XLSX oder JSON) hoch, um die Trial-Genauigkeit zu bewerten.",
+      "empty_description": "Laden Sie eine Datei mit den korrekten Werten (CSV, XLSX oder JSON) hoch, um die Genauigkeit der Durchläufe zu bewerten.",
       "default_name": "Ground Truth #{number}",
       "mappings_count": "{count} Zuordnung | {count} Zuordnungen",
       "created": "Erstellt: {date}",
@@ -1607,7 +1620,15 @@
       "use_filename": "Dokumentdateinamen verwenden",
       "use_field": "Feld verwenden:",
       "select_field": "Feld auswählen ...",
-      "match_hint": "Steuert, wie Dokumente für die Bewertung mit Trial-Ergebnissen abgeglichen werden."
+      "match_hint": "Steuert, wie Dokumente für die Bewertung mit Durchlaufergebnissen abgeglichen werden."
+    },
+    "match_check": {
+      "button": "Zuordnung prüfen",
+      "success": "{matched} von {total} Ground-Truth-Zeilen stimmen mit einem Dokument überein",
+      "partial": "{matched} von {total} Ground-Truth-Zeilen stimmen mit einem Dokument überein. Beispiele ohne Übereinstimmung:",
+      "none": "Keine der {total} Ground-Truth-Zeilen stimmt mit einem Dokument überein.",
+      "hint": "Prüfen Sie, ob die Werte dieser Spalte mit Ihren Dokumentnamen oder -IDs übereinstimmen.",
+      "failed": "Zuordnungsprüfung fehlgeschlagen: {error}"
     }
   },
   "landing": {
@@ -1934,12 +1955,11 @@
       },
       "load_failed": "Projekte konnten nicht geladen werden.",
       "workflow": {
-        "upload": "Dateien hochladen",
-        "preprocess": "Vorverarbeiten",
-        "documents": "Dokumente",
-        "schemas": "Schemas",
-        "trials": "Durchläufe starten",
-        "evaluate": "Auswerten"
+        "files_desc": "Laden Sie PDFs, Scans und Tabellen hoch und wandeln Sie sie in lesbaren Text um",
+        "documents_desc": "Prüfen Sie den extrahierten Text vor der Extraktion",
+        "schemas_desc": "Definieren Sie die zu extrahierenden Felder und die Anweisungen für die KI",
+        "trials_desc": "Führen Sie die Extraktion mit einem LLM auf Ihren Dokumenten aus",
+        "evaluation_desc": "Vergleichen Sie die Ergebnisse mit der Ground Truth, um die Genauigkeit zu messen"
       }
     },
     "settings": {
@@ -1991,11 +2011,12 @@
       "delete": "Schema löschen",
       "col_name": "Name",
       "col_created": "Erstellt",
-      "search_chip": "Suche: \"{query}\""
+      "search_chip": "Suche: \"{query}\"",
+      "start_from_template": "Mit einer Vorlage beginnen"
     },
     "view": {
       "snapshot": "Momentaufnahme",
-      "snapshot_title": "Eingefrorene Kopie des Schemas zum Zeitpunkt der Testausführung",
+      "snapshot_title": "Eingefrorene Kopie des Schemas zum Zeitpunkt des Durchlaufstarts",
       "copy": "Kopieren",
       "close": "Schließen",
       "copied": "Schema kopiert"
@@ -2079,7 +2100,7 @@
       "item_label": "Prompts",
       "search_placeholder": "Prompts suchen...",
       "no_match": "Keine Prompts entsprechen Ihrer Suche",
-      "auto_injected_tooltip": "Kein {ph}-Platzhalter — der Dokumenttext wird beim Ausführen des Tests automatisch angehängt.",
+      "auto_injected_tooltip": "Kein {ph}-Platzhalter — der Dokumenttext wird beim Ausführen des Durchlaufs automatisch angehängt.",
       "auto_injected": "Automatisch eingefügt",
       "view": "Prompt anzeigen",
       "edit": "Prompt bearbeiten",
@@ -2091,7 +2112,7 @@
     },
     "view": {
       "snapshot": "Momentaufnahme",
-      "snapshot_title": "Eingefrorene Kopie des Prompts zum Zeitpunkt der Testausführung",
+      "snapshot_title": "Eingefrorene Kopie des Prompts zum Zeitpunkt des Durchlaufstarts",
       "copy": "Kopieren",
       "close": "Schließen",
       "copied": "Prompt kopiert"
@@ -2108,12 +2129,12 @@
       "description_placeholder": "Beschreiben Sie, was dieser Prompt extrahieren soll...",
       "instruction_label": "Extraktionsanweisung",
       "instruction_placeholder": "Extrahieren Sie basierend auf dem Dokumentinhalt diese Felder:",
-      "instruction_help": "Dies wird als Benutzer-Prompt verwendet. Der Dokumenttext und das ausgewählte Schema werden beim Ausführen des Tests automatisch angehängt.",
+      "instruction_help": "Dies wird als Benutzer-Prompt verwendet. Der Dokumenttext und das ausgewählte Schema werden beim Ausführen des Durchlaufs automatisch angehängt.",
       "system_from_advanced": "Dieser Prompt enthält einen System-Prompt aus dem Modus „Erweitert“. Er bleibt während der Bearbeitung erhalten, wird aber nicht gespeichert, solange der Modus „Einfach“ ausgewählt ist.",
       "hide": "Ausblenden",
       "preview": "Vorschau",
       "preview_with_sample": "Vorschau mit Beispieldokument",
-      "simple_preview_help": "Im Modus „Einfach“ wird keine Systemnachricht gesendet — Ihre Anweisung wird zur Benutzernachricht, mit angehängtem Dokument und dem Schema des Tests:",
+      "simple_preview_help": "Im Modus „Einfach“ wird keine Systemnachricht gesendet — Ihre Anweisung wird zur Benutzernachricht, mit angehängtem Dokument und dem Schema des Durchlaufs:",
       "user_message_preview": "Vorschau der Benutzernachricht",
       "system_message_preview": "Vorschau der Systemnachricht",
       "callout_title": "So funktionieren Prompts",
@@ -2123,7 +2144,7 @@
       "callout_user_text": "— dokumentspezifische Anweisungen, wobei",
       "callout_replaced": "durch den Dokumenttext ersetzt wird.",
       "callout_schema_label": "Das ausgewählte Schema wird automatisch einbezogen",
-      "callout_schema_text": "wenn der Test ausgeführt wird, damit das Modell weiß, welche Felder zu extrahieren sind. Sie müssen das Schema-JSON nicht in Ihren Prompt einfügen — das würde es duplizieren.",
+      "callout_schema_text": "wenn der Durchlauf ausgeführt wird, damit das Modell weiß, welche Felder zu extrahieren sind. Sie müssen das Schema-JSON nicht in Ihren Prompt einfügen — das würde es duplizieren.",
       "insert_placeholder_title": "{ph} an der Cursorposition einfügen",
       "insert_placeholder": "+ {ph} einfügen",
       "system_placeholder": "Sie sind ein KI-Assistent, der auf die Extraktion strukturierter Informationen aus Dokumenten spezialisiert ist...",
@@ -2387,7 +2408,7 @@
     "disabled_reason": {
       "loading": "Projektressourcen werden geladen…",
       "no_schema": "Sie benötigen mindestens ein Schema, um einen Durchlauf zu starten.",
-      "no_document": "Sie müssen mindestens ein Dokument hochladen, um einen Durchlauf zu starten.",
+      "no_document": "Sie benötigen mindestens ein vorverarbeitetes Dokument, um einen Durchlauf zu starten. Laden Sie zuerst Dateien hoch und führen Sie die Vorverarbeitung aus.",
       "no_prompt": "Sie müssen mindestens einen Prompt erstellen, um einen Durchlauf zu starten."
     },
     "errors": {
@@ -2878,7 +2899,7 @@
       "coverage": "{found}/{total} gefunden",
       "coverage_title": "Herkunft der Werte",
       "coverage_help": "Werte werden durch eine Suche im extrahierten Text lokalisiert. Die Treffer stammen aus einer Textsuche, nicht vom Modell — bitte vor der Verwendung prüfen.",
-      "coverage_evidence_mode": "Dieser Trial lief mit Quellenzitaten: Das Modell wurde gebeten, die Textstelle zu jedem Wert zu zitieren.",
+      "coverage_evidence_mode": "Dieser Durchlauf lief mit Quellenzitaten: Das Modell wurde gebeten, die Textstelle zu jedem Wert zu zitieren.",
       "coverage_missing": "Ohne Zitat: {fields}",
       "prev_match": "Vorheriges Vorkommen",
       "next_match": "Nächstes Vorkommen",
@@ -3013,7 +3034,9 @@
       "no_file_provided": "Keine Datei angegeben",
       "name_required": "Ein Name ist erforderlich, wenn keine einzelne Datei angegeben wird",
       "id_column_too_long": "Der Name der ID-Spalte ist zu lang (maximal 200 Zeichen).",
-      "invalid_schema_paths": "Schemafeldpfad(e) im Schema nicht gefunden: {paths}. Verwenden Sie einen Blattpfad aus dem Schema (z. B. 'patient.age' oder 'lab_results[].value')."
+      "invalid_schema_paths": "Schemafeldpfad(e) im Schema nicht gefunden: {paths}. Verwenden Sie einen Blattpfad aus dem Schema (z. B. 'patient.age' oder 'lab_results[].value').",
+      "match_preview_parse_failed": "{error}",
+      "match_preview_load_failed": "Ground Truth konnte nicht geladen werden. Details im Serverprotokoll."
     },
     "preprocess": {
       "project_not_found": "Projekt nicht gefunden",
@@ -3044,7 +3067,7 @@
       "not_found": "Prompt nicht gefunden",
       "update_forbidden": "Sie sind nicht berechtigt, Prompts für dieses Projekt zu aktualisieren",
       "delete_forbidden": "Sie sind nicht berechtigt, Prompts aus diesem Projekt zu löschen",
-      "referenced_by_trial": "Der Prompt kann nicht gelöscht werden, da er von einem Trial referenziert wird"
+      "referenced_by_trial": "Der Prompt kann nicht gelöscht werden, da er von einem Durchlauf referenziert wird"
     },
     "schemas": {
       "required_without_property": "Das Schema führt Pflichtfelder auf, die nicht in „properties“ definiert sind. Das Modell kann sie nie zurückgeben: {details}",
@@ -3057,7 +3080,7 @@
       "not_authorized_delete": "Sie sind nicht berechtigt, Schemata aus diesem Projekt zu löschen",
       "invalid_json_schema": "Ungültiges JSON-Schema",
       "not_found": "Schema nicht gefunden",
-      "referenced_by_trial": "Ein Schema, das von einem Trial referenziert wird, kann nicht gelöscht werden"
+      "referenced_by_trial": "Ein Schema, das von einem Durchlauf referenziert wird, kann nicht gelöscht werden"
     },
     "sso": {
       "slug_no_alphanumeric": "Der Anbietername muss alphanumerische Zeichen enthalten.",
@@ -3092,7 +3115,7 @@
     },
     "trials": {
       "required_without_property": "Dieses Schema führt Pflichtfelder auf, die nicht in „properties“ definiert sind. Dadurch würde jedes Dokument die Validierung nicht bestehen: {details}",
-      "schema_definition_invalid": "Das Schema dieses Trials ist kein gültiges JSON Schema: {details}",
+      "schema_definition_invalid": "Das Schema dieses Durchlaufs ist kein gültiges JSON Schema: {details}",
       "project_not_found": "Projekt nicht gefunden",
       "not_authorized_project_action": "Sie sind nicht berechtigt, für dieses Projekt die Aktion {permission} auszuführen",
       "not_authorized_create": "Sie sind nicht berechtigt, Durchläufe für dieses Projekt zu erstellen",

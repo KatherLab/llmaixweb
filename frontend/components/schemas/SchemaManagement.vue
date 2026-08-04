@@ -24,6 +24,7 @@
       :schemas="schemas"
       :is-loading="isLoading"
       @create="showCreateModal = true"
+      @create-from-template="openCreateFromTemplate"
       @view="viewSchema"
       @edit="editSchema"
       @delete="confirmDelete"
@@ -45,6 +46,7 @@
       :open="showCreateModal || showEditModal"
       :project-id="props.projectId"
       :schema="showEditModal ? currentSchema : null"
+      :start-with-templates="createWithTemplates"
       @close="closeSchemaModal"
       @created="onSchemaCreated"
       @updated="onSchemaUpdated"
@@ -210,9 +212,18 @@ const editSchema = (schema: Schema) => {
   showEditModal.value = true
 }
 
+// "Start from a template" on the empty state: open the create modal with the
+// templates picker already showing.
+const createWithTemplates = ref(false)
+const openCreateFromTemplate = () => {
+  createWithTemplates.value = true
+  showCreateModal.value = true
+}
+
 const closeSchemaModal = () => {
   showCreateModal.value = false
   showEditModal.value = false
+  createWithTemplates.value = false
 }
 
 const onSchemaCreated = (schema: Schema) => {

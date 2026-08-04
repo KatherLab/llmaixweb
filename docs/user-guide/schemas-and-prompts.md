@@ -6,7 +6,7 @@ Prompts**.
 
 !!! tip "The schema is injected automatically"
     You do **not** paste the schema JSON into your prompt. The selected schema is
-    automatically included in the LLM call when a trial runs.
+    automatically included in the LLM call when an extraction runs.
 
 ## Schemas
 
@@ -142,24 +142,24 @@ The second check matters more than it looks. Structured output (the constrained
 decoding your LLM endpoint applies) builds its grammar from `properties` and
 **silently ignores** a `required` entry that names no property — so the model
 returns output the endpoint considers correct, and LLMAIx then rejects it with
-`'<field>' is a required property` for *every* document in the trial. The usual
+`'<field>' is a required property` for *every* document in the extraction run. The usual
 cause is a property renamed or removed by hand in the **Raw JSON** editor while
 its old name stayed in `required`; the error message names the offending field
 and suggests the closest matching property.
 
-The same check runs when a trial is created, so a schema saved before this
+The same check runs when an extraction run is created, so a schema saved before this
 validation existed fails fast instead of consuming a full run's worth of tokens.
 
 ### Viewing, editing, deleting
 
 **View Schema** shows the fields (with a **raw-JSON toggle** and a **Copy**
-button that copies the formatted JSON). A schema embedded in a trial is shown
+button that copies the formatted JSON). A schema embedded in an extraction run is shown
 with a **Snapshot** badge, indicating a point-in-time copy rather than the live
 schema. There is no separate file import/export — the **Raw JSON** editor is how
 you paste a schema in, and **Copy** is how you take one out.
 
 !!! note
-    A schema referenced by a trial cannot be deleted.
+    A schema referenced by an extraction run cannot be deleted.
 
 ## Prompts
 
@@ -175,7 +175,7 @@ beneath), a **Placeholder** column, and the **Created** date, and expands to
 preview the system and user prompt text. The Placeholder column shows a green
 **Contains {document_content}** badge when the prompt embeds the placeholder
 explicitly, or an **Auto-injected** hint (with a tooltip) when it doesn't — in
-which case the document text is appended automatically at trial time. Row actions
+which case the document text is appended automatically at extraction time. Row actions
 are **View**, **Edit**, and **Delete**.
 
 <figure markdown>
@@ -187,7 +187,7 @@ are **View**, **Edit**, and **Delete**.
 
 Where you write `{document_content}`, the document's text is substituted in. If
 your prompt doesn't contain the placeholder, the document text is **appended
-automatically** at trial time (shown as the *Auto-injected* hint in the list).
+automatically** at extraction time (shown as the *Auto-injected* hint in the list).
 
 ### Creating a prompt
 
@@ -196,13 +196,13 @@ prompt needs a **Name** (required) and may have an optional **Description**.
 
 <figure markdown>
   ![The Prompt editor in simple mode](../assets/screenshots/prompt-editor.png){ width="820" }
-  <figcaption>The Prompt editor in Simple mode: a single extraction instruction, with the system prompt and schema injected automatically at trial time.</figcaption>
+  <figcaption>The Prompt editor in Simple mode: a single extraction instruction, with the system prompt and schema injected automatically at extraction time.</figcaption>
 </figure>
 
 - **Simple** — a single **Extraction Instruction** (used as the user prompt); no
   system prompt is sent. **Preview** shows the real message the model receives:
   your instruction, the document content wrapped in markers, and a note that the
-  trial's schema is appended after it.
+  extraction run's schema is appended after it.
 - **Advanced** — separate **System Prompt** and **User Prompt** textareas, each
   with an **Insert {document_content}** helper (inserts at the cursor) and a
   green **Contains {document_content}** badge when present, plus a per-field
@@ -220,7 +220,7 @@ The template comes in English, German, French and Spanish, and the selector
 beside the button follows the interface language — German documents generally
 extract better with German instructions. It only affects the text the button
 inserts; you can edit or translate the prompt freely afterwards. The language of
-the instructions the app *appends* at run time is set per trial (see
+the instructions the app *appends* at run time is set per extraction run (see
 [Advanced settings](trials.md#advanced-settings)).
 
 !!! warning "Simple mode drops the system prompt"
@@ -232,8 +232,8 @@ the instructions the app *appends* at run time is set per trial (see
     accident.
 
 !!! note
-    A prompt referenced by a trial cannot be deleted.
+    A prompt referenced by an extraction run cannot be deleted.
 
 ## Next step
 
-With a schema and a prompt ready, run a **[trial](trials.md)**.
+With a schema and a prompt ready, start an **[extraction run](trials.md)**.

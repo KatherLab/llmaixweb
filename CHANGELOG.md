@@ -14,6 +14,10 @@ that point forward.
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed "Trials" to "Extraction Runs" in the UI (API and database keep the term "trial").
+
 ## [0.8.0] — 2026-08-03
 
 ### Added

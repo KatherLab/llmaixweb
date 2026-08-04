@@ -32,7 +32,7 @@
               <X v-else class="w-5 h-5" />
             </button>
             <div class="flex-shrink-0 flex items-center md:mr-6">
-              <AppBrand />
+              <AppBrand to="/projects" />
             </div>
             <!-- Project breadcrumb: replaces ProjectDetail's second header -->
             <div
@@ -88,11 +88,6 @@
                 :aria-current="$route.path.startsWith('/admin') ? 'page' : undefined"
               >
                 {{ $t('common.admin') }}
-                <span
-                  class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary-soft text-primary border border-primary/30"
-                >
-                  {{ $t('common.admin') }}
-                </span>
               </router-link>
             </div>
             <!-- Contextual: centered workflow pill tabs (desktop; mobile uses the slide-down menu) -->

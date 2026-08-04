@@ -1,7 +1,7 @@
 # Task monitoring
 
 **Celery Workers & Queues** (`/admin/celery`) monitors the background task system
-that runs preprocessing and trials. A **Refresh** button in the header re-fetches
+that runs preprocessing and extraction runs. A **Refresh** button in the header re-fetches
 worker and queue state on demand; the page loads a snapshot on open and does not
 auto-poll.
 
@@ -49,7 +49,7 @@ id is shown briefly.
 !!! warning "Revoke is forceful"
     Revoke/terminate signals the worker to stop the task. For in-flight OCR or
     extraction this abandons the work rather than rolling it back cleanly; prefer
-    the in-app cancel controls on a preprocessing task or trial (which support
+    the in-app cancel controls on a preprocessing task or extraction run (which support
     optional rollback) when they're available. Use this page's revoke mainly for
     stuck or orphaned tasks.
 

@@ -136,7 +136,7 @@ async function handleSubmit(): Promise<void> {
 
     // --- Only then, route away
     toast.success(t('auth.first_admin.success_toast'))
-    router.push('/')
+    router.push('/projects')
   } catch (err) {
     error.value = extractErrorMessage(err, t('auth.errors.create_admin_failed'))
     toast.error(error.value)

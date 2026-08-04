@@ -57,7 +57,7 @@ immediately on its own; the modal reports success or the specific error for each
 
 !!! danger "Deleting a user cascades"
     Deleting a user permanently removes the account **and all data owned by that
-    user** — their projects, files, documents, schemas, prompts, trials, and
+    user** — their projects, files, documents, schemas, prompts, extraction runs, and
     evaluations, plus their uploaded files in storage. A confirmation dialog
     requires you to confirm before the deletion runs.
 

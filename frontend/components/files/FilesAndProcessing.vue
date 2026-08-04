@@ -29,12 +29,32 @@
          including a brand-new project after its initial empty fetch).
          `hasLoadedFiles` gates it so the "empty project" hero can't flash
          while the very first fetch is still in flight. -->
-    <FileDropzone
-      v-if="hasLoadedFiles && !files.length && !hasActiveFilters && !fetchError"
-      v-model:dragging="isDragging"
-      @drop="uploadFiles"
-      @select="uploadFiles"
-    />
+    <template v-if="hasLoadedFiles && !files.length && !hasActiveFilters && !fetchError">
+      <!-- First-run mini-explainer: orients a brand-new project (3 steps) and
+           disappears as soon as the first file exists. -->
+      <Callout variant="info" :title="$t('files.first_run.title')">
+        <ol class="mt-1 flex flex-col gap-1.5 text-sm sm:flex-row sm:items-center sm:gap-5">
+          <li
+            v-for="(stepKey, index) in [
+              'files.first_run.step_upload',
+              'files.first_run.step_preprocess',
+              'files.first_run.step_review',
+            ]"
+            :key="stepKey"
+            class="flex items-start gap-2"
+          >
+            <span
+              class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary"
+              aria-hidden="true"
+            >
+              {{ index + 1 }}
+            </span>
+            <span>{{ $t(stepKey) }}</span>
+          </li>
+        </ol>
+      </Callout>
+      <FileDropzone v-model:dragging="isDragging" @drop="uploadFiles" @select="uploadFiles" />
+    </template>
 
     <!-- Filters & Search (only when there are files, or active filters to show/clear) -->
     <FilesFilterBar

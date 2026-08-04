@@ -14,6 +14,7 @@ export interface Project {
   documents?: Document[]
   document_count: number
   /** Aggregate counts driving the project workflow progression cue. */
+  file_count: number
   schema_count: number
   prompt_count: number
   trial_count: number

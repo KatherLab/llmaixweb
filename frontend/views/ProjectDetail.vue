@@ -141,7 +141,9 @@ const steps = computed(() => [
   {
     id: 'files',
     name: t('projects.steps.files'),
-    isComplete: (project.value.document_count ?? 0) > 0,
+    // Completes on upload (file_count), not on preprocessing output — a user
+    // who uploaded files but hasn't preprocessed yet has still done step 1.
+    isComplete: (project.value.file_count ?? 0) > 0,
   },
   {
     id: 'documents',

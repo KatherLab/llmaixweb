@@ -28,7 +28,7 @@ and impact. We aim to acknowledge within a few working days.
 | Passwords | bcrypt (cost 12); configurable complexity policy; empty-hash sentinel blocks password login for SSO-only accounts |
 | Brute force | Per-account lockout after N failed logins + per-IP rate limits on all auth endpoints |
 | SSO | OIDC (PKCE + signed state); provider client secrets Fernet-encrypted at rest |
-| Secrets at rest | Trial API keys + SSO client secrets Fernet-encrypted (key derived from `SECRET_KEY`); `SECRET_KEY` required (≥16 chars, hard-exit otherwise) |
+| Secrets at rest | Extraction-run API keys + SSO client secrets Fernet-encrypted (key derived from `SECRET_KEY`); `SECRET_KEY` required (≥16 chars, hard-exit otherwise) |
 | Egress control (SSRF) | User-supplied LLM/OCR endpoints validated against an SSRF policy; redirect-following disabled on extraction clients; optional host allowlist (`ALLOWED_LLM_ENDPOINTS` / `ALLOWED_OCR_ENDPOINTS`) restricts egress to approved hosts |
 | Transport | TLS terminated at an external reverse proxy; HSTS emitted by the app when HTTPS is detected |
 | HTTP headers | Security headers on API responses (app middleware) and on the SPA (nginx): CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
@@ -48,7 +48,7 @@ do about each.
    plaintext. **You must provide encryption at rest** via an encrypted database
    volume / disk and encrypted object storage (SSE). This is a deployment
    requirement, not a code feature.
-2. **External LLM/OCR endpoints are sub-processors.** Any trial or remote-OCR
+2. **External LLM/OCR endpoints are sub-processors.** Any extraction run or remote-OCR
    run sends patient text to the configured endpoint. Keep these self-hosted /
    on-premise unless you have explicitly cleared the endpoint as a permitted
    sub-processor. Every such egress is recorded in the audit log.

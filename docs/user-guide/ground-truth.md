@@ -1,6 +1,6 @@
 # Ground truth
 
-**Ground truth** is a file of known-correct values used to measure a trial's
+**Ground truth** is a file of known-correct values used to measure an extraction run's
 accuracy. You upload it, tell the app how documents are identified, and map each
 ground-truth column to a schema field. Ground truth is managed inside the
 **Evaluation** tab.
@@ -27,7 +27,7 @@ app opens the mapping configurator right away.
 </figure>
 
 !!! info "How documents are matched"
-    Ground-truth entries are matched to trial results by identifier. For
+    Ground-truth entries are matched to extraction results by identifier. For
     JSON/ZIP each entry needs an `id`; for CSV/XLSX you choose the **ID column**
     in the next step. Matching is **case-insensitive** and tries, in order: the
     document name (with and without file extension), the source filename (with
@@ -79,7 +79,7 @@ column (if changed) and the mappings. You can't save until a schema is chosen, a
 least one mapping exists, and the ID field is set.
 
 !!! warning "Editing mappings invalidates evaluations"
-    Saving new mappings deletes evaluations for trials using that schema, so they
+    Saving new mappings deletes evaluations for extraction runs using that schema, so they
     can be recomputed against the new mapping.
 
 ## Comparison methods

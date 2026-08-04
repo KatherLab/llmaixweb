@@ -19,13 +19,14 @@
 
     <div v-else class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mb-8">
       <router-link
-        to="/register"
+        :to="registrationOpen ? '/register' : '/login'"
         class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-hover px-8 py-4 text-lg font-medium text-white shadow-lg transition hover:shadow-xl"
       >
-        {{ $t('landing.cta.get_started') }}
+        {{ registrationOpen ? $t('landing.cta.get_started') : $t('landing.nav.sign_in') }}
         <ArrowRight class="h-5 w-5" />
       </router-link>
       <router-link
+        v-if="registrationOpen"
         to="/login"
         class="inline-flex items-center gap-2 rounded-full border border-strong bg-surface/80 text-content-muted px-8 py-4 text-lg font-medium backdrop-blur-sm transition hover:bg-surface-muted hover:border-strong"
       >
@@ -56,6 +57,15 @@
 <script setup lang="ts">
 import { ArrowRight, LogIn } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
+
+interface Props {
+  /** Whether open (non-invitation) registration is enabled on this deployment. */
+  registrationOpen?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  registrationOpen: false,
+})
 
 const authStore = useAuthStore()
 </script>

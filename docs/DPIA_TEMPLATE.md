@@ -34,7 +34,7 @@ Related: [DATA_FLOW.md](./DATA_FLOW.md), [THREAT_MODEL.md](./THREAT_MODEL.md),
 
 | Category | Present? | Where stored | Notes |
 |----------|----------|--------------|-------|
-| Special-category health data (PHI) | `‹yes/no›` | `documents.text`, uploaded files, trial results, ground truth | Plaintext at rest — see §6 |
+| Special-category health data (PHI) | `‹yes/no›` | `documents.text`, uploaded files, extraction-run results, ground truth | Plaintext at rest — see §6 |
 | Direct identifiers (name, MRN, DOB) | `‹yes/no›` | Within document text/files | Consider de-identifying before upload |
 | User account data (staff) | Yes | `users` table | Email, name, hashed password |
 | Audit metadata | Yes | `audit_logs` | Actor, action, IP, timestamps — no PHI |

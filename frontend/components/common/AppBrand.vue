@@ -1,8 +1,9 @@
 <!--
   Single source of truth for the LLMAIx wordmark.
 
-  - `asLink` (default true): renders as a <router-link> to `to` (default "/"),
-    so the logo always returns to the landing page — from anywhere in the app.
+  - `asLink` (default true): renders as a <router-link> to `to` (default "/",
+    the landing page; the in-app navbar passes `/projects` so the logo goes to
+    the app home instead).
   - `asLink={false}`: renders as a plain heading element (used on auth/setup
     pages where the wordmark is a page heading, not navigation).
   - `variant="hero"`: the gradient text treatment used on the landing hero.

@@ -82,10 +82,10 @@ cannot be dismissed while a delete is in flight).
     configuration into separate reprocessing tasks — one task per config.
 
 !!! danger "Delete cascade"
-    Deleting a document that's referenced by a trial, group, or evaluation
+    Deleting a document that's referenced by an extraction run, group, or evaluation
     requires confirming a **cascade** that also removes those dependents. When
     you tick the cascade option the dialog fetches and previews the exact impact
-    (e.g. *"3 documents, 2 trials, 1 group, 5 extraction results"*). You must
+    (e.g. *"3 documents, 2 extraction runs, 1 group, 5 extraction results"*). You must
     also tick *"I understand that this action is permanent."* before the delete
     button enables. Very large selections (over ~1,000 ids) skip the preview and
     say so; deletions are sent to the backend in chunks and a per-item summary of
@@ -153,7 +153,7 @@ sidebar. Each version is labelled `v1`, `v2`, … and marked **Current** or
 ## Document groups
 
 A **document group** (a *document set* in the API) is a named set of documents
-you can run a [trial](trials.md) against. Groups can be:
+you can start an [extraction run](trials.md) against. Groups can be:
 
 - **Manual** — created via **Create Group** (from the batch bar or the Groups
   tab).
@@ -182,7 +182,7 @@ Row actions are **View**, **Edit** (manual groups only — auto groups have no
 edit action), and **Delete**.
 
 !!! note "Groups in use can't be deleted"
-    A group referenced by a trial cannot be deleted — its delete action is
+    A group referenced by an extraction run cannot be deleted — its delete action is
     disabled with an explanatory tooltip. When you do delete a deletable group,
     the confirmation offers an **also delete its documents** checkbox; ticking it
     removes member documents too, but only where they aren't referenced

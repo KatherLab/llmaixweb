@@ -9,6 +9,8 @@ import type {
   FieldMappingCreate,
   FieldMappingStatus,
   GroundTruth,
+  GroundTruthMatchPreview,
+  GroundTruthMatchPreviewRequest,
   GroundTruthPreview,
 } from '@/types'
 
@@ -45,6 +47,17 @@ export const groundtruthApi = {
   setIdColumn(projectId: number | string, gtId: number | string, payload: Record<string, unknown>) {
     return api.put(`/project/${projectId}/groundtruth/${gtId}/id-column`, payload) as Promise<
       ApiBody<GroundTruth>
+    >
+  },
+  // Pre-save check: how many GT rows (keyed by the CANDIDATE, unsaved id
+  // config) match a project document. Read-only — persists nothing.
+  matchPreview(
+    projectId: number | string,
+    gtId: number | string,
+    payload: GroundTruthMatchPreviewRequest,
+  ) {
+    return api.post(`/project/${projectId}/groundtruth/${gtId}/match-preview`, payload) as Promise<
+      ApiBody<GroundTruthMatchPreview>
     >
   },
 

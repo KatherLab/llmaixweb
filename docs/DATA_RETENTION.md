@@ -9,13 +9,13 @@ cover, and the operational process to keep data minimised in a clinical setting.
 Deleting a **project** (or a **user**, which cascades their projects) removes:
 
 - All DB rows for the project: files, documents, document sets, preprocessing
-  tasks/configs, schemas, prompts, trials + results, ground truth, evaluations +
+  tasks/configs, schemas, prompts, extraction runs + results, ground truth, evaluations +
   metrics (removed by a cascading delete that clears child rows in FK order;
   deleting a user cascades to their owned projects).
 - The stored **bytes** for uploaded files and ground-truth files in local/S3
   storage (`remove_file`), performed after the DB commit.
 
-Finer-grained deletes exist for individual files, documents, trials, ground
+Finer-grained deletes exist for individual files, documents, extraction runs, ground
 truth, and evaluations.
 
 > **Accountability is preserved.** The append-only audit trail records the

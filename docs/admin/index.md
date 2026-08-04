@@ -30,5 +30,5 @@ keeps you inside the same shell. Opening `/admin` with no sub-page redirects to
 
 !!! tip "Activity bell"
     The bell in the app header shows live task activity (preprocessing and
-    trials) for everyone. Admins additionally get a **View all activity** link to
+    extraction runs) for everyone. Admins additionally get a **View all activity** link to
     the [task monitoring](celery.md) page.

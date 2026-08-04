@@ -49,6 +49,9 @@ class Project(ProjectBase):
     document_count: int = 0
     # Aggregate counts used to drive the project workflow progression cue
     # (Files → Documents → Schemas → Trials → Evaluation check marks).
+    # `file_count` lets the Files step complete on upload, before preprocessing
+    # has produced any documents.
+    file_count: int = 0
     schema_count: int = 0
     prompt_count: int = 0
     trial_count: int = 0
@@ -845,6 +848,23 @@ class GroundTruth(GroundTruthBase):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class GroundTruthMatchPreview(BaseModel):
+    """Result of the pre-save ground-truth ↔ document ID match check.
+
+    Returned by ``POST /groundtruth/{id}/match-preview`` so the user learns
+    whether a candidate ID column/field actually matches any project documents
+    BEFORE saving mappings and running an evaluation.
+    """
+
+    total_rows: int
+    matched_count: int
+    # Up to 5 example ground-truth keys that no document resolves to.
+    unmatched_examples: list[str] = Field(default_factory=list)
+    # "id_column" (CSV/XLSX column), "json_field" (JSON/ZIP id field) or
+    # "filename" (no explicit id — the app's default heuristics).
+    match_mode: str
 
 
 class EvaluationMetricDetail(BaseModel):

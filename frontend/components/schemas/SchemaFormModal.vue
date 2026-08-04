@@ -54,9 +54,10 @@
               <Layers class="h-4 w-4 mr-1" />
               {{ $t('schema.form.templates') }}
             </button>
-            <!-- Validation Indicator -->
+            <!-- Validation Indicator (hidden for a pristine empty draft: a brand-new
+                 schema with no fields yet shouldn't greet the user with "Invalid") -->
             <div
-              v-if="schemaForm.schema_definition"
+              v-if="schemaForm.schema_definition && !isEmptyDraft"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
               :class="isSchemaValid ? getPillClass('green') : getPillClass('red')"
             >
@@ -211,9 +212,11 @@
         :title="
           !schemaForm.schema_name.trim()
             ? $t('schema.form.name_required')
-            : simpleMode && !simpleEditorValid
-              ? $t('schema.form.fix_field_names')
-              : undefined
+            : !isSchemaValid
+              ? $t('schema.form.must_contain_field')
+              : simpleMode && !simpleEditorValid
+                ? $t('schema.form.fix_field_names')
+                : undefined
         "
         data-testid="schema-submit"
         @click="isEdit ? updateSchema() : createSchema()"
@@ -258,7 +261,7 @@ import SimpleSchemaEditor from './SimpleSchemaEditor.vue'
 import SchemaTemplatesModal from './SchemaTemplatesModal.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
-import { formatJSON, STARTER_SCHEMA, schemaTemplates } from '@/utils/schemaTemplates'
+import { formatJSON, schemaTemplates } from '@/utils/schemaTemplates'
 import { getPillClass } from '@/utils/statusStyles'
 import { inputClass, checkboxClass } from '@/utils/formStyles'
 import { extractErrorMessage } from '@/utils/errors'
@@ -269,10 +272,13 @@ interface Props {
   open: boolean
   projectId: string | number
   schema?: Schema | null
+  /** Open the templates picker immediately on create ("Start from a template"). */
+  startWithTemplates?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   schema: null,
+  startWithTemplates: false,
 })
 
 const emit = defineEmits<{
@@ -467,6 +473,22 @@ const updateSchema = async () => {
   }
 }
 
+// True while the definition is a well-formed object with zero properties — the
+// pristine state of a new schema (or one whose fields were all removed). Used
+// to suppress the red "Invalid" pill, which is reserved for actual errors.
+const isEmptyDraft = computed(() => {
+  try {
+    const parsed = JSON.parse(schemaForm.value.schema_definition)
+    return (
+      !!parsed &&
+      typeof parsed === 'object' &&
+      Object.keys(((parsed as Record<string, unknown>).properties as object) ?? {}).length === 0
+    )
+  } catch {
+    return false
+  }
+})
+
 // A schema is saveable when it parses to an object with at least one property.
 const isSchemaValid = computed(() => {
   try {
@@ -639,14 +661,16 @@ watch(
           visualSchema.value = { type: 'object', properties: {} }
         }
       } else {
-        // Create mode — seed starter fields for a new schema
-        const starter = JSON.parse(JSON.stringify(STARTER_SCHEMA))
-        simpleSchema.value = starter
-        visualSchema.value = JSON.parse(JSON.stringify(STARTER_SCHEMA))
+        // Create mode — start empty: the Simple editor's empty state invites
+        // adding the first field, and no example fields ship by accident.
+        simpleSchema.value = { type: 'object', properties: {} }
+        visualSchema.value = { type: 'object', properties: {} }
         schemaForm.value = {
           schema_name: '',
-          schema_definition: JSON.stringify(STARTER_SCHEMA, null, 2),
+          schema_definition: JSON.stringify({ type: 'object', properties: {} }, null, 2),
         }
+        // "Start from a template" entry point: open the picker right away.
+        showTemplates.value = props.startWithTemplates
       }
       // Baseline for unsaved-changes detection: everything written above is
       // initialization, not a user edit.
@@ -654,6 +678,7 @@ watch(
     } else {
       // Reset on close
       schemaError.value = ''
+      showTemplates.value = false
       activeTab.value = 'visual'
       schemaForm.value = {
         schema_name: '',
