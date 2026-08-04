@@ -935,7 +935,9 @@
       "hide": "Ocultar",
       "setup_required": "Configuración necesaria",
       "no_evaluations": "Aún no hay evaluaciones. Seleccione una ejecución de extracción para evaluar.",
-      "item_label": "evaluaciones"
+      "item_label": "evaluaciones",
+      "view_mappings": "Ver asignaciones",
+      "view_ground_truth": "Ver datos de referencia"
     },
     "concepts": {
       "title": "Cómo funciona la evaluación",
@@ -1591,7 +1593,8 @@
       "toast_update_failed": "No se pudo actualizar el Ground Truth",
       "toast_deleted": "Ground Truth eliminado",
       "toast_delete_failed": "No se pudo eliminar el Ground Truth",
-      "toast_mappings_configured": "Asignaciones de campos configuradas"
+      "toast_mappings_configured": "Asignaciones de campos configuradas",
+      "view_mappings": "Ver asignaciones"
     },
     "upload": {
       "title": "Subir Ground Truth",
@@ -1695,7 +1698,8 @@
       "tolerance": "Tolerancia",
       "relative": "relativo (±%)",
       "hint_type_mismatch": "Discrepancia de tipos: el campo del esquema es {schemaType}, el campo de Ground Truth es {gtType}",
-      "hint_unusual_method": "La comparación \"{method}\" es inusual para un campo {fieldType}"
+      "hint_unusual_method": "La comparación \"{method}\" es inusual para un campo {fieldType}",
+      "empty_readonly": "Aún no hay asignaciones."
     },
     "id_field": {
       "document_id": "ID del documento",

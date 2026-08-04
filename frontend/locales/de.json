@@ -935,7 +935,9 @@
       "hide": "Ausblenden",
       "setup_required": "Einrichtung erforderlich",
       "no_evaluations": "Noch keine Auswertungen. Wählen Sie einen Durchlauf zur Auswertung aus.",
-      "item_label": "Auswertungen"
+      "item_label": "Auswertungen",
+      "view_mappings": "Zuordnungen ansehen",
+      "view_ground_truth": "Ground Truth ansehen"
     },
     "concepts": {
       "title": "So funktioniert die Auswertung",
@@ -1591,7 +1593,8 @@
       "toast_update_failed": "Ground Truth konnte nicht aktualisiert werden",
       "toast_deleted": "Ground Truth gelöscht",
       "toast_delete_failed": "Ground Truth konnte nicht gelöscht werden",
-      "toast_mappings_configured": "Feldzuordnungen konfiguriert"
+      "toast_mappings_configured": "Feldzuordnungen konfiguriert",
+      "view_mappings": "Zuordnungen ansehen"
     },
     "upload": {
       "title": "Ground Truth hochladen",
@@ -1695,7 +1698,8 @@
       "tolerance": "Toleranz",
       "relative": "relativ (±%)",
       "hint_type_mismatch": "Typkonflikt: Schemafeld ist {schemaType}, Ground-Truth-Feld ist {gtType}",
-      "hint_unusual_method": "Der Vergleich \"{method}\" ist für ein {fieldType}-Feld ungewöhnlich"
+      "hint_unusual_method": "Der Vergleich \"{method}\" ist für ein {fieldType}-Feld ungewöhnlich",
+      "empty_readonly": "Noch keine Zuordnungen."
     },
     "id_field": {
       "document_id": "Dokument-ID",

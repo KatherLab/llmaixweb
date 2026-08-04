@@ -935,7 +935,9 @@
       "hide": "Hide",
       "setup_required": "Setup Required",
       "no_evaluations": "No evaluations yet. Select an extraction run to evaluate.",
-      "item_label": "evaluations"
+      "item_label": "evaluations",
+      "view_mappings": "View mappings",
+      "view_ground_truth": "View ground truth"
     },
     "concepts": {
       "title": "How evaluation works",
@@ -1591,7 +1593,8 @@
       "toast_update_failed": "Failed to update ground truth",
       "toast_deleted": "Ground truth deleted",
       "toast_delete_failed": "Failed to delete ground truth",
-      "toast_mappings_configured": "Field mappings configured"
+      "toast_mappings_configured": "Field mappings configured",
+      "view_mappings": "View mappings"
     },
     "upload": {
       "title": "Upload Ground Truth",
@@ -1695,7 +1698,8 @@
       "tolerance": "Tolerance",
       "relative": "relative (±%)",
       "hint_type_mismatch": "Type mismatch: schema field is {schemaType}, ground-truth field is {gtType}",
-      "hint_unusual_method": "\"{method}\" comparison is unusual for a {fieldType} field"
+      "hint_unusual_method": "\"{method}\" comparison is unusual for a {fieldType} field",
+      "empty_readonly": "No mappings yet."
     },
     "id_field": {
       "document_id": "Document ID",

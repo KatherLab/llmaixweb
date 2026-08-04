@@ -1,11 +1,15 @@
 <template>
   <div class="w-full">
     <div v-if="(mappings ?? []).length === 0" class="text-xs text-content-subtle text-center py-4">
-      {{ $t('groundtruth.mapping_list.empty_line1') }}<br />{{
-        $t('groundtruth.mapping_list.empty_line2')
-      }}
-      <b>{{ $t('groundtruth.mapping_list.map') }}</b
-      >.
+      <template v-if="canEdit">
+        {{ $t('groundtruth.mapping_list.empty_line1') }}<br />{{
+          $t('groundtruth.mapping_list.empty_line2')
+        }}
+        <b>{{ $t('groundtruth.mapping_list.map') }}</b
+        >.
+      </template>
+      <!-- Viewers can't map, so drop the "click Map" instruction. -->
+      <template v-else>{{ $t('groundtruth.mapping_list.empty_readonly') }}</template>
     </div>
     <ul v-else class="flex flex-col gap-2">
       <li

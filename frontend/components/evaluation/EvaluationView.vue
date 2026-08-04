@@ -85,7 +85,7 @@
               class="text-primary hover:text-primary-hover text-sm"
               @click="showGroundTruthManager = true"
             >
-              {{ $t('evaluation.view.manage') }}
+              {{ canEdit ? $t('evaluation.view.manage') : $t('evaluation.view.view_ground_truth') }}
             </button>
           </div>
           <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -168,10 +168,14 @@
                   size="sm"
                   @click="previewGroundTruth"
                 >
+                  <!-- Viewers reach the same modal, but it is read-only for
+                       them, so the label must not promise editing. -->
                   {{
-                    hasMappings
-                      ? $t('evaluation.view.edit_mappings')
-                      : $t('evaluation.view.configure_mappings')
+                    !canEdit
+                      ? $t('evaluation.view.view_mappings')
+                      : hasMappings
+                        ? $t('evaluation.view.edit_mappings')
+                        : $t('evaluation.view.configure_mappings')
                   }}
                 </BaseButton>
               </div>

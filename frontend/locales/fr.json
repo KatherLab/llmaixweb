@@ -935,7 +935,9 @@
       "hide": "Masquer",
       "setup_required": "Configuration requise",
       "no_evaluations": "Aucune évaluation pour l'instant. Sélectionnez une exécution d'extraction à évaluer.",
-      "item_label": "évaluations"
+      "item_label": "évaluations",
+      "view_mappings": "Voir les correspondances",
+      "view_ground_truth": "Voir la vérité terrain"
     },
     "concepts": {
       "title": "Comment fonctionne l'évaluation",
@@ -1591,7 +1593,8 @@
       "toast_update_failed": "Échec de la mise à jour du Ground Truth",
       "toast_deleted": "Ground Truth supprimé",
       "toast_delete_failed": "Échec de la suppression du Ground Truth",
-      "toast_mappings_configured": "Mappages de champs configurés"
+      "toast_mappings_configured": "Mappages de champs configurés",
+      "view_mappings": "Voir les correspondances"
     },
     "upload": {
       "title": "Importer un Ground Truth",
@@ -1695,7 +1698,8 @@
       "tolerance": "Tolérance",
       "relative": "relatif (±%)",
       "hint_type_mismatch": "Incompatibilité de type : le champ de schéma est {schemaType}, le champ Ground Truth est {gtType}",
-      "hint_unusual_method": "La comparaison \"{method}\" est inhabituelle pour un champ {fieldType}"
+      "hint_unusual_method": "La comparaison \"{method}\" est inhabituelle pour un champ {fieldType}",
+      "empty_readonly": "Aucun mappage pour l'instant."
     },
     "id_field": {
       "document_id": "ID du document",

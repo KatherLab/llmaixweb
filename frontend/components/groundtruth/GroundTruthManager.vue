@@ -57,11 +57,11 @@
             <!-- Configure mappings -->
             <button
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary hover:text-primary hover:bg-primary-soft rounded-card transition-colors"
-              :title="$t('groundtruth.manager.configure_mappings')"
+              :title="mappingsLabel"
               @click="previewGroundTruth(gt)"
             >
               <Settings class="w-4 h-4" />
-              {{ $t('groundtruth.manager.configure_mappings') }}
+              {{ mappingsLabel }}
             </button>
             <!-- Rename (pencil) -->
             <button
@@ -177,7 +177,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Pencil, Settings, Trash2 } from '@lucide/vue'
 import { groundtruthApi } from '@/services/groundtruthApi'
@@ -205,6 +205,12 @@ const emit = defineEmits<{ close: []; updated: [] }>()
 
 const { t } = useI18n({ useScope: 'global' })
 const { canEdit } = useProjectAccess()
+// The mappings modal is read-only for viewers — label it accordingly.
+const mappingsLabel = computed(() =>
+  canEdit.value
+    ? t('groundtruth.manager.configure_mappings')
+    : t('groundtruth.manager.view_mappings'),
+)
 const toast = useToast()
 const editingGroundTruth = ref<GroundTruth | null>(null)
 const previewingGroundTruth = ref<GroundTruth | null>(null)
