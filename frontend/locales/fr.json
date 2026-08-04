@@ -2090,7 +2090,7 @@
       "title": "Partage",
       "add": "Ajouter",
       "email_label": "Adresse e-mail",
-      "email_placeholder": "collegue@exemple.fr",
+      "email_placeholder": "collegue{'@'}exemple.fr",
       "email_hint": "La personne doit déjà avoir un compte. Le projet apparaîtra dans sa liste de projets.",
       "permission_label": "Niveau d'accès",
       "permission": {

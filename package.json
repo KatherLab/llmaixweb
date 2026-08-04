@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@intlify/message-compiler": "11.4.8",
     "@playwright/test": "1.62.1",
     "@types/node": "26.1.2",
     "@vitejs/plugin-vue": "6.0.8",

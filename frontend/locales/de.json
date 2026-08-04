@@ -2090,7 +2090,7 @@
       "title": "Freigabe",
       "add": "Hinzufügen",
       "email_label": "E-Mail-Adresse",
-      "email_placeholder": "kollege@beispiel.de",
+      "email_placeholder": "kollege{'@'}beispiel.de",
       "email_hint": "Die Person muss bereits ein Konto haben. Das Projekt erscheint dann in ihrer Projektliste.",
       "permission_label": "Zugriffsebene",
       "permission": {

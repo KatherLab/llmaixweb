@@ -2090,7 +2090,7 @@
       "title": "Compartir",
       "add": "Añadir",
       "email_label": "Dirección de correo",
-      "email_placeholder": "colega@ejemplo.es",
+      "email_placeholder": "colega{'@'}ejemplo.es",
       "email_hint": "La persona ya debe tener una cuenta. El proyecto aparecerá en su lista de proyectos.",
       "permission_label": "Nivel de acceso",
       "permission": {

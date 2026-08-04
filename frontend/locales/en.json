@@ -2090,7 +2090,7 @@
       "title": "Sharing",
       "add": "Add",
       "email_label": "Email address",
-      "email_placeholder": "colleague@example.com",
+      "email_placeholder": "colleague{'@'}example.com",
       "email_hint": "The person must already have an account. They will see this project in their project list.",
       "permission_label": "Access level",
       "permission": {

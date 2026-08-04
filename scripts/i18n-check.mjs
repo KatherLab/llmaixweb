@@ -1,16 +1,40 @@
 #!/usr/bin/env node
-// i18n catalog parity check.
+// i18n catalog parity + message-compilation check.
 //
-// Asserts every non-source locale under frontend/locales/ has exactly the same
-// set of (deeply-flattened) message keys as the source-of-truth `en.json` —
-// no missing keys, no extras. Run in `npm run check` / CI so translations can
-// never silently drift out of sync with the English catalog.
+// 1. Parity: every non-source locale under frontend/locales/ has exactly the
+//    same set of (deeply-flattened) message keys as the source-of-truth
+//    `en.json` — no missing keys, no extras.
+// 2. Compilation: every message in every catalog actually compiles under
+//    vue-i18n's message syntax. This catches the silent killers — an
+//    unescaped `@` (vue-i18n reads it as linked-message syntax, so
+//    "a@b.com" throws "Invalid linked format"), stray `|`, unbalanced
+//    braces. A message that fails to compile throws at *render* time and
+//    blanks the entire component subtree, which no type check or build
+//    catches. Escape literals as `{'@'}`.
+//
+// Run in `npm run check` / CI so translations can never silently drift out of
+// sync with — or break — the English catalog.
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { baseCompile } from '@intlify/message-compiler'
 
 const SOURCE_LOCALE = 'en'
 const localesDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'locales')
+
+/** Flatten a nested message object into [dotted key, message] pairs. */
+function flattenEntries(obj, prefix = '') {
+  const entries = []
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      entries.push(...flattenEntries(value, path))
+    } else {
+      entries.push([path, value])
+    }
+  }
+  return entries
+}
 
 /** Flatten a nested message object into dotted key paths. */
 function flattenKeys(obj, prefix = '') {
@@ -52,8 +76,28 @@ for (const file of localeFiles) {
   }
 }
 
+// --- Message compilation -------------------------------------------------
+for (const file of localeFiles) {
+  const locale = file.replace(/\.json$/, '')
+  const broken = []
+  for (const [key, message] of flattenEntries(loadCatalog(locale))) {
+    if (typeof message !== 'string') continue
+    try {
+      baseCompile(message, { onError: (e) => { throw e } })
+    } catch (err) {
+      broken.push(`${key}: ${err.message?.split('\n')[0] ?? err}\n      ${JSON.stringify(message)}`)
+    }
+  }
+  if (broken.length) {
+    failed = true
+    console.error(`\n✖ ${locale}.json has ${broken.length} message(s) that fail to compile:`)
+    console.error(`    ${broken.join('\n    ')}`)
+    console.error(`  Hint: literal '@' and '|' must be escaped, e.g. "a{'@'}b.com".`)
+  }
+}
+
 if (failed) {
-  console.error('\ni18n catalog parity check failed.')
+  console.error('\ni18n catalog check failed.')
   process.exit(1)
 }
-console.log('\nAll locale catalogs are in sync.')
+console.log('\nAll locale catalogs are in sync and compile cleanly.')
