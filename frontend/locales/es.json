@@ -2850,7 +2850,15 @@
       "errors": {
         "load_trial": "No se pudieron cargar los datos de la ejecución"
       },
-      "running": "Ejecución de extracción en curso"
+      "running": "Ejecución de extracción en curso",
+      "view_document": "Vista de documento",
+      "view_table": "Vista de tabla",
+      "table_document_header": "Documento",
+      "table_open_document": "Abrir en la vista de documento",
+      "table_items_count": "{count} elemento | {count} elementos",
+      "table_fields_count": "{count} campo | {count} campos",
+      "table_error_row": "Sin valores extraídos: {status}",
+      "table_columns_note": "Los {count} campos del esquema se muestran como columnas: desplácese horizontalmente para verlos."
     },
     "viewer": {
       "tokens_label": "Tokens:",

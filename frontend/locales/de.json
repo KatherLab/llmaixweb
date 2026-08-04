@@ -2850,7 +2850,15 @@
       "errors": {
         "load_trial": "Durchlaufdaten konnten nicht geladen werden"
       },
-      "running": "Durchlauf läuft"
+      "running": "Durchlauf läuft",
+      "view_document": "Dokumentansicht",
+      "view_table": "Tabellenansicht",
+      "table_document_header": "Dokument",
+      "table_open_document": "In der Dokumentansicht öffnen",
+      "table_items_count": "{count} Eintrag | {count} Einträge",
+      "table_fields_count": "{count} Feld | {count} Felder",
+      "table_error_row": "Keine extrahierten Werte – {status}",
+      "table_columns_note": "Alle {count} Schemafelder werden als Spalten angezeigt – scrollen Sie horizontal, um sie zu sehen."
     },
     "viewer": {
       "tokens_label": "Tokens:",

@@ -194,6 +194,14 @@ Failed documents show an error banner with **tuning advice** (suggested prompt
 or setting changes). The **"{N} errors"** header link lists all failures; click
 one to jump to that document.
 
+A **Document view / Table view** toggle in the header switches to a
+cross-document table: one row per document, one column per schema field, so you
+can scan a single field across the whole extraction run at a glance. Clicking a
+column header sorts the current page by that column, and clicking a document
+name jumps back to the document view with that document open; failed documents
+appear as a single error row. The table pages through the same result set as
+the document view, and your choice of view is remembered per project.
+
 ### Tracing values back to the document
 
 Every extracted value in the **Result** panel carries a small coloured dot.

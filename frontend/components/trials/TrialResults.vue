@@ -73,8 +73,10 @@
             </button>
           </div>
         </div>
+        <!-- Document / Table view toggle -->
+        <BaseSegmentedControl v-if="trial" v-model="viewMode" :options="viewOptions" size="sm" />
         <!-- Document nav -->
-        <div class="flex items-center gap-1 shrink-0">
+        <div v-if="viewMode === 'document'" class="flex items-center gap-1 shrink-0">
           <BaseButton
             variant="secondary"
             size="sm"
@@ -165,10 +167,24 @@
         </EmptyState>
       </div>
 
-      <!-- Main 2-pane layout: doc list + viewer -->
+      <!-- Main results area: 2-pane document view, or cross-document table view -->
       <div v-else class="flex flex-1 min-h-0">
+        <!-- Cross-document table: rows = documents, columns = schema leaf fields -->
+        <TrialResultsTable
+          v-if="viewMode === 'table'"
+          class="flex-1 min-w-0"
+          :results="results"
+          :schema-definition="schemaDefinitionForTable"
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          :status-label="statusLabel"
+          @open-document="openDocumentFromTable"
+          @page-change="handlePageChange"
+          @reset-filters="resetFilters"
+        />
         <!-- Left rail: document list -->
         <aside
+          v-if="viewMode === 'document'"
           :class="[
             'flex flex-col border-r border-default bg-surface-muted/40 shrink-0',
             leftRailOpen ? 'w-64' : 'w-0 -ml-px overflow-hidden',
@@ -286,7 +302,7 @@
         </aside>
 
         <!-- Center: main viewer -->
-        <div class="flex-1 min-w-0 flex flex-col">
+        <div v-if="viewMode === 'document'" class="flex-1 min-w-0 flex flex-col">
           <!-- Rail toggle (for narrow viewports / power users) -->
           <div
             class="flex items-center justify-between px-2 py-1 border-b border-default bg-surface shrink-0"
@@ -339,7 +355,9 @@
 
     <template #footer>
       <div class="flex items-center justify-between gap-4 w-full">
-        <p class="text-xs text-content-subtle">
+        <!-- ←/→ hint only applies to the document view; invisible (not removed)
+             so the close button keeps its right-aligned position. -->
+        <p :class="['text-xs text-content-subtle', viewMode === 'table' ? 'invisible' : '']">
           {{ $t('trials.results.kbd_use') }}
           <kbd class="px-1 py-0.5 bg-surface-sunken rounded">←</kbd> /
           <kbd class="px-1 py-0.5 bg-surface-sunken rounded">→</kbd>
@@ -369,7 +387,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, type PropType } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, type PropType } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { debounce } from 'perfect-debounce'
@@ -380,6 +398,7 @@ import { useToast } from '@/composables/useToast'
 import { websocketService } from '@/services/websocket'
 import { isForProject, mergeWsEntity } from '@/composables/useWsEntityUpdates'
 import TrialResultViewer from './TrialResultViewer.vue'
+import TrialResultsTable from './TrialResultsTable.vue'
 import TrialDocumentErrors from './TrialDocumentErrors.vue'
 import SchemaViewModal from '@/components/schemas/SchemaViewModal.vue'
 import PromptViewModal from '@/components/schemas/PromptViewModal.vue'
@@ -390,11 +409,20 @@ import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
+import BaseSegmentedControl from '@/components/common/BaseSegmentedControl.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import { formatDuration } from '@/utils/formatters'
 import { selectClass } from '@/utils/formStyles'
 import { trialLabel } from '@/utils/trialLabel'
-import type { Trial, TrialResultItem, Schema, Prompt, WsTrialUpdate, WsMessage } from '@/types'
+import type {
+  Trial,
+  TrialResultItem,
+  Schema,
+  SchemaDefinition,
+  Prompt,
+  WsTrialUpdate,
+  WsMessage,
+} from '@/types'
 
 interface TokenUsage {
   prompt_tokens?: number
@@ -437,6 +465,36 @@ const activeIndex = ref(0)
 const leftRailOpen = ref(true)
 const showErrors = ref(false)
 
+// --- View mode: one-document viewer vs cross-document table ---
+// Persisted per project (mirrors the `llmaix.lastModel.*` pattern).
+type ResultsViewMode = 'document' | 'table'
+const viewModeKey = computed(() => `llmaix.trialResultsView.${props.projectId}`)
+
+function loadViewMode(): ResultsViewMode {
+  try {
+    return localStorage.getItem(viewModeKey.value) === 'table' ? 'table' : 'document'
+  } catch {
+    return 'document'
+  }
+}
+
+const viewMode = ref<ResultsViewMode>(loadViewMode())
+
+watch(viewMode, (mode) => {
+  try {
+    localStorage.setItem(viewModeKey.value, mode)
+  } catch {
+    /* storage disabled — persistence is a convenience, not a requirement */
+  }
+  // Table columns come from the schema; fetch it if there is no snapshot.
+  if (mode === 'table') ensureSchemaLoaded()
+})
+
+const viewOptions = computed(() => [
+  { label: t('trials.results.view_document'), value: 'document' },
+  { label: t('trials.results.view_table'), value: 'table' },
+])
+
 // Filters
 const search = ref('')
 const statusFilter = ref('')
@@ -453,6 +511,12 @@ const promptForModal = computed<Prompt | null>(
 )
 const schemaIsSnapshot = computed(() => !!trial.value?.schema_snapshot)
 const promptIsSnapshot = computed(() => !!trial.value?.prompt_snapshot)
+
+// Schema definition driving the table view's columns (snapshot preferred, so
+// the columns match what the run actually extracted).
+const schemaDefinitionForTable = computed<SchemaDefinition | null>(
+  () => schemaForModal.value?.schema_definition ?? null,
+)
 
 // Failures map stored on trial.meta
 const trialFailures = computed<Record<string, string>>(() => {
@@ -778,6 +842,8 @@ async function goNext(): Promise<void> {
 // in an editable field so users can type in search etc.)
 function onKeydown(e: KeyboardEvent): void {
   if (!props.isModal) return
+  // In table mode the arrow keys belong to the (scrollable) table.
+  if (viewMode.value !== 'document') return
   const target = e.target as HTMLElement | null
   const tag = target?.tagName
   const editable =
@@ -792,7 +858,9 @@ function onKeydown(e: KeyboardEvent): void {
   }
 }
 
-async function openSchemaModal(): Promise<void> {
+// Load the live schema as a fallback when the trial carries no snapshot
+// (needed by both the schema modal and the table view's columns).
+async function ensureSchemaLoaded(): Promise<void> {
   if (!trial.value?.schema_snapshot && trial.value?.schema_id && !schemaFallback.value) {
     try {
       const res = await schemasApi.get(props.projectId, trial.value.schema_id)
@@ -801,7 +869,18 @@ async function openSchemaModal(): Promise<void> {
       console.error('Failed to load schema for trial:', err)
     }
   }
+}
+
+async function openSchemaModal(): Promise<void> {
+  await ensureSchemaLoaded()
   showSchemaModal.value = true
+}
+
+// Table row click → jump to the document view with that document open.
+function openDocumentFromTable(result: TrialResultItem): void {
+  const idx = results.value.findIndex((r) => r.id === result.id)
+  if (idx !== -1) activeIndex.value = idx
+  viewMode.value = 'document'
 }
 
 function openPromptModal(): void {
@@ -812,7 +891,10 @@ onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
   startLiveUpdates()
   await fetchTrial()
-  if (trial.value) await fetchResults()
+  if (trial.value) {
+    if (viewMode.value === 'table') ensureSchemaLoaded()
+    await fetchResults()
+  }
 })
 
 onUnmounted(() => {

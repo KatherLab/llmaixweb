@@ -2850,7 +2850,15 @@
       "errors": {
         "load_trial": "Failed to load extraction run data"
       },
-      "running": "Extraction run in progress"
+      "running": "Extraction run in progress",
+      "view_document": "Document view",
+      "view_table": "Table view",
+      "table_document_header": "Document",
+      "table_open_document": "Open in document view",
+      "table_items_count": "{count} item | {count} items",
+      "table_fields_count": "{count} field | {count} fields",
+      "table_error_row": "No extracted values — {status}",
+      "table_columns_note": "All {count} schema fields are shown as columns — scroll horizontally to see them."
     },
     "viewer": {
       "tokens_label": "Tokens:",

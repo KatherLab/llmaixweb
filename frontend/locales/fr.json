@@ -2850,7 +2850,15 @@
       "errors": {
         "load_trial": "Échec du chargement des données de l'exécution"
       },
-      "running": "Exécution d'extraction en cours"
+      "running": "Exécution d'extraction en cours",
+      "view_document": "Vue document",
+      "view_table": "Vue tableau",
+      "table_document_header": "Document",
+      "table_open_document": "Ouvrir dans la vue document",
+      "table_items_count": "{count} élément | {count} éléments",
+      "table_fields_count": "{count} champ | {count} champs",
+      "table_error_row": "Aucune valeur extraite — {status}",
+      "table_columns_note": "Les {count} champs du schéma sont tous affichés en colonnes — faites défiler horizontalement pour les voir."
     },
     "viewer": {
       "tokens_label": "Tokens :",
