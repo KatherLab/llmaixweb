@@ -14,71 +14,42 @@ that point forward.
 
 ## [Unreleased]
 
-### Added
-
-- **Email notifications.** Beyond invitations and password resets, the app now
-  sends email for: a preprocessing run or extraction run finishing (to whoever
-  started it), a project being shared with you or your access changing, account
-  security events (password changed or reset, account locked after failed
-  sign-ins, SSO sign-in method linked or removed), and admin alerts (background
-  task crash, reclaimed stuck tasks, unhandled server error). Each user opts out
-  per category under **Account settings → Email notifications**, where they can
-  also choose to be emailed only while away from the app and set a minimum job
-  length. Notification bodies contain counts, timings, model names, and the
-  project/run names users chose — never document text, extracted values, file
-  names, or per-document errors.
-- Notification email is localized (English, German, French, Spanish) using the
-  language chosen in the app; the password-reset email is now localized too.
-- New settings on the admin **Email** tab: `NOTIFICATIONS_ENABLED` (master
-  switch for notifications only — invitations and password resets keep working
-  when it is off), `NOTIFY_MIN_JOB_SECONDS`, `NOTIFY_ADMIN_ALERT_COOLDOWN_MINUTES`,
-  and the read-only `NOTIFY_PRESENCE_TTL_SECONDS`. A **Send test email** button
-  on that tab verifies SMTP against the signed-in admin's own address.
-- The "only notify me when I'm away" option needs Redis; without it every user
-  is treated as away and job email is always sent.
-
-### Fixed
-
-- Non-admin users can now save their profile from **Account settings**. It
-  previously called the admin-only endpoint and failed with a permission error.
-  The **Email** field is now read-only for everyone: it is the sign-in identity
-  (and what SSO matches accounts on), so changing it stays an administrator
-  action in User management.
-- Read-only collaborators no longer see edit controls that only produce an error
-  toast. Upload/preprocessing, document restore and reprocess, group and schema
-  and prompt editing, extraction-run rename/cancel/retry/delete, ground-truth
-  upload and field mapping, and evaluation create/delete are now hidden for
-  view-only access, along with batch-selection checkboxes. The task-activity
-  bell only offers *Cancel* on projects the user can edit.
-
-## [0.9.0] — 2026-08-04
+## [0.9.0] — 2026-08-05
 
 ### Added
 
-- **Project sharing.** A project owner can now give other users access to a
-  project from *Project Settings → Sharing*, at one of two levels: **Can view**
-  (read-only) or **Can edit** (everything except deleting the project and
-  managing its shares, which stay owner-only). Collaborators are added by email
-  address and must already have an account. Shared projects appear in the
-  collaborator's project list with their access level, view-only users get a
-  banner and no editing controls, and live preprocessing/extraction progress is
-  delivered to every member of a project. Every share, permission change, and
-  revocation is audited (`project_share`, `project_share_update`,
-  `project_unshare`). See
+- **Project sharing.** Owners can share a project from *Project Settings →
+  Sharing* as **Can view** or **Can edit** (deleting the project and managing
+  shares stay owner-only). Collaborators are added by email and must already
+  have an account; live task progress reaches every member. Shares and
+  permission changes are audited. See
   [Sharing projects](https://katherlab.github.io/llmaixweb/user-guide/sharing/).
-- Audit log now records denied access: an authenticated user refused a project
-  they don't own, or a non-admin hitting an admin route, is written as
-  `access_denied` (outcome `denied`) with the attempted method and path.
-  Filterable under a new "Authorization" group in the audit viewer. Repeated
-  identical denials collapse to one row per minute so a client hammering a
-  forbidden endpoint can't inflate the trail.
-- Audit log now records SSO identity changes: linking a sign-in method to an
-  existing account, SSO just-in-time account provisioning, and a user unlinking
-  their own identity.
+- **Email notifications** for finished preprocessing/extraction runs (to whoever
+  started them), project shares, account security events, and admin alerts.
+  Opt out per category under **Account settings → Email notifications**, which
+  also offers "only when I'm away" (needs Redis) and a minimum job length.
+  Bodies carry counts, timings, model names, and project/run names only — never
+  document text, extracted values, or file names. Localized (EN/DE/FR/ES), as is
+  the password-reset email.
+- Admin **Email** tab: `NOTIFICATIONS_ENABLED` (notifications only — invitations
+  and password resets keep working when off), `NOTIFY_MIN_JOB_SECONDS`,
+  `NOTIFY_ADMIN_ALERT_COOLDOWN_MINUTES`, plus a **Send test email** button.
+- Audit log records denied access (`access_denied`, filterable under
+  "Authorization"; repeats collapse per minute) and SSO identity changes
+  (linking, just-in-time provisioning, unlinking).
 
 ### Changed
 
 - Renamed "Trials" to "Extraction Runs" in the UI (API and database keep the term "trial").
+
+### Fixed
+
+- Non-admin users can now save their profile from **Account settings** — it
+  previously called an admin-only endpoint. **Email** is read-only for everyone:
+  it is the sign-in identity, so changes stay an administrator action.
+- Read-only collaborators no longer see edit controls that only produce an error
+  toast (uploads, reprocessing, schema/prompt/group editing, run actions,
+  ground truth, evaluations, batch selection, and the activity bell's *Cancel*).
 
 ## [0.8.0] — 2026-08-03
 
