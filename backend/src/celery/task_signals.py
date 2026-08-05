@@ -22,6 +22,12 @@ from ..middleware.error_handlers import (
     internal_error_message,
     operational_error_message,
 )
+from ..utils.notifications import (
+    notify_admin_alert,
+    notify_job_failed_by_crash,
+    notify_preprocessing_finished,
+    notify_trial_finished,
+)
 from .celery_config import celery_app
 
 logger = logging.getLogger(__name__)
@@ -228,6 +234,23 @@ def mark_trial_started(sender=None, task_id=None, args=None, kwargs=None, **_):
 @signals.task_failure.connect
 def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     """Convert raw Celery errors into user‑friendly messages and broadcast via WebSocket."""
+    # Alert admins for *any* task that died with an unhandled exception — a trial
+    # crash reaches this signal too, and it is precisely the case where nobody is
+    # watching the logs. Only the exception's *type* is included: its message can
+    # quote document content.
+    #
+    # The email-send task is excluded deliberately: alerting about a failed alert
+    # would enqueue more sends, each of which can fail again. The per-kind
+    # cooldown bounds that loop, but not alerting on it is simpler and loses
+    # nothing — a dead SMTP server can't tell anyone by email anyway, and the
+    # failure is already in the logs.
+    if sender is not None and not sender.name.endswith("send_notification_email_task"):
+        try:
+            with next(get_db()) as db:
+                notify_admin_alert(db, "worker_crash", reason=type(exception).__name__)
+        except Exception:
+            logger.exception("Could not send worker-crash alert")
+
     if sender is None or not _is_preprocess_task(sender.name):
         return
     if not args:
@@ -244,6 +267,16 @@ def mark_failed(sender=None, task_id=None, exception=None, args=None, **_):
     )
 
     _update(args[0], models.PreprocessingStatus.FAILED, friendly, broadcast=True)
+
+    # The task raised, so its finalizer never emailed anyone. _update() has
+    # already persisted the FAILED status and counters this reads.
+    try:
+        with next(get_db()) as db:
+            notify_job_failed_by_crash(db, kind="preprocessing", job_id=args[0])
+    except Exception:
+        logger.exception(
+            "Could not send crash notification for preprocessing task %s", args[0]
+        )
 
 
 # ────────────────── periodic sweeper ──────────────────
@@ -380,6 +413,9 @@ def sweep_orphans():
             parent = db.get(models.PreprocessingTask, pid)
             if parent:
                 _broadcast_preprocessing_update(parent, "failed")
+                # The task's own finalizer never ran (its worker is gone), so
+                # the "finished" email has to come from here.
+                notify_preprocessing_finished(db, parent)
 
         # 4) fail stuck Trials. The extraction heartbeat (run by both the Celery
         # task and the synchronous bypass_celery path) bumps `updated_at` every
@@ -425,6 +461,13 @@ def sweep_orphans():
 
         for trial in stuck_trials:
             _broadcast_trial_update(trial, "failed")
+            notify_trial_finished(db, trial)
+
+        # One alert per sweep, not per reaped row — and rate-limited on top of
+        # that, because a crashed worker with a large backlog would otherwise
+        # mail every admin on every beat tick.
+        if affected:
+            notify_admin_alert(db, "stuck_tasks", count=affected)
 
     if affected == 0:
         return "no orphaned file tasks / stuck trials found"

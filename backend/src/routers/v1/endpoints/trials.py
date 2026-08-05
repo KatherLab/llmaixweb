@@ -300,6 +300,9 @@ def create_trial(
         name=trial.name,
         description=trial.description,
         project_trial_number=next_trial_number,
+        # Recorded so the "run finished" notification goes to whoever started
+        # it rather than to every member of the project.
+        created_by_id=current_user.id,
         schema_id=trial.schema_id,
         prompt_id=trial.prompt_id,
         project_id=project_id,

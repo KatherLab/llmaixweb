@@ -498,6 +498,14 @@ class PreprocessingTask(Base):
     configuration_id: Mapped[int] = mapped_column(
         ForeignKey("preprocessing_configurations.id"), nullable=True
     )
+    # Who started the run. Drives notification delivery: the person who kicked
+    # a job off is the one who wants to hear it finished, not every project
+    # member. SET NULL (not CASCADE) so deleting a user doesn't erase their
+    # project's task history. NULL for rows created before this column existed
+    # and for system-initiated runs — those fall back to the project owner.
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     __table_args__ = (
         Index("ix_preprocessing_tasks_project_created", "project_id", "created_at"),
@@ -557,6 +565,7 @@ class PreprocessingTask(Base):
 
     # Relationships
     project: Mapped["Project"] = relationship(back_populates="preprocessing_tasks")
+    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
     configuration: Mapped["PreprocessingConfiguration"] = relationship(
         back_populates="preprocessing_tasks"
     )
@@ -729,6 +738,11 @@ class Trial(Base):
     document_set_id: Mapped[int | None] = mapped_column(
         ForeignKey("document_sets.id", ondelete="SET NULL")
     )
+    # Who started the run — see the identical column on PreprocessingTask for
+    # why it exists and why it is SET NULL / nullable.
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     __table_args__ = (
         Index("ix_trials_project_created", "project_id", "created_at"),
@@ -794,6 +808,7 @@ class Trial(Base):
 
     # ── relationships ───────────────────────────────────────────────────────────
     project: Mapped["Project"] = relationship(back_populates="trials")
+    created_by: Mapped["User | None"] = relationship(foreign_keys=[created_by_id])
     schema: Mapped["Schema"] = relationship(back_populates="trials")
     prompt: Mapped["Prompt"] = relationship(back_populates="trials")
     document_set: Mapped["DocumentSet"] = relationship(back_populates="trials")

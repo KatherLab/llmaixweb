@@ -294,13 +294,15 @@
       "revert": "Revert",
       "saving": "Saving...",
       "reset": "Reset",
+      "send_test_email": "Send test email",
       "saved": "Settings saved!",
       "errors": {
         "save_secret": "Failed to save secret",
         "clear_secret": "Failed to clear secret",
         "load": "Failed to load settings",
         "save": "Failed to save settings",
-        "remove_override": "Failed to remove override"
+        "remove_override": "Failed to remove override",
+        "test_email": "Failed to send the test email"
       },
       "revert_dialog": {
         "title": "Remove override?",
@@ -312,7 +314,8 @@
       },
       "toasts": {
         "override_removed": "Override for {key} removed",
-        "secret_cleared": "{key} cleared"
+        "secret_cleared": "{key} cleared",
+        "test_email_sent": "Test email sent to {email}. It uses the settings currently saved, not unsaved edits."
       }
     },
     "sso": {
@@ -576,7 +579,7 @@
       "full_name": "Full Name",
       "full_name_placeholder": "Full name",
       "email": "Email",
-      "email_placeholder": "admin{'@'}yourcompany.com",
+      "email_readonly_hint": "Your email is your sign-in identity — ask an administrator to change it.",
       "save": "Save profile",
       "saved": "Saved."
     },
@@ -591,6 +594,29 @@
       "mismatch": "Passwords do not match",
       "update": "Update password",
       "updated_notice": "Password updated. Other sessions were signed out."
+    },
+    "notifications": {
+      "title": "Email notifications",
+      "subtitle": "Choose which emails this instance sends you.",
+      "email_not_configured": "Email delivery is not configured on this server, so no notifications can be sent. Ask an administrator to set up SMTP.",
+      "job_finished": "Job finished",
+      "job_finished_hint": "When a preprocessing run or extraction run you started completes or fails.",
+      "project_shared": "Project shared with me",
+      "project_shared_hint": "When someone gives you access to a project, or changes your access.",
+      "security": "Account security",
+      "security_hint": "Password changes, account lockouts, and sign-in methods added or removed.",
+      "admin_alerts": "Administrator alerts",
+      "admin_alerts_hint": "Background task crashes, reclaimed stuck tasks, and unhandled server errors.",
+      "delivery_title": "When to send",
+      "only_when_away": "Only when I'm away",
+      "only_when_away_hint": "Skip job emails while you have LLMAIx Web open in a browser tab.",
+      "min_duration": "Minimum job length",
+      "min_duration_hint": "Jobs that finish faster than this never trigger an email. Leave empty to use the server default.",
+      "min_duration_default": "Default",
+      "min_duration_invalid": "Enter a number of minutes between 0 and 1440.",
+      "minutes": "minutes",
+      "load_failed": "Failed to load notification settings",
+      "save_failed": "Failed to save notification settings"
     },
     "connected": {
       "title": "Connected accounts",

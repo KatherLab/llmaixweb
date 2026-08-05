@@ -220,6 +220,35 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "LLMAIx Web"
     SMTP_USE_TLS: bool = True
 
+    # ─────────────────────────────────────────────────────────────
+    # Email notifications (job finished, project shared, security,
+    # admin alerts). Transactional mail — invitations and password
+    # resets — is governed by EMAIL_ENABLED alone and is unaffected
+    # by these switches.
+    # ─────────────────────────────────────────────────────────────
+
+    # Master switch for *notification* email. Turning it off leaves
+    # invitations/password resets working while silencing everything else, so an
+    # operator can disable notifications without breaking account recovery.
+    NOTIFICATIONS_ENABLED: bool = True
+
+    # Jobs shorter than this never trigger a "finished" email: nobody wants mail
+    # about a 20-second run they watched complete. Measured from started_at to
+    # the finalization timestamp.
+    NOTIFY_MIN_JOB_SECONDS: int = Field(default=120, ge=0)
+
+    # How long a WebSocket presence marker stays valid without a heartbeat. The
+    # frontend pings every NOTIFY_PRESENCE_TTL_SECONDS/2 or so; if the browser
+    # goes away without closing the socket cleanly (laptop sleep), the user is
+    # considered "away" once this elapses. Keep it comfortably above the client
+    # ping interval or an idle-but-open tab flaps to "away".
+    NOTIFY_PRESENCE_TTL_SECONDS: int = Field(default=120, ge=30)
+
+    # Minimum gap between two admin alerts of the same kind. Without it a
+    # crash-loop in a worker (or an error spike) would mail every admin on every
+    # occurrence.
+    NOTIFY_ADMIN_ALERT_COOLDOWN_MINUTES: int = Field(default=60, ge=1)
+
     CELERY_PREPROCESS_POOL: str = Field(
         default="auto",  # auto | solo | prefork
         description="How to start the preprocess worker pool",
@@ -1067,6 +1096,48 @@ SETTINGS_META = {
         "readonly": False,
         "category": "Email",
         "label": "Use TLS",
+    },
+    "NOTIFICATIONS_ENABLED": {
+        "type": "bool",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "Notification Emails Enabled",
+        "help": (
+            "Send notification email (job finished, project shared, security "
+            "notices, admin alerts). Invitations and password resets are "
+            "unaffected by this switch."
+        ),
+    },
+    "NOTIFY_MIN_JOB_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "Minimum Job Duration (seconds)",
+        "help": (
+            "Jobs that finish faster than this never trigger a notification "
+            "email. Users can override it for their own account."
+        ),
+    },
+    "NOTIFY_ADMIN_ALERT_COOLDOWN_MINUTES": {
+        "type": "int",
+        "secret": False,
+        "readonly": False,
+        "category": "Email",
+        "label": "Admin Alert Cooldown (minutes)",
+        "help": "Minimum gap between two admin alerts of the same kind.",
+    },
+    "NOTIFY_PRESENCE_TTL_SECONDS": {
+        "type": "int",
+        "secret": False,
+        "readonly": True,
+        "category": "Email",
+        "label": "Presence TTL (seconds)",
+        "help": (
+            "How long a user counts as 'online' after their last WebSocket "
+            "heartbeat. Used by the 'only notify me when I'm away' preference."
+        ),
     },
     "BACKEND_CORS_ORIGINS": {
         "type": "str",

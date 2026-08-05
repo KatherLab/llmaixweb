@@ -1,0 +1,173 @@
+{
+  "common": {
+    "greeting": "Hola {name}:",
+    "greeting_no_name": "Hola:",
+    "details_heading": "Detalles",
+    "footer_reason": "Recibe este correo por su configuración de notificaciones en LLMAIx Web.",
+    "footer_manage": "Gestionar la configuración de notificaciones",
+    "footer_admin_reason": "Recibe este correo porque es administrador de esta instancia de LLMAIx Web."
+  },
+  "duration": {
+    "h_m": "{hours} h {minutes} min",
+    "m_s": "{minutes} min {seconds} s",
+    "s": "{seconds} s"
+  },
+  "label": {
+    "project": "Proyecto",
+    "run": "Ejecución de extracción",
+    "status": "Estado",
+    "duration": "Duración",
+    "model": "Modelo",
+    "files_total": "Archivos",
+    "files_processed": "Procesados",
+    "files_failed": "Con errores",
+    "documents_total": "Documentos",
+    "documents_succeeded": "Extraídos",
+    "documents_failed": "Con errores",
+    "permission": "Acceso",
+    "granted_by": "Concedido por",
+    "provider": "Proveedor",
+    "time": "Hora",
+    "reason": "Motivo",
+    "count": "Tareas afectadas",
+    "error_id": "ID de error"
+  },
+  "status": {
+    "completed": "Completado",
+    "partial": "Completado con errores",
+    "failed": "Fallido"
+  },
+  "job": {
+    "subject": {
+      "preprocessing": {
+        "completed": "Preprocesamiento completado — {project}",
+        "partial": "Preprocesamiento completado con errores — {project}",
+        "failed": "Preprocesamiento fallido — {project}"
+      },
+      "trial": {
+        "completed": "Ejecución de extracción completada — {project}",
+        "partial": "Ejecución de extracción completada con errores — {project}",
+        "failed": "Ejecución de extracción fallida — {project}"
+      }
+    },
+    "heading": {
+      "preprocessing": {
+        "completed": "Preprocesamiento completado",
+        "partial": "Preprocesamiento completado con errores",
+        "failed": "Preprocesamiento fallido"
+      },
+      "trial": {
+        "completed": "Ejecución de extracción completada",
+        "partial": "Ejecución de extracción completada con errores",
+        "failed": "Ejecución de extracción fallida"
+      }
+    },
+    "intro": {
+      "preprocessing": {
+        "completed": "Los {total} archivo(s) del proyecto «{project}» se preprocesaron correctamente.",
+        "partial": "Se preprocesaron {processed} de {total} archivo(s) del proyecto «{project}». {failed} con errores.",
+        "failed": "El preprocesamiento de {total} archivo(s) del proyecto «{project}» ha fallado."
+      },
+      "trial": {
+        "completed": "La ejecución de extracción «{run}» del proyecto «{project}» ha finalizado. Se extrajeron {succeeded} de {total} documento(s).",
+        "partial": "La ejecución de extracción «{run}» del proyecto «{project}» ha finalizado. Se extrajeron {succeeded} de {total} documento(s); {failed} con errores.",
+        "failed": "La ejecución de extracción «{run}» del proyecto «{project}» ha fallado."
+      }
+    },
+    "hint": {
+      "failed": "Abra la ejecución para ver los mensajes de error de cada elemento y reintente los elementos fallidos cuando se haya corregido la causa."
+    },
+    "cta": {
+      "preprocessing": "Abrir el preprocesamiento",
+      "trial": "Abrir la ejecución de extracción"
+    }
+  },
+  "share": {
+    "subject": {
+      "granted": "Ya tiene acceso a «{project}»",
+      "updated": "Su acceso a «{project}» ha cambiado"
+    },
+    "heading": {
+      "granted": "Se ha compartido un proyecto con usted",
+      "updated": "Su acceso al proyecto ha cambiado"
+    },
+    "intro": {
+      "granted": "{actor} le ha dado acceso {permission} al proyecto «{project}».",
+      "updated": "{actor} ha cambiado su acceso al proyecto «{project}» a acceso {permission}."
+    },
+    "permission": {
+      "read": "de solo lectura",
+      "write": "completo"
+    },
+    "permission_label": {
+      "read": "Solo lectura",
+      "write": "Acceso completo"
+    },
+    "cta": "Abrir el proyecto"
+  },
+  "security": {
+    "subject": {
+      "password_changed": "Su contraseña ha cambiado",
+      "password_reset_by_admin": "Un administrador ha restablecido su contraseña",
+      "account_locked": "Su cuenta se ha bloqueado temporalmente",
+      "identity_linked": "Se ha añadido un nuevo método de inicio de sesión a su cuenta",
+      "identity_unlinked": "Se ha eliminado un método de inicio de sesión de su cuenta"
+    },
+    "heading": {
+      "password_changed": "Su contraseña ha cambiado",
+      "password_reset_by_admin": "Su contraseña se ha restablecido",
+      "account_locked": "Su cuenta se ha bloqueado temporalmente",
+      "identity_linked": "Nuevo método de inicio de sesión añadido",
+      "identity_unlinked": "Método de inicio de sesión eliminado"
+    },
+    "intro": {
+      "password_changed": "La contraseña de su cuenta de LLMAIx Web se acaba de cambiar.",
+      "password_reset_by_admin": "Un administrador ha establecido una nueva contraseña para su cuenta de LLMAIx Web. La necesitará la próxima vez que inicie sesión.",
+      "account_locked": "Su cuenta de LLMAIx Web se ha bloqueado durante {minutes} minuto(s) tras {attempts} intentos de inicio de sesión fallidos.",
+      "identity_linked": "Su cuenta de LLMAIx Web ya puede iniciar sesión con {provider}.",
+      "identity_unlinked": "{provider} ya no se puede usar para iniciar sesión en su cuenta de LLMAIx Web."
+    },
+    "note": {
+      "contact_admin": "Si no ha sido usted, póngase en contacto con su administrador de inmediato: otra persona podría tener acceso a su cuenta.",
+      "locked_hint": "El acceso se restablece automáticamente cuando expira el bloqueo. Si no ha sido usted, cambie su contraseña en cuanto pueda iniciar sesión de nuevo."
+    },
+    "cta": "Revisar mi cuenta"
+  },
+  "admin": {
+    "subject": {
+      "worker_crash": "LLMAIx Web: una tarea en segundo plano se ha bloqueado",
+      "stuck_tasks": "LLMAIx Web: se han recuperado tareas en segundo plano atascadas",
+      "error_spike": "LLMAIx Web: error del servidor no controlado"
+    },
+    "heading": {
+      "worker_crash": "Una tarea en segundo plano se ha bloqueado",
+      "stuck_tasks": "Se han recuperado tareas en segundo plano atascadas",
+      "error_spike": "Error del servidor no controlado"
+    },
+    "intro": {
+      "worker_crash": "Un worker de Celery ha muerto mientras ejecutaba una tarea, por lo que el trabajo afectado se ha marcado como fallido. Normalmente significa que el proceso se quedó sin memoria o fue terminado.",
+      "stuck_tasks": "El barrido periódico ha encontrado {count} tarea(s) que dejaron de informar progreso y las ha marcado como fallidas para que no bloqueen la cola.",
+      "error_spike": "El servidor ha devuelto un error no controlado. La traza completa está en el registro de errores con el identificador que figura abajo."
+    },
+    "note": {
+      "cooldown": "Las siguientes alertas de este tipo se omiten durante {minutes} minuto(s) para evitar una avalancha."
+    },
+    "cta": "Abrir el panel de administración"
+  },
+  "test": {
+    "subject": "Correo de prueba de LLMAIx Web",
+    "heading": "Su configuración SMTP funciona",
+    "intro": "Este es un correo de prueba enviado desde la configuración de administración de LLMAIx Web. Si lo ha recibido, el envío de correo está configurado correctamente.",
+    "cta": "Abrir LLMAIx Web"
+  },
+  "reset": {
+    "subject": "Restablecer la contraseña — LLMAIx Web",
+    "heading": "Restablecer su contraseña",
+    "intro": "Hemos recibido una solicitud para restablecer su contraseña de LLMAIx Web.",
+    "instruction": "Haga clic en el botón de abajo para establecer una nueva contraseña:",
+    "cta": "Restablecer la contraseña",
+    "fallback": "O copie este enlace en su navegador:",
+    "expiry": "Este enlace caducará en 24 horas.",
+    "ignore": "Si no ha solicitado esto, puede ignorar este correo."
+  }
+}

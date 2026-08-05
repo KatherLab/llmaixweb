@@ -18,6 +18,13 @@ class WebSocketService {
   isConnected = false
   private manualClose = false
   private retryTimeout: ReturnType<typeof setTimeout> | null = null
+  // Keepalive ping. The server treats each ping as a presence heartbeat, which
+  // is what backs the "only email me when I'm away" notification preference — so
+  // this interval must stay comfortably below the server's presence TTL
+  // (NOTIFY_PRESENCE_TTL_SECONDS, 120s by default) or an open-but-idle tab would
+  // be considered away. It also keeps intermediaries from reaping an idle socket.
+  private pingIntervalMs = 45000
+  private pingTimer: ReturnType<typeof setInterval> | null = null
   // Optional async hook that returns a fresh access token. Registered by the
   // auth store (kept as a hook to avoid a circular import). Used before a
   // reconnect so a dropped socket doesn't keep retrying with an expired token.
@@ -74,12 +81,14 @@ class WebSocketService {
         this.reconnectAttempts = 0
         this.reconnectDelay = 1000
         this.manualClose = false
+        this.startPing()
         this.emit('connected', { type: 'connected' })
       }
 
       this.ws.onclose = (event) => {
         console.log('[WebSocket] Disconnected', event.code, event.reason)
         this.isConnected = false
+        this.stopPing()
 
         if (!this.manualClose) {
           this.scheduleReconnect()
@@ -92,6 +101,11 @@ class WebSocketService {
       }
 
       this.ws.onmessage = (event) => {
+        // The keepalive reply is a bare text frame, not JSON — parsing it would
+        // log a spurious error every ping interval.
+        if (event.data === 'pong') {
+          return
+        }
         try {
           const data = JSON.parse(event.data) as WsMessage
           this.handleMessage(data)
@@ -160,10 +174,34 @@ class WebSocketService {
   }
 
   /**
+   * Start the keepalive/presence ping loop (idempotent).
+   */
+  private startPing() {
+    this.stopPing()
+    this.pingTimer = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        try {
+          this.ws.send('ping')
+        } catch {
+          /* the close handler will schedule a reconnect */
+        }
+      }
+    }, this.pingIntervalMs)
+  }
+
+  private stopPing() {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer)
+      this.pingTimer = null
+    }
+  }
+
+  /**
    * Remove handlers from and close the current socket without touching
    * manualClose / reconnect scheduling.
    */
   private teardownSocket() {
+    this.stopPing()
     if (this.ws) {
       this.ws.onopen = null
       this.ws.onclose = null

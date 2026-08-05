@@ -708,6 +708,9 @@ async def preprocess_project_data(
         configuration_id=config.id,
         total_files=len(files_to_process),
         rollback_on_cancel=preprocessing_task.rollback_on_cancel,
+        # Recorded so the "preprocessing finished" notification goes to whoever
+        # started the run rather than to every member of the project.
+        created_by_id=current_user.id,
     )
 
     # Store custom API credentials for the OCR backend. The api_key is stored
@@ -1233,6 +1236,9 @@ def retry_failed_files(
         configuration_id=original_task.configuration_id,
         total_files=len(failed_file_ids),
         rollback_on_cancel=original_task.rollback_on_cancel,
+        # The retry is attributed to whoever pressed retry, not to the original
+        # run's initiator — they are the one waiting on this outcome.
+        created_by_id=current_user.id,
         api_key_encrypted=original_task.api_key_encrypted,
         task_metadata=dict(original_task.task_metadata)
         if original_task.task_metadata

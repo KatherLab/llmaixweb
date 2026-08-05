@@ -294,13 +294,15 @@
       "revert": "Rétablir",
       "saving": "Enregistrement…",
       "reset": "Réinitialiser",
+      "send_test_email": "Envoyer un e-mail de test",
       "saved": "Paramètres enregistrés !",
       "errors": {
         "save_secret": "Échec de l'enregistrement du secret",
         "clear_secret": "Échec de la suppression du secret",
         "load": "Échec du chargement des paramètres",
         "save": "Échec de l'enregistrement des paramètres",
-        "remove_override": "Échec de la suppression de la substitution"
+        "remove_override": "Échec de la suppression de la substitution",
+        "test_email": "Échec de l'envoi de l'e-mail de test"
       },
       "revert_dialog": {
         "title": "Supprimer la substitution ?",
@@ -312,7 +314,8 @@
       },
       "toasts": {
         "override_removed": "Substitution pour {key} supprimée",
-        "secret_cleared": "{key} effacé"
+        "secret_cleared": "{key} effacé",
+        "test_email_sent": "E-mail de test envoyé à {email}. Il utilise les paramètres enregistrés, pas les modifications non enregistrées."
       }
     },
     "sso": {
@@ -576,7 +579,7 @@
       "full_name": "Nom complet",
       "full_name_placeholder": "Nom complet",
       "email": "E-mail",
-      "email_placeholder": "admin{'@'}votreentreprise.com",
+      "email_readonly_hint": "Votre e-mail est votre identifiant de connexion — demandez à un administrateur de le modifier.",
       "save": "Enregistrer le profil",
       "saved": "Enregistré."
     },
@@ -591,6 +594,29 @@
       "mismatch": "Les mots de passe ne correspondent pas",
       "update": "Mettre à jour le mot de passe",
       "updated_notice": "Mot de passe mis à jour. Les autres sessions ont été déconnectées."
+    },
+    "notifications": {
+      "title": "Notifications par e-mail",
+      "subtitle": "Choisissez les e-mails que cette instance vous envoie.",
+      "email_not_configured": "L'envoi d'e-mails n'est pas configuré sur ce serveur, aucune notification ne peut donc être envoyée. Demandez à un administrateur de configurer SMTP.",
+      "job_finished": "Tâche terminée",
+      "job_finished_hint": "Lorsqu'un prétraitement ou une exécution d'extraction que vous avez lancé se termine ou échoue.",
+      "project_shared": "Projet partagé avec moi",
+      "project_shared_hint": "Lorsque quelqu'un vous donne accès à un projet ou modifie votre accès.",
+      "security": "Sécurité du compte",
+      "security_hint": "Changements de mot de passe, verrouillages de compte et méthodes de connexion ajoutées ou retirées.",
+      "admin_alerts": "Alertes administrateur",
+      "admin_alerts_hint": "Plantages de tâches d'arrière-plan, tâches bloquées récupérées et erreurs serveur non gérées.",
+      "delivery_title": "Quand envoyer",
+      "only_when_away": "Uniquement quand je suis absent",
+      "only_when_away_hint": "Ne pas envoyer d'e-mail de tâche lorsque LLMAIx Web est ouvert dans un onglet.",
+      "min_duration": "Durée minimale d'une tâche",
+      "min_duration_hint": "Les tâches plus rapides que cela ne déclenchent jamais d'e-mail. Laissez vide pour utiliser la valeur par défaut du serveur.",
+      "min_duration_default": "Par défaut",
+      "min_duration_invalid": "Saisissez un nombre de minutes entre 0 et 1440.",
+      "minutes": "minutes",
+      "load_failed": "Échec du chargement des préférences de notification",
+      "save_failed": "Échec de l'enregistrement des préférences de notification"
     },
     "connected": {
       "title": "Comptes connectés",

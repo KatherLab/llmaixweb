@@ -3,6 +3,7 @@
 // catalogs are lazy-loaded (dynamic import) so the initial bundle only ships the
 // active language plus the eager `en` fallback.
 import { computed } from 'vue'
+import { usersApi } from '@/services/usersApi'
 import {
   i18n,
   persistLocale,
@@ -37,7 +38,18 @@ export async function applyLocale(locale: SupportedLocale, persist = true): Prom
   await loadLocaleMessages(locale)
   i18n.global.locale.value = locale
   document.documentElement.setAttribute('lang', locale)
-  if (persist) persistLocale(locale)
+  if (persist) {
+    persistLocale(locale)
+    // Mirror the choice onto the account so notification email (composed
+    // server-side, often in a Celery worker long after any request) is written
+    // in the same language. Only for an explicit selection by a signed-in user,
+    // and fire-and-forget: this is a preference, not part of the interaction.
+    if (localStorage.getItem('token')) {
+      void usersApi.updateLanguage(locale).catch(() => {
+        /* cosmetic: email falls back to English until the next sync */
+      })
+    }
+  }
 }
 
 export function useLocale() {

@@ -38,6 +38,7 @@ from .routers.v1.endpoints import (
     sso,
     users,
 )
+from .utils import presence
 from .utils.logging_config import setup_logging
 from .websocket_manager import manager
 
@@ -522,6 +523,11 @@ async def activity_websocket(websocket: WebSocket):
                 data = await websocket.receive_text()
                 # Optionally handle client messages
                 if data == "ping":
+                    # The heartbeat doubles as the presence refresh: a tab that
+                    # is open but idle keeps its marker alive, and one whose
+                    # browser vanished without closing the socket lets the
+                    # marker expire (see utils/presence.py).
+                    presence.touch(user.id)
                     await websocket.send_text("pong")
             except WebSocketDisconnect:
                 break

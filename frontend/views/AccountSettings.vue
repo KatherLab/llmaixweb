@@ -21,12 +21,18 @@
               type="text"
               :placeholder="$t('account.profile.full_name_placeholder')"
             />
+            <!--
+              Email is shown but not editable: it is the sign-in identity (and
+              what SSO matches accounts on), so changing it is an administrator
+              action rather than self-service. The backend enforces this — the
+              self-update endpoint accepts the name only.
+            -->
             <FormField
-              v-model="profileForm.email"
+              :model-value="authStore.user?.email ?? ''"
               :label="$t('account.profile.email')"
               type="email"
-              maxlength="254"
-              :placeholder="$t('account.profile.email_placeholder')"
+              disabled
+              :hint="$t('account.profile.email_readonly_hint')"
             />
             <div class="flex items-center gap-3">
               <BaseButton
@@ -104,6 +110,9 @@
           </div>
         </div>
       </GlassCard>
+
+      <!-- Email notifications -->
+      <NotificationPreferencesCard />
 
       <!-- Connected accounts (SSO) -->
       <GlassCard v-if="ssoEnabled !== false">
@@ -218,6 +227,7 @@ import PasswordInput from '@/components/common/PasswordInput.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import GlassCard from '@/components/common/GlassCard.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
+import NotificationPreferencesCard from '@/components/account/NotificationPreferencesCard.vue'
 import type { UserIdentityResponse } from '@/types'
 
 const { t } = useI18n({ useScope: 'global' })
@@ -226,16 +236,14 @@ const authStore = useAuthStore()
 const toast = useToast()
 
 // ── Profile ──
-const profileForm = reactive<{ full_name: string; email: string }>({
-  full_name: '',
-  email: '',
-})
+// Name only. Email is rendered read-only straight from the store, so it is not
+// part of the form or the dirty check.
+const profileForm = reactive<{ full_name: string }>({ full_name: '' })
 const savingProfile = ref<boolean>(false)
 const profileSaved = ref<boolean>(false)
 const profileDirty = computed<boolean>(
   () =>
-    profileForm.full_name !== authStore.user?.full_name ||
-    profileForm.email !== authStore.user?.email,
+    profileForm.full_name.trim().length > 0 && profileForm.full_name !== authStore.user?.full_name,
 )
 
 // ── Password ──
@@ -267,7 +275,6 @@ const signingOut = ref<boolean>(false)
 onMounted(async () => {
   if (authStore.user) {
     profileForm.full_name = authStore.user.full_name
-    profileForm.email = authStore.user.email
   }
   try {
     const res = await authApi.getSettings()
@@ -297,12 +304,11 @@ async function saveProfile(): Promise<void> {
   savingProfile.value = true
   profileSaved.value = false
   try {
-    const payload: { full_name?: string; email?: string } = {}
-    if (profileForm.full_name !== authStore.user!.full_name)
-      payload.full_name = profileForm.full_name
-    if (profileForm.email !== authStore.user!.email) payload.email = profileForm.email
-    const res = await usersApi.update(authStore.user!.id, payload)
+    // `updateMe`, not `update`: the latter is the admin-only PATCH /user/{id},
+    // which a non-admin cannot call.
+    const res = await usersApi.updateMe({ full_name: profileForm.full_name.trim() })
     authStore.user = res.data
+    profileForm.full_name = res.data.full_name
     profileSaved.value = true
     toast.success(t('account.toasts.profile_updated'))
   } catch (e) {

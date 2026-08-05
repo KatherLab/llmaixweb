@@ -1,0 +1,173 @@
+{
+  "common": {
+    "greeting": "Bonjour {name},",
+    "greeting_no_name": "Bonjour,",
+    "details_heading": "Détails",
+    "footer_reason": "Vous recevez cet e-mail en raison de vos préférences de notification dans LLMAIx Web.",
+    "footer_manage": "Gérer les préférences de notification",
+    "footer_admin_reason": "Vous recevez cet e-mail parce que vous êtes administrateur de cette instance LLMAIx Web."
+  },
+  "duration": {
+    "h_m": "{hours} h {minutes} min",
+    "m_s": "{minutes} min {seconds} s",
+    "s": "{seconds} s"
+  },
+  "label": {
+    "project": "Projet",
+    "run": "Exécution d'extraction",
+    "status": "Statut",
+    "duration": "Durée",
+    "model": "Modèle",
+    "files_total": "Fichiers",
+    "files_processed": "Traités",
+    "files_failed": "En échec",
+    "documents_total": "Documents",
+    "documents_succeeded": "Extraits",
+    "documents_failed": "En échec",
+    "permission": "Accès",
+    "granted_by": "Accordé par",
+    "provider": "Fournisseur",
+    "time": "Heure",
+    "reason": "Motif",
+    "count": "Tâches concernées",
+    "error_id": "ID d'erreur"
+  },
+  "status": {
+    "completed": "Terminé",
+    "partial": "Terminé avec des erreurs",
+    "failed": "Échec"
+  },
+  "job": {
+    "subject": {
+      "preprocessing": {
+        "completed": "Prétraitement terminé — {project}",
+        "partial": "Prétraitement terminé avec des erreurs — {project}",
+        "failed": "Échec du prétraitement — {project}"
+      },
+      "trial": {
+        "completed": "Exécution d'extraction terminée — {project}",
+        "partial": "Exécution d'extraction terminée avec des erreurs — {project}",
+        "failed": "Échec de l'exécution d'extraction — {project}"
+      }
+    },
+    "heading": {
+      "preprocessing": {
+        "completed": "Prétraitement terminé",
+        "partial": "Prétraitement terminé avec des erreurs",
+        "failed": "Échec du prétraitement"
+      },
+      "trial": {
+        "completed": "Exécution d'extraction terminée",
+        "partial": "Exécution d'extraction terminée avec des erreurs",
+        "failed": "Échec de l'exécution d'extraction"
+      }
+    },
+    "intro": {
+      "preprocessing": {
+        "completed": "Les {total} fichier(s) du projet « {project} » ont tous été prétraités avec succès.",
+        "partial": "{processed} fichier(s) sur {total} du projet « {project} » ont été prétraités. {failed} en échec.",
+        "failed": "Le prétraitement de {total} fichier(s) du projet « {project} » a échoué."
+      },
+      "trial": {
+        "completed": "L'exécution d'extraction « {run} » du projet « {project} » est terminée. {succeeded} document(s) sur {total} ont été extraits.",
+        "partial": "L'exécution d'extraction « {run} » du projet « {project} » est terminée. {succeeded} document(s) sur {total} ont été extraits, {failed} en échec.",
+        "failed": "L'exécution d'extraction « {run} » du projet « {project} » a échoué."
+      }
+    },
+    "hint": {
+      "failed": "Ouvrez l'exécution pour consulter les messages d'erreur de chaque élément, puis relancez les éléments en échec une fois la cause corrigée."
+    },
+    "cta": {
+      "preprocessing": "Ouvrir le prétraitement",
+      "trial": "Ouvrir l'exécution d'extraction"
+    }
+  },
+  "share": {
+    "subject": {
+      "granted": "Vous avez désormais accès à « {project} »",
+      "updated": "Votre accès à « {project} » a changé"
+    },
+    "heading": {
+      "granted": "Un projet a été partagé avec vous",
+      "updated": "Votre accès au projet a changé"
+    },
+    "intro": {
+      "granted": "{actor} vous a donné un accès {permission} au projet « {project} ».",
+      "updated": "{actor} a modifié votre accès au projet « {project} » en accès {permission}."
+    },
+    "permission": {
+      "read": "en lecture seule",
+      "write": "complet"
+    },
+    "permission_label": {
+      "read": "Lecture seule",
+      "write": "Accès complet"
+    },
+    "cta": "Ouvrir le projet"
+  },
+  "security": {
+    "subject": {
+      "password_changed": "Votre mot de passe a été modifié",
+      "password_reset_by_admin": "Votre mot de passe a été réinitialisé par un administrateur",
+      "account_locked": "Votre compte a été temporairement verrouillé",
+      "identity_linked": "Une nouvelle méthode de connexion a été ajoutée à votre compte",
+      "identity_unlinked": "Une méthode de connexion a été retirée de votre compte"
+    },
+    "heading": {
+      "password_changed": "Votre mot de passe a été modifié",
+      "password_reset_by_admin": "Votre mot de passe a été réinitialisé",
+      "account_locked": "Votre compte a été temporairement verrouillé",
+      "identity_linked": "Nouvelle méthode de connexion ajoutée",
+      "identity_unlinked": "Méthode de connexion retirée"
+    },
+    "intro": {
+      "password_changed": "Le mot de passe de votre compte LLMAIx Web vient d'être modifié.",
+      "password_reset_by_admin": "Un administrateur a défini un nouveau mot de passe pour votre compte LLMAIx Web. Vous en aurez besoin lors de votre prochaine connexion.",
+      "account_locked": "Votre compte LLMAIx Web a été verrouillé pendant {minutes} minute(s) après {attempts} tentatives de connexion infructueuses.",
+      "identity_linked": "Votre compte LLMAIx Web peut désormais se connecter avec {provider}.",
+      "identity_unlinked": "{provider} ne peut plus être utilisé pour vous connecter à votre compte LLMAIx Web."
+    },
+    "note": {
+      "contact_admin": "Si vous n'êtes pas à l'origine de cette action, contactez immédiatement votre administrateur — quelqu'un d'autre a peut-être accès à votre compte.",
+      "locked_hint": "L'accès est rétabli automatiquement à l'expiration du verrouillage. Si ce n'était pas vous, changez votre mot de passe dès que vous pourrez vous reconnecter."
+    },
+    "cta": "Vérifier mon compte"
+  },
+  "admin": {
+    "subject": {
+      "worker_crash": "LLMAIx Web : une tâche d'arrière-plan a planté",
+      "stuck_tasks": "LLMAIx Web : des tâches d'arrière-plan bloquées ont été récupérées",
+      "error_spike": "LLMAIx Web : erreur serveur non gérée"
+    },
+    "heading": {
+      "worker_crash": "Une tâche d'arrière-plan a planté",
+      "stuck_tasks": "Des tâches d'arrière-plan bloquées ont été récupérées",
+      "error_spike": "Erreur serveur non gérée"
+    },
+    "intro": {
+      "worker_crash": "Un worker Celery s'est arrêté pendant l'exécution d'une tâche ; le travail concerné a donc été marqué comme en échec. En général, le processus a épuisé la mémoire disponible ou a été tué.",
+      "stuck_tasks": "Le nettoyage périodique a trouvé {count} tâche(s) qui ne signalaient plus de progression et les a marquées comme en échec afin qu'elles ne bloquent plus la file.",
+      "error_spike": "Le serveur a renvoyé une erreur non gérée. La trace complète se trouve dans le journal des erreurs sous l'identifiant ci-dessous."
+    },
+    "note": {
+      "cooldown": "Les alertes suivantes de ce type sont supprimées pendant {minutes} minute(s) pour éviter un afflux."
+    },
+    "cta": "Ouvrir le tableau de bord d'administration"
+  },
+  "test": {
+    "subject": "E-mail de test LLMAIx Web",
+    "heading": "Vos paramètres SMTP fonctionnent",
+    "intro": "Ceci est un e-mail de test envoyé depuis les paramètres d'administration de LLMAIx Web. Si vous l'avez reçu, l'envoi d'e-mails est correctement configuré.",
+    "cta": "Ouvrir LLMAIx Web"
+  },
+  "reset": {
+    "subject": "Réinitialisation du mot de passe — LLMAIx Web",
+    "heading": "Réinitialiser votre mot de passe",
+    "intro": "Nous avons reçu une demande de réinitialisation de votre mot de passe LLMAIx Web.",
+    "instruction": "Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :",
+    "cta": "Réinitialiser le mot de passe",
+    "fallback": "Ou copiez ce lien dans votre navigateur :",
+    "expiry": "Ce lien expirera dans 24 heures.",
+    "ignore": "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail."
+  }
+}

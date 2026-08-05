@@ -157,12 +157,27 @@
           </template>
         </div>
       </div>
-      <div class="mt-8 flex gap-4">
+      <div class="mt-8 flex flex-wrap gap-4">
         <BaseButton type="submit" variant="primary" :loading="saving" :disabled="saving">
           {{ saving ? $t('admin.settings.saving') : $t('admin.settings.save') }}
         </BaseButton>
         <BaseButton variant="secondary" @click="resetDraft">
           {{ $t('admin.settings.reset') }}
+        </BaseButton>
+        <!--
+          Only on the Email tab: SMTP is the one category whose settings can look
+          correct and still not deliver, so it gets a way to prove itself. Sends
+          to the signed-in admin's own address.
+        -->
+        <BaseButton
+          v-if="activeTab === 'Email'"
+          type="button"
+          variant="secondary"
+          :loading="sendingTestEmail"
+          :disabled="sendingTestEmail"
+          @click="sendTestEmail"
+        >
+          {{ $t('admin.settings.send_test_email') }}
         </BaseButton>
       </div>
       <div v-if="success" class="mt-5 text-green-600 dark:text-green-400 font-semibold">
@@ -224,6 +239,7 @@ const settings = reactive<AdminSettings>({})
 const draft = reactive<Record<string, string | number | boolean>>({})
 const loading = ref<boolean>(true)
 const saving = ref<boolean>(false)
+const sendingTestEmail = ref<boolean>(false)
 const error = ref<string>('')
 const success = ref<boolean>(false)
 
@@ -425,6 +441,23 @@ async function save(): Promise<void> {
     error.value = extractErrorMessage(e, t('admin.settings.errors.save'))
   } finally {
     saving.value = false
+  }
+}
+
+/**
+ * Verify SMTP end-to-end. Unsaved edits in the form are *not* used — the backend
+ * sends with the settings it has stored, so a test after editing but before
+ * saving would report on the old configuration. Hence the hint in the toast.
+ */
+async function sendTestEmail(): Promise<void> {
+  sendingTestEmail.value = true
+  try {
+    const res = await adminApi.sendTestEmail()
+    toast.success(t('admin.settings.toasts.test_email_sent', { email: res.data.recipient ?? '' }))
+  } catch (e) {
+    error.value = extractErrorMessage(e, t('admin.settings.errors.test_email'))
+  } finally {
+    sendingTestEmail.value = false
   }
 }
 

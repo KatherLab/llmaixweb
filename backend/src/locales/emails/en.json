@@ -1,0 +1,173 @@
+{
+  "common": {
+    "greeting": "Hi {name},",
+    "greeting_no_name": "Hello,",
+    "details_heading": "Details",
+    "footer_reason": "You are receiving this email because of your notification settings in LLMAIx Web.",
+    "footer_manage": "Manage notification settings",
+    "footer_admin_reason": "You are receiving this email because you are an administrator of this LLMAIx Web instance."
+  },
+  "duration": {
+    "h_m": "{hours} h {minutes} min",
+    "m_s": "{minutes} min {seconds} s",
+    "s": "{seconds} s"
+  },
+  "label": {
+    "project": "Project",
+    "run": "Extraction run",
+    "status": "Status",
+    "duration": "Duration",
+    "model": "Model",
+    "files_total": "Files",
+    "files_processed": "Processed",
+    "files_failed": "Failed",
+    "documents_total": "Documents",
+    "documents_succeeded": "Extracted",
+    "documents_failed": "Failed",
+    "permission": "Access",
+    "granted_by": "Granted by",
+    "provider": "Provider",
+    "time": "Time",
+    "reason": "Reason",
+    "count": "Affected tasks",
+    "error_id": "Error ID"
+  },
+  "status": {
+    "completed": "Completed",
+    "partial": "Completed with errors",
+    "failed": "Failed"
+  },
+  "job": {
+    "subject": {
+      "preprocessing": {
+        "completed": "Preprocessing finished — {project}",
+        "partial": "Preprocessing finished with errors — {project}",
+        "failed": "Preprocessing failed — {project}"
+      },
+      "trial": {
+        "completed": "Extraction run finished — {project}",
+        "partial": "Extraction run finished with errors — {project}",
+        "failed": "Extraction run failed — {project}"
+      }
+    },
+    "heading": {
+      "preprocessing": {
+        "completed": "Preprocessing finished",
+        "partial": "Preprocessing finished with errors",
+        "failed": "Preprocessing failed"
+      },
+      "trial": {
+        "completed": "Extraction run finished",
+        "partial": "Extraction run finished with errors",
+        "failed": "Extraction run failed"
+      }
+    },
+    "intro": {
+      "preprocessing": {
+        "completed": "All {total} file(s) in the project \"{project}\" were preprocessed successfully.",
+        "partial": "{processed} of {total} file(s) in the project \"{project}\" were preprocessed. {failed} failed.",
+        "failed": "Preprocessing of {total} file(s) in the project \"{project}\" failed."
+      },
+      "trial": {
+        "completed": "The extraction run \"{run}\" in the project \"{project}\" finished. {succeeded} of {total} document(s) were extracted.",
+        "partial": "The extraction run \"{run}\" in the project \"{project}\" finished. {succeeded} of {total} document(s) were extracted, {failed} failed.",
+        "failed": "The extraction run \"{run}\" in the project \"{project}\" failed."
+      }
+    },
+    "hint": {
+      "failed": "Open the run to see the per-item error messages, and retry the failed items once the cause is fixed."
+    },
+    "cta": {
+      "preprocessing": "Open preprocessing run",
+      "trial": "Open extraction run"
+    }
+  },
+  "share": {
+    "subject": {
+      "granted": "You now have access to \"{project}\"",
+      "updated": "Your access to \"{project}\" has changed"
+    },
+    "heading": {
+      "granted": "A project was shared with you",
+      "updated": "Your project access changed"
+    },
+    "intro": {
+      "granted": "{actor} gave you {permission} access to the project \"{project}\".",
+      "updated": "{actor} changed your access to the project \"{project}\" to {permission}."
+    },
+    "permission": {
+      "read": "view-only",
+      "write": "full"
+    },
+    "permission_label": {
+      "read": "View-only",
+      "write": "Full access"
+    },
+    "cta": "Open project"
+  },
+  "security": {
+    "subject": {
+      "password_changed": "Your password was changed",
+      "password_reset_by_admin": "Your password was reset by an administrator",
+      "account_locked": "Your account was temporarily locked",
+      "identity_linked": "A new sign-in method was added to your account",
+      "identity_unlinked": "A sign-in method was removed from your account"
+    },
+    "heading": {
+      "password_changed": "Your password was changed",
+      "password_reset_by_admin": "Your password was reset",
+      "account_locked": "Your account was temporarily locked",
+      "identity_linked": "New sign-in method added",
+      "identity_unlinked": "Sign-in method removed"
+    },
+    "intro": {
+      "password_changed": "The password for your LLMAIx Web account was just changed.",
+      "password_reset_by_admin": "An administrator set a new password for your LLMAIx Web account. You will need it the next time you sign in.",
+      "account_locked": "Your LLMAIx Web account was locked for {minutes} minute(s) after {attempts} failed sign-in attempts.",
+      "identity_linked": "Your LLMAIx Web account can now sign in with {provider}.",
+      "identity_unlinked": "{provider} can no longer be used to sign in to your LLMAIx Web account."
+    },
+    "note": {
+      "contact_admin": "If you did not do this, contact your administrator immediately — someone else may have access to your account.",
+      "locked_hint": "Access is restored automatically once the lock expires. If it was not you, change your password as soon as you can sign in again."
+    },
+    "cta": "Review your account"
+  },
+  "admin": {
+    "subject": {
+      "worker_crash": "LLMAIx Web: a background task crashed",
+      "stuck_tasks": "LLMAIx Web: stuck background tasks were reclaimed",
+      "error_spike": "LLMAIx Web: unhandled server error"
+    },
+    "heading": {
+      "worker_crash": "A background task crashed",
+      "stuck_tasks": "Stuck background tasks were reclaimed",
+      "error_spike": "Unhandled server error"
+    },
+    "intro": {
+      "worker_crash": "A Celery worker died while running a task, so the affected job was marked as failed. This usually means the worker process ran out of memory or was killed.",
+      "stuck_tasks": "The periodic sweeper found {count} task(s) that stopped reporting progress and marked them as failed so they no longer block the queue.",
+      "error_spike": "The server returned an unhandled error. The full stack trace is in the error log under the ID below."
+    },
+    "note": {
+      "cooldown": "Further alerts of this kind are suppressed for {minutes} minute(s) to avoid a flood."
+    },
+    "cta": "Open admin dashboard"
+  },
+  "test": {
+    "subject": "LLMAIx Web test email",
+    "heading": "Your SMTP settings work",
+    "intro": "This is a test email sent from the LLMAIx Web admin settings. If you received it, notification email is configured correctly.",
+    "cta": "Open LLMAIx Web"
+  },
+  "reset": {
+    "subject": "Password Reset — LLMAIx Web",
+    "heading": "Reset your password",
+    "intro": "We received a request to reset your LLMAIx Web password.",
+    "instruction": "Click the button below to set a new password:",
+    "cta": "Reset Password",
+    "fallback": "Or copy and paste this link into your browser:",
+    "expiry": "This link will expire in 24 hours.",
+    "ignore": "If you did not request this, you can safely ignore this email."
+  }
+}

@@ -4,17 +4,21 @@
  * under `/user/*` (first-admin, password reset, invitation validation).
  */
 import { api } from './api'
+import type { SupportedLocale } from '@/i18n'
 import type { ApiBody } from '@/types'
 import type {
   FirstAdminCheckResponse,
   InvitationInfo,
   InvitationResponse,
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
   PasswordChange,
   PasswordResetConfirm,
   PasswordSet,
   UserCreate,
   UserIdentityResponse,
   UserResponse,
+  UserSelfUpdate,
   UserUpdateAdmin,
 } from '@/types'
 
@@ -27,12 +31,38 @@ export const usersApi = {
   me() {
     return api.get('/user/me') as Promise<ApiBody<UserResponse>>
   },
+  /**
+   * Update the signed-in user's own profile (display name only).
+   *
+   * Not `update()`: that hits the admin-only `PATCH /user/{id}`, which a
+   * non-admin cannot call. Email is not self-editable — it is the sign-in
+   * identity, so changing it is an administrator action in User management.
+   */
+  updateMe(payload: UserSelfUpdate) {
+    return api.patch('/user/me', payload) as Promise<ApiBody<UserResponse>>
+  },
   // Linked SSO identities (self-service)
   listMyIdentities() {
     return api.get('/user/me/identities') as Promise<ApiBody<UserIdentityResponse[]>>
   },
   deleteMyIdentity(identityId: number | string) {
     return api.delete(`/user/me/identities/${identityId}`) as Promise<ApiBody<unknown>>
+  },
+  // Notification settings (self-service)
+  getNotificationPreferences() {
+    return api.get('/user/me/notification-preferences') as Promise<ApiBody<NotificationPreferences>>
+  },
+  updateNotificationPreferences(payload: NotificationPreferencesUpdate) {
+    return api.patch('/user/me/notification-preferences', payload) as Promise<
+      ApiBody<NotificationPreferences>
+    >
+  },
+  /**
+   * Mirror the active UI locale onto the account so server-composed email
+   * (which runs long after the request, in a Celery worker) can be localized.
+   */
+  updateLanguage(preferred_language: SupportedLocale) {
+    return api.patch('/user/me/language', { preferred_language }) as Promise<ApiBody<UserResponse>>
   },
   create(payload: UserCreate) {
     return api.post('/user', payload) as Promise<ApiBody<UserResponse>>

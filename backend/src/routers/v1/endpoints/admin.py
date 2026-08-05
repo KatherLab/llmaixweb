@@ -1,20 +1,24 @@
 # backend/src/routers/v1/endpoints/admin.py
 from celery.result import AsyncResult
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from backend.src.models import PreprocessingTask
 
 from ....celery.celery_config import celery_app
-from ....core.config import SETTINGS_META, Settings
+from ....core.config import SETTINGS_META, Settings, settings
 from ....core.dynamic_settings import reload_settings_cache
+from ....core.rate_limit import limiter
 from ....core.security import get_admin_user
 from ....dependencies import get_db
 from ....models import AppSetting
+from ....schemas import TestEmailResponse
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import encrypt
+from ....utils.email_service import is_configured as is_email_configured
 from ....utils.enums import AuditAction
+from ....utils.notifications import send_test_email
 
 router = APIRouter()
 
@@ -173,6 +177,35 @@ def delete_setting(
         detail={"deleted_key": key},
     )
     return {"deleted": key}
+
+
+@router.post("/settings/test-email", response_model=TestEmailResponse)
+@limiter.limit("5/minute" if not settings.DISABLE_RATE_LIMIT else "1000/minute")
+def send_test_email_to_self(
+    request: Request,
+    current_user=Depends(get_admin_user),
+):
+    """Send a test email to the calling admin to verify SMTP settings.
+
+    Synchronous (unlike every other notification) because the admin pressed a
+    button and needs the real outcome, not "queued". Rate-limited so the button
+    can't be used as a relay. Always sends to the caller's own address — never a
+    supplied one, which would make this an open relay.
+    """
+    if not is_email_configured():
+        raise api_error(
+            "admin.email_not_configured",
+            400,
+            "Email is not configured. Set EMAIL_ENABLED and the SMTP settings first.",
+        )
+    sent = send_test_email(current_user)
+    if not sent:
+        raise api_error(
+            "admin.test_email_failed",
+            502,
+            "The SMTP server rejected the message. Check the server logs for details.",
+        )
+    return TestEmailResponse(sent=True, recipient=current_user.email)
 
 
 # --------------------------

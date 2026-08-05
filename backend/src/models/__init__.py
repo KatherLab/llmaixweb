@@ -28,7 +28,14 @@ from .project import (
     TrialStatus,
 )
 from .sso import IdentityProvider, UserIdentity
-from .user import Invitation, PasswordResetToken, RefreshToken, User, UserRole
+from .user import (
+    Invitation,
+    NotificationPreference,
+    PasswordResetToken,
+    RefreshToken,
+    User,
+    UserRole,
+)
 
 __all__ = [
     "AppSetting",
@@ -66,4 +73,5 @@ __all__ = [
     "FieldMapping",
     "EvaluationMetric",
     "PasswordResetToken",
+    "NotificationPreference",
 ]

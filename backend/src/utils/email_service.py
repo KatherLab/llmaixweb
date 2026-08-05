@@ -7,14 +7,16 @@ Uses Jinja2 for HTML template rendering with inline CSS.
 import logging
 import smtplib
 import ssl
+from collections.abc import Sequence
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
 
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound, select_autoescape
 
 from ..core.config import settings
+from .email_i18n import translate, translator
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,16 @@ _env: Optional[Environment] = None
 def _get_env() -> Environment:
     global _env
     if _env is None:
-        _env = Environment(loader=FileSystemLoader(str(_TEMPLATES_DIR)))
+        _env = Environment(
+            loader=FileSystemLoader(str(_TEMPLATES_DIR)),
+            # Notification email interpolates user-authored text (project names,
+            # run names, SSO provider names) into HTML, so escaping is not
+            # optional. Note the consequence for URLs: `&` in a query string
+            # renders as `&amp;`, which is correct inside href but would be
+            # visible if a URL were printed as body text — so don't print raw
+            # URLs in templates that carry query parameters.
+            autoescape=select_autoescape(default_for_string=True, default=True),
+        )
     return _env
 
 
@@ -129,24 +140,96 @@ def send_invitation_email(email: str, token: str, invite_url: str) -> bool:
     )
 
 
-def send_password_reset_email(email: str, token: str, reset_url: str) -> bool:
-    """Send a password reset email with a reset link."""
+def send_password_reset_email(
+    email: str, token: str, reset_url: str, locale: str | None = None
+) -> bool:
+    """Send a password reset email with a reset link.
+
+    ``locale`` is the recipient's ``preferred_language`` when known; it falls
+    back to English, which is also what the un-localized callers get.
+    """
     if not is_configured():
         return False
 
+    t = translator(locale)
     html = _render_template(
         "password_reset.html",
         reset_url=reset_url,
+        locale=locale or "en",
+        t=t,
     )
     text = (
-        f"We received a request to reset your LLMAIx Web password.\n\n"
-        f"Click the link below to set a new password:\n{reset_url}\n\n"
-        f"This link will expire in 24 hours.\n\n"
-        f"If you did not request this, you can safely ignore this email."
+        f"{t('reset.intro')}\n\n"
+        f"{t('reset.instruction')}\n{reset_url}\n\n"
+        f"{t('reset.expiry')}\n\n"
+        f"{t('reset.ignore')}"
     )
     return send_email(
         to=email,
-        subject="Password Reset — LLMAIx Web",
+        subject=t("reset.subject"),
         html=html,
         text=text,
     )
+
+
+def render_notification(
+    *,
+    locale: str | None,
+    subject: str,
+    heading: str,
+    paragraphs: Sequence[str],
+    details: Sequence[tuple[str, str]] = (),
+    note: str | None = None,
+    cta_label: str | None = None,
+    cta_url: str | None = None,
+    greeting_name: str | None = None,
+    footer_key: str = "common.footer_reason",
+    manage_url: str | None = None,
+) -> tuple[str, str]:
+    """Render one notification email into ``(html, text)``.
+
+    Every string arriving here is already localized — this function only lays
+    them out. The plain-text twin is built from the same pieces so the two parts
+    of the multipart message can't drift.
+    """
+    if greeting_name:
+        greeting = translate(locale, "common.greeting", name=greeting_name)
+    else:
+        greeting = translate(locale, "common.greeting_no_name")
+    detail_rows = [{"label": label, "value": value} for label, value in details]
+    footer = translate(locale, footer_key)
+    manage_label = translate(locale, "common.footer_manage") if manage_url else None
+
+    html = _render_template(
+        "notification.html",
+        locale=locale or "en",
+        subject=subject,
+        greeting=greeting,
+        heading=heading,
+        paragraphs=list(paragraphs),
+        details=detail_rows,
+        details_heading=translate(locale, "common.details_heading")
+        if detail_rows
+        else None,
+        note=note,
+        cta_label=cta_label,
+        cta_url=cta_url,
+        footer=footer,
+        manage_label=manage_label,
+        manage_url=manage_url,
+    )
+
+    lines: list[str] = [greeting, "", heading, ""]
+    lines.extend([*paragraphs, ""] if paragraphs else [])
+    for label, value in details:
+        lines.append(f"{label}: {value}")
+    if details:
+        lines.append("")
+    if note:
+        lines.extend([note, ""])
+    if cta_url:
+        lines.extend([f"{cta_label or ''}: {cta_url}".strip(": "), ""])
+    lines.append(footer)
+    if manage_url:
+        lines.append(f"{manage_label}: {manage_url}")
+    return html, "\n".join(lines)

@@ -181,13 +181,50 @@ On the frontend, `ProjectDetail.vue` provides `projectCanEdit` /
 `projectAccessLevel`; descendants read them through
 `composables/useProjectAccess.ts` rather than threading props.
 
+### 8. Email notifications
+
+Four categories, each opt-out-able per user via `NotificationPreference`
+(`models/user.py`; a user with no row uses `DEFAULTS`, so no backfill was
+needed): `job_finished`, `project_shared`, `security`, `admin_alerts`.
+
+**All decisions live in `utils/notifications.py`** — hook sites call one function
+and never gate themselves. Every public function swallows its own exceptions:
+these run inside Celery finalizers and request handlers where raising would turn
+"the email didn't arrive" into "the job failed".
+
+- **Job email goes to the initiator**, not to every project member. That is why
+  `Trial` and `PreprocessingTask` carry `created_by_id` (nullable; pre-existing
+  rows fall back to the project owner).
+- **Gating for job email only:** the category toggle, a minimum duration
+  (`NOTIFY_MIN_JOB_SECONDS`, per-user override on the preference row), and
+  presence — skipped if `utils/presence.py` says the user has the app open.
+  Security notices and share grants are deliberately *not* presence-gated.
+- **Presence** is a Redis key per connected user, written by
+  `websocket_manager.ConnectionManager` (which knows the per-user socket count)
+  and refreshed by the frontend's 45s `ping`. No Redis → everyone counts as away.
+- **Delivery** is deferred to `celery/notifications.py` because `smtplib` blocks
+  for up to 15s; the rendered HTML/text travels as task arguments so the worker
+  stays stateless. Falls back to a daemon thread when Celery can't take it.
+- **PHI boundary:** counts, timings, model names, and user-authored labels
+  (project + run name) only. Never document/file names, extracted values, or
+  per-document error text. Admin error alerts carry the `error_id` alone.
+- **Localization is server-side** (`utils/email_i18n.py` + `locales/emails/`),
+  keyed off `User.preferred_language`, which the frontend mirrors from the
+  language switcher via `PATCH /user/me/language`.
+
+Hook sites: `celery/preprocessing.py` + `celery/info_extraction.py` finalizers,
+`celery/task_signals.py` (`mark_failed` crash path and the orphan sweeper),
+`shares.py`, `users.py` (password change/reset, identity unlink), `auth.py`
+(lockout transition only), `sso.py` (email-linked identity), and
+`middleware/error_handlers.py` (unhandled 500 → admin alert).
+
 ## Backend Architecture
 
 ### API Structure
 All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - `/api/v1/auth/*` — login, token refresh, logout, public settings (incl. SSO provider list)
 - `/api/v1/auth/sso/*` — OIDC SSO flow (login redirect + callback with JIT provisioning)
-- `/api/v1/user/*` — user CRUD, invitations, self-service linked identities (`/me/identities`)
+- `/api/v1/user/*` — user CRUD, invitations, self-service profile (`PATCH /me`, name only — email stays admin-only), linked identities (`/me/identities`), notification preferences (`/me/notification-preferences`), UI locale (`/me/language`)
 - `/api/v1/project/*` — projects (with sub-routers for files, documents, trials, etc.)
 - `/api/v1/admin/*` — admin settings, Celery monitoring, audit log + error log (`/admin/audit`, `/admin/audit/export`, `/admin/errors`)
 - `/api/v1/admin/sso/*` — admin CRUD for OIDC identity providers
@@ -222,6 +259,11 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 | `utils/evaluation.py` | Evaluation metrics computation |
 | `utils/password_policy.py` | Shared password validator (complexity rules, config-driven) |
 | `utils/crypto.py` | Fernet encrypt/decrypt for secrets at rest (e.g. SSO client secrets) |
+| `utils/email_service.py` | SMTP send + Jinja2 templates (`templates/emails/`, autoescaped); `render_notification()` lays out the one generic notification template |
+| `utils/email_i18n.py` | Server-side message catalogs for email (`locales/emails/{en,de,fr,es}.json`), `translate()` / `format_duration()` with English fallback |
+| `utils/notifications.py` | **Who gets notified and when** — category preferences, presence + minimum-duration gating, admin-alert cooldown, PHI-free payloads |
+| `utils/presence.py` | Short-TTL Redis marker per connected user, so a Celery worker can ask "does this user have the app open?" |
+| `celery/notifications.py` | `send_notification_email_task` — the blocking SMTP send, off the request/OCR path, with retry |
 | `services/oidc_service.py` | OIDC discovery, authorize URL (PKCE + signed state), code exchange, userinfo |
 | `routers/v1/endpoints/sso.py` | OIDC SSO login/callback flow + JIT user provisioning |
 | `routers/v1/endpoints/admin_sso.py` | Admin CRUD for OIDC identity providers |

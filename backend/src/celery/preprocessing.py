@@ -809,6 +809,13 @@ if celery_app:
                 # Broadcast final status via Redis pub/sub (FastAPI will relay to WebSocket clients)
                 _broadcast_preprocessing_update(task, event)
 
+                # Email the person who started the run (if they've been away
+                # long enough to have missed the live update). Swallows its own
+                # errors — see utils/notifications.py.
+                from ..utils.notifications import notify_preprocessing_finished
+
+                notify_preprocessing_finished(db, task)
+
         # _run() returns True when this chunk finished but PENDING files remain,
         # meaning the task should re-enqueue itself to continue. Doing it here
         # (outside asyncio.run) avoids nesting event loops under eager mode.

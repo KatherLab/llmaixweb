@@ -197,6 +197,27 @@ def raise_internal_error(
     )
 
 
+def _alert_admins(error_id: str) -> None:
+    """Email admins about an unhandled 500, at most once per cooldown window.
+
+    Only the error id travels — the message and stack trace stay in the error log,
+    where they are behind authentication, because an exception string can quote
+    document content. Imported lazily and guarded: an error while reporting an
+    error must not replace the 500 the client is owed with a different one.
+    """
+    try:
+        from ..db.session import SessionLocal
+        from ..utils.notifications import notify_admin_alert
+
+        db = SessionLocal()
+        try:
+            notify_admin_alert(db, "error_spike", error_id=error_id)
+        finally:
+            db.close()
+    except Exception:
+        logger.warning("Could not send admin alert for error_id=%s", error_id)
+
+
 def register_exception_handlers(app) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
@@ -208,6 +229,7 @@ def register_exception_handlers(app) -> None:
             request.url.path,
         )
         _persist_error_log(request, error_id, exc)
+        _alert_admins(error_id)
         return JSONResponse(
             status_code=500,
             content={

@@ -173,3 +173,23 @@ class TrialResultStatus(str, enum.Enum):
     SCHEMA_INVALID = "schema_invalid"
     REFUSED = "refused"
     PROVIDER_ERROR = "provider_error"
+
+
+class NotificationCategory(str, enum.Enum):
+    """Groups of notification email a user can independently opt out of.
+
+    Each value maps 1:1 to a boolean column on ``NotificationPreference`` and to
+    a toggle in Account settings. Adding a category means adding the column, the
+    toggle, and the catalog strings — the value itself is the contract between
+    the three.
+    """
+
+    # A preprocessing task or extraction run reached a terminal state.
+    JOB_FINISHED = "job_finished"
+    # A project was shared with the recipient, or their permission changed.
+    PROJECT_SHARED = "project_shared"
+    # Account/security notices: password changed, account locked out, SSO
+    # identity linked or unlinked.
+    SECURITY = "security"
+    # Operational alerts (worker crash, swept stuck tasks). Admins only.
+    ADMIN_ALERTS = "admin_alerts"

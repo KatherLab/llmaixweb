@@ -44,6 +44,7 @@ from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import decrypt
 from ....utils.enums import AuditAction, UserRole
+from ....utils.notifications import notify_security_event
 
 logger = logging.getLogger(__name__)
 
@@ -440,6 +441,12 @@ def _resolve_or_provision_user(
                 "email_verified": email_verified,
             },
         )
+    # Only the linking path notifies. A JIT-provisioned account has no prior
+    # owner to warn — but attaching a new sign-in method to an account that
+    # already existed is exactly the takeover-shaped event they should hear
+    # about, even though the verified-email gate above makes it legitimate.
+    if user_by_email:
+        notify_security_event(db, target, "identity_linked", provider=provider.name)
     return target
 
 

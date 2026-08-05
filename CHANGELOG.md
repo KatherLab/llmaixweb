@@ -14,8 +14,36 @@ that point forward.
 
 ## [Unreleased]
 
+### Added
+
+- **Email notifications.** Beyond invitations and password resets, the app now
+  sends email for: a preprocessing run or extraction run finishing (to whoever
+  started it), a project being shared with you or your access changing, account
+  security events (password changed or reset, account locked after failed
+  sign-ins, SSO sign-in method linked or removed), and admin alerts (background
+  task crash, reclaimed stuck tasks, unhandled server error). Each user opts out
+  per category under **Account settings → Email notifications**, where they can
+  also choose to be emailed only while away from the app and set a minimum job
+  length. Notification bodies contain counts, timings, model names, and the
+  project/run names users chose — never document text, extracted values, file
+  names, or per-document errors.
+- Notification email is localized (English, German, French, Spanish) using the
+  language chosen in the app; the password-reset email is now localized too.
+- New settings on the admin **Email** tab: `NOTIFICATIONS_ENABLED` (master
+  switch for notifications only — invitations and password resets keep working
+  when it is off), `NOTIFY_MIN_JOB_SECONDS`, `NOTIFY_ADMIN_ALERT_COOLDOWN_MINUTES`,
+  and the read-only `NOTIFY_PRESENCE_TTL_SECONDS`. A **Send test email** button
+  on that tab verifies SMTP against the signed-in admin's own address.
+- The "only notify me when I'm away" option needs Redis; without it every user
+  is treated as away and job email is always sent.
+
 ### Fixed
 
+- Non-admin users can now save their profile from **Account settings**. It
+  previously called the admin-only endpoint and failed with a permission error.
+  The **Email** field is now read-only for everyone: it is the sign-in identity
+  (and what SSO matches accounts on), so changing it stays an administrator
+  action in User management.
 - Read-only collaborators no longer see edit controls that only produce an error
   toast. Upload/preprocessing, document restore and reprocess, group and schema
   and prompt editing, extraction-run rename/cancel/retry/delete, ground-truth

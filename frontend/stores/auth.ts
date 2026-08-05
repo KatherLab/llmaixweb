@@ -6,6 +6,8 @@ import { api } from '@/services/api'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
 import { websocketService } from '@/services/websocket'
+import { i18n } from '@/i18n'
+import type { SupportedLocale } from '@/i18n'
 import type { LogoutOptions } from '@/types'
 import type { UserResponse } from '@/types'
 
@@ -31,6 +33,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
+
+  /**
+   * Make the account's stored locale agree with the one the browser is actually
+   * showing, so server-composed email arrives in the language the user reads.
+   *
+   * The browser side wins deliberately: localStorage reflects a choice made in
+   * this browser, and adopting the server's value instead would silently switch
+   * the UI language on login. Fire-and-forget — a failure here must never keep
+   * someone from signing in.
+   */
+  function syncPreferredLanguage(stored: string | null | undefined) {
+    const active = i18n.global.locale.value as SupportedLocale
+    if (stored === active) return
+    void usersApi.updateLanguage(active).catch(() => {
+      /* cosmetic: email falls back to English until the next sync */
+    })
+  }
 
   async function initialize() {
     if (isInitialized.value) {
@@ -89,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await usersApi.me()
       user.value = response.data
+      syncPreferredLanguage(response.data.preferred_language)
       return true
     } catch (error) {
       // Only an actual auth rejection invalidates the session. (A 401 has

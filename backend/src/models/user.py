@@ -25,6 +25,10 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(default=True)
     token_version: Mapped[int] = mapped_column(default=1)
+    # UI locale ("en"/"de"/"fr"/"es"), mirrored from the frontend language
+    # switcher. Notification email is rendered in this language; NULL means the
+    # user never picked one, so mail falls back to English.
+    preferred_language: Mapped[str | None] = mapped_column(String(5), nullable=True)
     # Brute-force protection: after LOGIN_MAX_ATTEMPTS failed logins the
     # account is locked until `locked_until`. Reset to 0 / None on success.
     failed_login_attempts: Mapped[int] = mapped_column(default=0)
@@ -47,6 +51,13 @@ class User(Base):
     )
     identities: Mapped[list["UserIdentity"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    # Lazily created: a user without a row uses the defaults in
+    # `NotificationPreference.DEFAULTS`, so existing accounts need no backfill.
+    # Deliberately *not* eager-loaded — every authenticated request loads a User
+    # and only the notification paths need this.
+    notification_preference: Mapped["NotificationPreference | None"] = relationship(
+        back_populates="user", cascade="all, delete-orphan", uselist=False
     )
 
 
@@ -117,3 +128,67 @@ class RefreshToken(Base):
     revoked: Mapped[bool] = mapped_column(default=False)
 
     user: Mapped["User"] = relationship()
+
+
+class NotificationPreference(Base):
+    """Per-user opt-outs for notification email.
+
+    One row per user, created on first write (the GET endpoint returns defaults
+    without persisting anything). A missing row therefore means "all defaults",
+    which is why every send path goes through
+    :func:`backend.src.utils.notifications.preferences_for` rather than reading
+    this relationship directly.
+
+    Security notices default on and are *not* silently ignorable elsewhere: the
+    toggle exists because some deployments route these to a SIEM instead, but the
+    default keeps the user informed about their own account.
+    """
+
+    __tablename__ = "notification_preferences"
+
+    # Defaults for a user with no row yet — also the reset target for the
+    # Account settings "restore defaults" action. Keys match the column names
+    # and the `NotificationCategory` values.
+    DEFAULTS: "dict[str, bool | int | None]" = {
+        "job_finished": True,
+        "project_shared": True,
+        "security": True,
+        "admin_alerts": True,
+        "only_when_away": True,
+        "min_job_seconds": None,
+    }
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+
+    # ── Category opt-outs (see utils.enums.NotificationCategory) ──
+    job_finished: Mapped[bool] = mapped_column(default=True)
+    project_shared: Mapped[bool] = mapped_column(default=True)
+    security: Mapped[bool] = mapped_column(default=True)
+    # Only consulted for admins; a non-admin never receives these regardless.
+    admin_alerts: Mapped[bool] = mapped_column(default=True)
+
+    # ── Delivery gating ──
+    # Suppress job-finished email while the user has the app open (tracked via
+    # WebSocket presence). Applies to job notifications only — a security notice
+    # or a share grant is worth an email either way.
+    only_when_away: Mapped[bool] = mapped_column(default=True)
+    # Per-user override of settings.NOTIFY_MIN_JOB_SECONDS. NULL = use the
+    # server default.
+    min_job_seconds: Mapped[int | None] = mapped_column(nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(),
+        server_default=func.now(),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(),
+        server_default=func.now(),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    user: Mapped["User"] = relationship(back_populates="notification_preference")

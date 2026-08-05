@@ -16,6 +16,7 @@ if not settings.DISABLE_CELERY:
         include=[
             "backend.src.celery.preprocessing",
             "backend.src.celery.info_extraction",
+            "backend.src.celery.notifications",
         ],
     )
 

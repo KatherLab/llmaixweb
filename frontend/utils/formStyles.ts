@@ -14,8 +14,12 @@
  */
 
 // Boxed text input — modern, token-backed, dark-mode automatic.
+//
+// The `disabled:` variants matter: without them a read-only field (e.g. the
+// email in Account settings) is pixel-identical to an editable one, so the user
+// only discovers it can't be changed by clicking it.
 export const inputClass =
-  'w-full px-4 py-2 text-sm rounded-card border border-default-border bg-surface text-content placeholder-content-subtle outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/50'
+  'w-full px-4 py-2 text-sm rounded-card border border-default-border bg-surface text-content placeholder-content-subtle outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/50 disabled:bg-surface-sunken disabled:text-content-muted disabled:cursor-not-allowed'
 
 // Textarea — same base, vertical resize only.
 export const textareaClass = inputClass + ' resize-y'

@@ -390,6 +390,85 @@ def test_admin_set_user_password_requires_admin(client, api_url, user_headers):
 
 
 # ---------------------------------------------------------------------------
+# update_current_user (PATCH /user/me)
+#
+# Self-service profile editing. The interesting property is what it *refuses*:
+# email is the sign-in identity (and what SSO links accounts on), so it stays an
+# administrator action.
+# ---------------------------------------------------------------------------
+
+
+def test_self_update_changes_own_name(client, api_url, user_headers):
+    resp = client.patch(
+        f"{api_url}/user/me",
+        headers=user_headers,
+        json={"full_name": "Renamed Self"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["full_name"] == "Renamed Self"
+    assert client.get(f"{api_url}/user/me", headers=user_headers).json()[
+        "full_name"
+    ] == ("Renamed Self")
+    # Restore for the other tests in this module.
+    client.patch(
+        f"{api_url}/user/me", headers=user_headers, json={"full_name": "Test User"}
+    )
+
+
+def test_self_update_does_not_require_admin(client, api_url, user_headers):
+    """The whole point: PATCH /user/{id} is admin-only, this one is not."""
+    before = client.get(f"{api_url}/user/me", headers=user_headers).json()
+    assert before["role"] != "admin"
+    resp = client.patch(
+        f"{api_url}/user/me",
+        headers=user_headers,
+        json={"full_name": before["full_name"]},
+    )
+    assert resp.status_code == 200, resp.text
+
+
+def test_self_update_ignores_email(client, api_url, user_headers):
+    """An email in the body is not an error — it simply has no effect."""
+    original = client.get(f"{api_url}/user/me", headers=user_headers).json()["email"]
+    resp = client.patch(
+        f"{api_url}/user/me",
+        headers=user_headers,
+        json={"full_name": "Still Me", "email": "hijack@example.com"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["email"] == original
+    client.patch(
+        f"{api_url}/user/me", headers=user_headers, json={"full_name": "Test User"}
+    )
+
+
+def test_self_update_cannot_escalate_role_or_status(client, api_url, user_headers):
+    resp = client.patch(
+        f"{api_url}/user/me",
+        headers=user_headers,
+        json={"full_name": "Sneaky", "role": "admin", "is_active": False},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["role"] != "admin"
+    assert resp.json()["is_active"] is True
+    client.patch(
+        f"{api_url}/user/me", headers=user_headers, json={"full_name": "Test User"}
+    )
+
+
+def test_self_update_rejects_empty_name(client, api_url, user_headers):
+    resp = client.patch(
+        f"{api_url}/user/me", headers=user_headers, json={"full_name": ""}
+    )
+    assert resp.status_code == 422
+
+
+def test_self_update_requires_authentication(client, api_url):
+    resp = client.patch(f"{api_url}/user/me", json={"full_name": "Anon"})
+    assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # admin_update_user (PATCH /user/{id})
 # ---------------------------------------------------------------------------
 

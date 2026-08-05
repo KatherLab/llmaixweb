@@ -38,6 +38,7 @@ from ....utils.email_service import (
     send_password_reset_email,
 )
 from ....utils.enums import AuditAction, AuditOutcome, UserRole
+from ....utils.notifications import notify_security_event, preferences_for
 from ....utils.password_policy import validate_password
 
 logger = logging.getLogger(__name__)
@@ -164,6 +165,7 @@ def change_password(
         resource_id=current_user.id,
         detail={"self": True},
     )
+    notify_security_event(db, current_user, "password_changed")
     return schemas.UserResponse.model_validate(current_user)
 
 
@@ -200,6 +202,8 @@ def admin_set_user_password(
         resource_id=user.id,
         detail={"self": False, "by_admin": True},
     )
+    # The user's own sessions were just revoked by someone else; tell them why.
+    notify_security_event(db, user, "password_reset_by_admin")
     return schemas.UserResponse.model_validate(user)
 
 
@@ -321,6 +325,31 @@ def read_current_user(
     return resp
 
 
+@router.patch("/me", response_model=schemas.UserResponse)
+def update_current_user(
+    payload: schemas.UserSelfUpdate = Body(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    """Update the caller's own profile.
+
+    Separate from the admin ``PATCH /user/{user_id}`` on purpose: that route is
+    behind ``get_admin_user`` and can change role, active status, and email, so a
+    user editing their own display name must not go through it. The allowlist of
+    self-editable fields is ``UserSelfUpdate`` — notably *not* email, which is the
+    sign-in identity and stays an administrator action.
+
+    Declared before ``PATCH /{user_id}`` so "me" is matched as a literal rather
+    than failing that route's int coercion.
+    """
+    current_user.full_name = payload.full_name.strip()
+    db.commit()
+    db.refresh(current_user)
+    resp = schemas.UserResponse.model_validate(current_user)
+    resp.can_access_all_projects = admin_has_global_project_access(current_user)
+    return resp
+
+
 @router.get("/me/identities", response_model=list[schemas.UserIdentityResponse])
 def list_my_identities(
     current_user: models.User = Depends(get_current_user),
@@ -342,6 +371,71 @@ def list_my_identities(
         )
         for ident in identities
     ]
+
+
+@router.patch("/me/language", response_model=schemas.UserResponse)
+def update_my_language(
+    payload: schemas.LanguageUpdate = Body(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.UserResponse:
+    """Persist the caller's UI locale.
+
+    Its own endpoint rather than part of a profile update: the language switcher
+    calls it on every change, and it must not be able to touch anything else.
+    The stored value is what notification email is rendered in.
+    """
+    current_user.preferred_language = payload.preferred_language
+    db.commit()
+    db.refresh(current_user)
+    return schemas.UserResponse.model_validate(current_user)
+
+
+@router.get(
+    "/me/notification-preferences",
+    response_model=schemas.NotificationPreferenceResponse,
+)
+def get_my_notification_preferences(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.NotificationPreferenceResponse:
+    """The caller's effective notification settings.
+
+    Returns defaults (without persisting a row) for users who never changed
+    anything, so the settings UI has something to render for everyone.
+    """
+    prefs = preferences_for(current_user)
+    return schemas.NotificationPreferenceResponse(
+        **prefs, email_configured=is_email_configured()
+    )
+
+
+@router.patch(
+    "/me/notification-preferences",
+    response_model=schemas.NotificationPreferenceResponse,
+)
+def update_my_notification_preferences(
+    payload: schemas.NotificationPreferenceUpdate = Body(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.NotificationPreferenceResponse:
+    """Partially update the caller's notification settings (creating the row)."""
+    row = current_user.notification_preference
+    if row is None:
+        row = models.NotificationPreference(user_id=current_user.id)
+        db.add(row)
+        current_user.notification_preference = row
+
+    # exclude_unset so an omitted field keeps its stored value; min_job_seconds
+    # is explicitly nullable, which is why exclude_none would be wrong here.
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(row, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return schemas.NotificationPreferenceResponse(
+        **preferences_for(current_user), email_configured=is_email_configured()
+    )
 
 
 @router.delete("/me/identities/{identity_id}")
@@ -374,6 +468,9 @@ def delete_my_identity(
             "Cannot disconnect your last sign-in method without a password set on the account.",
         )
     provider_id = identity.provider_id
+    # Read the display name before the delete: the relationship is unusable once
+    # the row is gone, and the notification needs to name the provider.
+    provider_name = identity.provider.name if identity.provider else str(provider_id)
     db.delete(identity)
     db.commit()
     # Removing a sign-in method is an account-security event: it changes how the
@@ -390,6 +487,7 @@ def delete_my_identity(
             "remaining_identities": len(remaining) - 1,
         },
     )
+    notify_security_event(db, current_user, "identity_unlinked", provider=provider_name)
     return {"deleted": identity_id}
 
 
@@ -783,7 +881,9 @@ def forgot_password(
         if email_configured:
             base_url = settings.APP_URL
             reset_url = f"{base_url}/reset-password/{token}"
-            send_password_reset_email(body.email, token, reset_url)
+            send_password_reset_email(
+                body.email, token, reset_url, locale=user.preferred_language
+            )
 
     # Identical response shape for all callers, gated only on the global email
     # configuration — never on account existence.
@@ -879,4 +979,7 @@ def reset_password(
         resource_type="user",
         resource_id=user.id,
     )
+    # Same notice as a logged-in change: what matters to the user is that their
+    # password moved, not which flow moved it.
+    notify_security_event(db, user, "password_changed")
     return {"message": "Password has been reset successfully."}

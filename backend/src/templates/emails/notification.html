@@ -1,0 +1,70 @@
+{#
+  One template for every notification email (job finished, project shared,
+  security notice, admin alert, SMTP test).
+
+  All copy arrives pre-translated from utils/notifications.py — this template
+  contains no catalog lookups, so adding an event type means adding strings and a
+  builder function, never another template. Context:
+
+    subject       str            — also the document <title>
+    greeting      str | None     — "Hi Alice," (omitted for admin alerts)
+    heading       str            — <h1>
+    paragraphs    list[str]      — body copy, in order
+    details       list[dict]     — [{label, value}] rendered as a table
+    details_heading str | None   — caption above the table
+    note          str | None     — highlighted callout (e.g. "wasn't you?")
+    cta_label/cta_url str|None   — call-to-action button (both or neither)
+    footer        str            — why this email was sent
+    manage_label/manage_url      — link to notification settings (optional)
+
+  Autoescaping is on (see utils/email_service.py) because `details` values and
+  paragraph interpolations carry user-authored names.
+#}{% extends "base.html" %}
+
+{% block content %}
+{%- if greeting %}
+                <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #4a5568;">{{ greeting }}</p>
+{%- endif %}
+                <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 700; color: #1a202c;">{{ heading }}</h1>
+{%- for paragraph in paragraphs %}
+                <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #4a5568;">{{ paragraph }}</p>
+{%- endfor %}
+{%- if details %}
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 24px 0; border-collapse: collapse;">
+{%- if details_heading %}
+                    <tr>
+                        <td colspan="2" style="padding: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #a0aec0;">{{ details_heading }}</td>
+                    </tr>
+{%- endif %}
+{%- for row in details %}
+                    <tr>
+                        <td style="padding: 6px 16px 6px 0; font-size: 14px; line-height: 1.5; color: #718096; white-space: nowrap; vertical-align: top; border-top: 1px solid #e2e8f0;">{{ row.label }}</td>
+                        <td style="padding: 6px 0; font-size: 14px; line-height: 1.5; color: #1a202c; font-weight: 600; vertical-align: top; border-top: 1px solid #e2e8f0; word-break: break-word;">{{ row.value }}</td>
+                    </tr>
+{%- endfor %}
+                </table>
+{%- endif %}
+{%- if note %}
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; margin: 0 0 24px;">
+                    <tr>
+                        <td style="background-color: #fffaf0; border-left: 3px solid #dd6b20; border-radius: 4px; padding: 12px 16px; font-size: 14px; line-height: 1.6; color: #744210;">{{ note }}</td>
+                    </tr>
+                </table>
+{%- endif %}
+{%- if cta_url and cta_label %}
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 32px;">
+                    <tr>
+                        <td style="background-color: #2563eb; border-radius: 8px; padding: 12px 32px;">
+                            <a href="{{ cta_url }}" style="color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; display: inline-block;">{{ cta_label }}</a>
+                        </td>
+                    </tr>
+                </table>
+{%- endif %}
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0 16px;" />
+                <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #a0aec0;">
+                    {{ footer }}
+{%- if manage_url and manage_label %}
+                    <br /><a href="{{ manage_url }}" style="color: #718096; text-decoration: underline;">{{ manage_label }}</a>
+{%- endif %}
+                </p>
+{% endblock %}

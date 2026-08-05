@@ -7,6 +7,8 @@ from typing import Dict, Set
 
 from fastapi import WebSocket
 
+from .utils import presence
+
 logger = logging.getLogger(__name__)
 
 # Per-user cap on simultaneous WebSocket connections. Without it an
@@ -64,6 +66,11 @@ class ConnectionManager:
         if is_admin:
             self._admin_connections.add(websocket)
 
+        # Presence lives here rather than in the WebSocket route because this is
+        # the only place that knows how many sockets a user still holds — and
+        # sockets are also dropped from inside this class when a broadcast fails.
+        presence.mark_online(user_id)
+
         logger.info(f"WebSocket connected for user {user_id}")
         return True
 
@@ -75,7 +82,17 @@ class ConnectionManager:
                 del self._active_connections[user_id]
 
         self._admin_connections.discard(websocket)
+
+        # Only the last socket going away means the user left; closing one of
+        # several open tabs must not report them away.
+        if user_id not in self._active_connections:
+            presence.mark_offline(user_id)
+
         logger.info(f"WebSocket disconnected for user {user_id}")
+
+    def has_connections(self, user_id: int) -> bool:
+        """Whether this process holds any live socket for the user."""
+        return bool(self._active_connections.get(user_id))
 
     async def broadcast_to_user(self, user_id: int, message: dict):
         """Send a message to all connections for a specific user."""

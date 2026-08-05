@@ -294,13 +294,15 @@
       "revert": "Zurücksetzen",
       "saving": "Wird gespeichert …",
       "reset": "Zurücksetzen",
+      "send_test_email": "Test-E-Mail senden",
       "saved": "Einstellungen gespeichert!",
       "errors": {
         "save_secret": "Geheimnis konnte nicht gespeichert werden",
         "clear_secret": "Geheimnis konnte nicht gelöscht werden",
         "load": "Einstellungen konnten nicht geladen werden",
         "save": "Einstellungen konnten nicht gespeichert werden",
-        "remove_override": "Überschreibung konnte nicht entfernt werden"
+        "remove_override": "Überschreibung konnte nicht entfernt werden",
+        "test_email": "Test-E-Mail konnte nicht gesendet werden"
       },
       "revert_dialog": {
         "title": "Überschreibung entfernen?",
@@ -312,7 +314,8 @@
       },
       "toasts": {
         "override_removed": "Überschreibung für {key} entfernt",
-        "secret_cleared": "{key} gelöscht"
+        "secret_cleared": "{key} gelöscht",
+        "test_email_sent": "Test-E-Mail an {email} gesendet. Verwendet die gespeicherten Einstellungen, nicht ungespeicherte Änderungen."
       }
     },
     "sso": {
@@ -576,7 +579,7 @@
       "full_name": "Vollständiger Name",
       "full_name_placeholder": "Vollständiger Name",
       "email": "E-Mail",
-      "email_placeholder": "admin{'@'}ihrunternehmen.com",
+      "email_readonly_hint": "Ihre E-Mail-Adresse ist Ihre Anmeldekennung — bitten Sie einen Administrator, sie zu ändern.",
       "save": "Profil speichern",
       "saved": "Gespeichert."
     },
@@ -591,6 +594,29 @@
       "mismatch": "Die Passwörter stimmen nicht überein",
       "update": "Passwort aktualisieren",
       "updated_notice": "Passwort aktualisiert. Andere Sitzungen wurden abgemeldet."
+    },
+    "notifications": {
+      "title": "E-Mail-Benachrichtigungen",
+      "subtitle": "Wählen Sie, welche E-Mails diese Instanz Ihnen sendet.",
+      "email_not_configured": "Der E-Mail-Versand ist auf diesem Server nicht konfiguriert, daher können keine Benachrichtigungen gesendet werden. Bitten Sie einen Administrator, SMTP einzurichten.",
+      "job_finished": "Auftrag abgeschlossen",
+      "job_finished_hint": "Wenn eine von Ihnen gestartete Vorverarbeitung oder ein Durchlauf abgeschlossen wird oder fehlschlägt.",
+      "project_shared": "Projekt für mich freigegeben",
+      "project_shared_hint": "Wenn Ihnen jemand Zugriff auf ein Projekt gibt oder Ihren Zugriff ändert.",
+      "security": "Kontosicherheit",
+      "security_hint": "Passwortänderungen, Kontosperrungen sowie hinzugefügte oder entfernte Anmeldemethoden.",
+      "admin_alerts": "Administrator-Warnungen",
+      "admin_alerts_hint": "Abstürze von Hintergrundaufgaben, zurückgesetzte hängende Aufgaben und unbehandelte Serverfehler.",
+      "delivery_title": "Wann senden",
+      "only_when_away": "Nur wenn ich abwesend bin",
+      "only_when_away_hint": "Keine Auftrags-E-Mails, solange Sie LLMAIx Web in einem Browser-Tab geöffnet haben.",
+      "min_duration": "Mindestdauer eines Auftrags",
+      "min_duration_hint": "Aufträge, die schneller abgeschlossen werden, lösen keine E-Mail aus. Leer lassen, um den Serverstandard zu verwenden.",
+      "min_duration_default": "Standard",
+      "min_duration_invalid": "Geben Sie eine Anzahl von Minuten zwischen 0 und 1440 ein.",
+      "minutes": "Minuten",
+      "load_failed": "Benachrichtigungseinstellungen konnten nicht geladen werden",
+      "save_failed": "Benachrichtigungseinstellungen konnten nicht gespeichert werden"
     },
     "connected": {
       "title": "Verbundene Konten",

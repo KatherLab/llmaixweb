@@ -294,13 +294,15 @@
       "revert": "Revertir",
       "saving": "Guardando…",
       "reset": "Restablecer",
+      "send_test_email": "Enviar correo de prueba",
       "saved": "¡Configuración guardada!",
       "errors": {
         "save_secret": "No se pudo guardar el secreto",
         "clear_secret": "No se pudo borrar el secreto",
         "load": "No se pudo cargar la configuración",
         "save": "No se pudo guardar la configuración",
-        "remove_override": "No se pudo eliminar la anulación"
+        "remove_override": "No se pudo eliminar la anulación",
+        "test_email": "No se pudo enviar el correo de prueba"
       },
       "revert_dialog": {
         "title": "¿Eliminar la anulación?",
@@ -312,7 +314,8 @@
       },
       "toasts": {
         "override_removed": "Anulación de {key} eliminada",
-        "secret_cleared": "{key} borrado"
+        "secret_cleared": "{key} borrado",
+        "test_email_sent": "Correo de prueba enviado a {email}. Usa la configuración guardada, no los cambios sin guardar."
       }
     },
     "sso": {
@@ -576,7 +579,7 @@
       "full_name": "Nombre completo",
       "full_name_placeholder": "Nombre completo",
       "email": "Correo electrónico",
-      "email_placeholder": "admin{'@'}suempresa.com",
+      "email_readonly_hint": "Su correo es su identificador de inicio de sesión: pida a un administrador que lo cambie.",
       "save": "Guardar perfil",
       "saved": "Guardado."
     },
@@ -591,6 +594,29 @@
       "mismatch": "Las contraseñas no coinciden",
       "update": "Actualizar contraseña",
       "updated_notice": "Contraseña actualizada. Se cerraron las demás sesiones."
+    },
+    "notifications": {
+      "title": "Notificaciones por correo",
+      "subtitle": "Elija qué correos le envía esta instancia.",
+      "email_not_configured": "El envío de correo no está configurado en este servidor, por lo que no se pueden enviar notificaciones. Pida a un administrador que configure SMTP.",
+      "job_finished": "Trabajo finalizado",
+      "job_finished_hint": "Cuando un preprocesamiento o una ejecución de extracción que usted inició termina o falla.",
+      "project_shared": "Proyecto compartido conmigo",
+      "project_shared_hint": "Cuando alguien le da acceso a un proyecto o cambia su acceso.",
+      "security": "Seguridad de la cuenta",
+      "security_hint": "Cambios de contraseña, bloqueos de cuenta y métodos de inicio de sesión añadidos o eliminados.",
+      "admin_alerts": "Alertas de administrador",
+      "admin_alerts_hint": "Fallos de tareas en segundo plano, tareas atascadas recuperadas y errores del servidor no controlados.",
+      "delivery_title": "Cuándo enviar",
+      "only_when_away": "Solo cuando esté ausente",
+      "only_when_away_hint": "Omitir los correos de trabajos mientras tenga LLMAIx Web abierto en una pestaña.",
+      "min_duration": "Duración mínima del trabajo",
+      "min_duration_hint": "Los trabajos que terminen antes de esto nunca generan un correo. Déjelo vacío para usar el valor predeterminado del servidor.",
+      "min_duration_default": "Predeterminado",
+      "min_duration_invalid": "Introduzca un número de minutos entre 0 y 1440.",
+      "minutes": "minutos",
+      "load_failed": "No se pudieron cargar las preferencias de notificación",
+      "save_failed": "No se pudieron guardar las preferencias de notificación"
     },
     "connected": {
       "title": "Cuentas conectadas",

@@ -77,7 +77,7 @@ state matches exactly what was persisted.
 | **Preprocessing** | Defaults for the preprocessing pipeline (e.g. OCR fallback thresholds). |
 | **Storage** | Local directory vs S3-compatible storage, upload size limits. |
 | **Database** | Database connection details (usually read-only `.env`). |
-| **Email** | SMTP settings used for invitations and password resets. |
+| **Email** | SMTP settings plus the notification-email switches. See [Email & notifications](#email-notifications). |
 
 For the full catalog of settings and what each does, see
 [`.env.example`](https://github.com/KatherLab/llmaixweb/blob/main/.env.example)
@@ -87,3 +87,49 @@ and the [Configuration](../operations/configuration.md) page.
     The OCR-related tabs are where you enable the engines that appear in the
     [preprocessing](../user-guide/preprocessing.md) panel (local Docling/Tesseract,
     Mistral OCR, Vision LLM) and set their default endpoints and models.
+
+## Email & notifications
+
+The **Email** tab holds two kinds of setting: the SMTP connection, and the
+policy for *notification* email on top of it.
+
+`EMAIL_ENABLED` plus the `SMTP_*` values are the transport. With them
+unconfigured the instance sends nothing at all: invitations fall back to copying
+a link by hand, password reset shows a warning, and no notifications are sent.
+
+### Verifying SMTP
+
+The **Send test email** button (visible only on this tab) sends a message to the
+signed-in admin's own address and reports whether the SMTP server accepted it.
+It always sends to you — never to an address you type — so the button can't be
+used as an open relay, and it is rate-limited to 5 attempts per minute.
+
+!!! warning "Test after saving"
+    The test uses the settings **currently stored**, not unsaved edits in the
+    form. Press **Save** first, then **Send test email**.
+
+### Notification policy
+
+| Setting | What it does |
+| --- | --- |
+| **Notification Emails Enabled** | Master switch for notification email. Turning it off silences job/share/security/admin email while leaving invitations and password resets working — so account recovery keeps functioning. |
+| **Minimum Job Duration (seconds)** | Jobs that finish faster than this never trigger a "finished" email. Default 120. Users may set their own value in [Account settings](../user-guide/account.md#email-notifications). |
+| **Admin Alert Cooldown (minutes)** | Minimum gap between two admin alerts of the same kind, so a crash-looping worker can't mail every admin on every occurrence. Default 60. |
+| **Presence TTL (seconds)** | Read-only (`.env`). How long a user counts as "online" after their last WebSocket heartbeat; this backs the per-user "only notify me when I'm away" preference. Keep it well above the frontend's 45-second ping interval. |
+
+What gets sent to whom, and the opt-outs each user controls, is documented in
+[Account settings → Email notifications](../user-guide/account.md#email-notifications).
+
+!!! note "Presence tracking needs Redis"
+    The "only when I'm away" preference is answered by a short-lived Redis key
+    written by the web process and read by the Celery worker that finishes the
+    job. Without Redis (or with a non-Redis broker) every user is treated as
+    away, so job email is sent regardless of whether they have the app open.
+
+!!! note "Notification email contains no PHI"
+    Notification bodies carry counts, timings, model names, and the labels users
+    chose themselves — project and run names. They never contain document text,
+    extracted values, file names, or per-document error messages. Unhandled-error
+    alerts carry only the error ID; the message and stack trace stay in the
+    [error log](../AUDIT_LOGGING.md). Because project and run names *do* leave the system by
+    email, tell users not to put patient identifiers in them.

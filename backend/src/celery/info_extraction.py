@@ -358,6 +358,13 @@ if celery_app:
                     # Broadcast final status via Redis pub/sub
                     _broadcast_trial_update(trial, event)
 
+                    # Email whoever started the run if they've been away long
+                    # enough to have missed the live update. Swallows its own
+                    # errors — see utils/notifications.py.
+                    from ..utils.notifications import notify_trial_finished
+
+                    notify_trial_finished(db, trial)
+
         try:
             asyncio.run(_run())
         except Exception as exc:
@@ -387,6 +394,13 @@ if celery_app:
                         }
                         db.commit()
                         _broadcast_trial_update(trial, "failed")
+
+                        # The normal finalizer never ran, so notify from here —
+                        # a run that died this way is exactly the one its owner
+                        # most needs to hear about.
+                        from ..utils.notifications import notify_trial_finished
+
+                        notify_trial_finished(db, trial)
             except Exception:
                 log.exception(
                     "Trial %s: failed to mark FAILED after catastrophic error",

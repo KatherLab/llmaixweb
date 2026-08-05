@@ -1,3 +1,4 @@
+import type { SupportedLocale } from '@/i18n'
 import type { ISODateString } from './api'
 import type { UserRole } from './enums'
 
@@ -15,6 +16,8 @@ export interface UserResponse {
   full_name: string
   role: UserRole
   is_active: boolean
+  /** UI locale, mirrored from the language switcher; notification email uses it. */
+  preferred_language?: SupportedLocale | null
   last_login_at: ISODateString | null
   has_sso?: boolean | null
   // Whether this user may access projects they don't own (admin + the
@@ -27,6 +30,14 @@ export interface UserCreate {
   password: string
   full_name: string
   invitation_token?: string | null
+}
+
+/**
+ * The fields a user may change about their own account (`PATCH /user/me`).
+ * Mirrors the backend allowlist — email is absent on purpose.
+ */
+export interface UserSelfUpdate {
+  full_name: string
 }
 
 export interface UserUpdateAdmin {
@@ -76,4 +87,36 @@ export interface InvitationInfo {
 /** Response for `GET /users/first-admin-check`. */
 export interface FirstAdminCheckResponse {
   allow_first_admin_setup: boolean
+}
+
+/**
+ * Effective notification settings for the current user (`GET
+ * /user/me/notification-preferences`). Always present — users who never touched
+ * the settings get the server defaults.
+ */
+export interface NotificationPreferences {
+  /** Preprocessing tasks and extraction runs reaching a terminal state. */
+  job_finished: boolean
+  /** Being granted access to a project, or having that access changed. */
+  project_shared: boolean
+  /** Password changes, account lockouts, SSO identities linked/unlinked. */
+  security: boolean
+  /** Operational alerts. Only ever sent to admins. */
+  admin_alerts: boolean
+  /** Suppress job email while a WebSocket session is open. */
+  only_when_away: boolean
+  /** Per-user minimum job duration; null means use the server default. */
+  min_job_seconds: number | null
+  /** Not a preference: whether this instance can send email at all. */
+  email_configured: boolean
+}
+
+export type NotificationPreferencesUpdate = Partial<
+  Omit<NotificationPreferences, 'email_configured'>
+>
+
+/** Response for `POST /admin/settings/test-email`. */
+export interface TestEmailResponse {
+  sent: boolean
+  recipient: string | null
 }

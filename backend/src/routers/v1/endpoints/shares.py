@@ -29,6 +29,7 @@ from ....dependencies import get_db
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction
+from ....utils.notifications import notify_project_shared
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,9 @@ def create_project_share(
         existing.permission = payload.permission
         share = existing
         action = AuditAction.PROJECT_SHARE_UPDATE
+        # Re-sharing at the permission someone already has is a no-op for them —
+        # don't email about it.
+        was_update = previous != payload.permission
         detail = {
             "target_user_id": target.id,
             "from": getattr(previous, "value", previous),
@@ -148,6 +152,7 @@ def create_project_share(
         )
         db.add(share)
         action = AuditAction.PROJECT_SHARE
+        was_update = False
         detail = {"target_user_id": target.id, "permission": payload.permission.value}
 
     db.commit()
@@ -161,6 +166,8 @@ def create_project_share(
         project_id=project_id,
         detail=detail,
     )
+    if action == AuditAction.PROJECT_SHARE or was_update:
+        notify_project_shared(db, share, actor=current_user, updated=was_update)
     return schemas.ProjectShare.model_validate(share, from_attributes=True)
 
 
@@ -206,6 +213,10 @@ def update_project_share(
             "to": payload.permission.value,
         },
     )
+    # A no-op re-save at the same permission changes nothing for the
+    # collaborator, so it doesn't earn an email.
+    if previous != payload.permission:
+        notify_project_shared(db, share, actor=current_user, updated=True)
     return schemas.ProjectShare.model_validate(share, from_attributes=True)
 
 

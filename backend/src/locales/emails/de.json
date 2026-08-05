@@ -1,0 +1,173 @@
+{
+  "common": {
+    "greeting": "Hallo {name},",
+    "greeting_no_name": "Hallo,",
+    "details_heading": "Details",
+    "footer_reason": "Sie erhalten diese E-Mail aufgrund Ihrer Benachrichtigungseinstellungen in LLMAIx Web.",
+    "footer_manage": "Benachrichtigungseinstellungen verwalten",
+    "footer_admin_reason": "Sie erhalten diese E-Mail, weil Sie Administrator dieser LLMAIx-Web-Instanz sind."
+  },
+  "duration": {
+    "h_m": "{hours} Std. {minutes} Min.",
+    "m_s": "{minutes} Min. {seconds} Sek.",
+    "s": "{seconds} Sek."
+  },
+  "label": {
+    "project": "Projekt",
+    "run": "Durchlauf",
+    "status": "Status",
+    "duration": "Dauer",
+    "model": "Modell",
+    "files_total": "Dateien",
+    "files_processed": "Verarbeitet",
+    "files_failed": "Fehlgeschlagen",
+    "documents_total": "Dokumente",
+    "documents_succeeded": "Extrahiert",
+    "documents_failed": "Fehlgeschlagen",
+    "permission": "Zugriff",
+    "granted_by": "Freigegeben von",
+    "provider": "Anbieter",
+    "time": "Zeit",
+    "reason": "Grund",
+    "count": "Betroffene Aufgaben",
+    "error_id": "Fehler-ID"
+  },
+  "status": {
+    "completed": "Abgeschlossen",
+    "partial": "Mit Fehlern abgeschlossen",
+    "failed": "Fehlgeschlagen"
+  },
+  "job": {
+    "subject": {
+      "preprocessing": {
+        "completed": "Vorverarbeitung abgeschlossen — {project}",
+        "partial": "Vorverarbeitung mit Fehlern abgeschlossen — {project}",
+        "failed": "Vorverarbeitung fehlgeschlagen — {project}"
+      },
+      "trial": {
+        "completed": "Durchlauf abgeschlossen — {project}",
+        "partial": "Durchlauf mit Fehlern abgeschlossen — {project}",
+        "failed": "Durchlauf fehlgeschlagen — {project}"
+      }
+    },
+    "heading": {
+      "preprocessing": {
+        "completed": "Vorverarbeitung abgeschlossen",
+        "partial": "Vorverarbeitung mit Fehlern abgeschlossen",
+        "failed": "Vorverarbeitung fehlgeschlagen"
+      },
+      "trial": {
+        "completed": "Durchlauf abgeschlossen",
+        "partial": "Durchlauf mit Fehlern abgeschlossen",
+        "failed": "Durchlauf fehlgeschlagen"
+      }
+    },
+    "intro": {
+      "preprocessing": {
+        "completed": "Alle {total} Datei(en) im Projekt \"{project}\" wurden erfolgreich vorverarbeitet.",
+        "partial": "{processed} von {total} Datei(en) im Projekt \"{project}\" wurden vorverarbeitet. {failed} sind fehlgeschlagen.",
+        "failed": "Die Vorverarbeitung von {total} Datei(en) im Projekt \"{project}\" ist fehlgeschlagen."
+      },
+      "trial": {
+        "completed": "Der Durchlauf \"{run}\" im Projekt \"{project}\" ist abgeschlossen. {succeeded} von {total} Dokument(en) wurden extrahiert.",
+        "partial": "Der Durchlauf \"{run}\" im Projekt \"{project}\" ist abgeschlossen. {succeeded} von {total} Dokument(en) wurden extrahiert, {failed} sind fehlgeschlagen.",
+        "failed": "Der Durchlauf \"{run}\" im Projekt \"{project}\" ist fehlgeschlagen."
+      }
+    },
+    "hint": {
+      "failed": "Öffnen Sie den Durchlauf, um die Fehlermeldungen der einzelnen Einträge zu sehen, und wiederholen Sie die fehlgeschlagenen Einträge, sobald die Ursache behoben ist."
+    },
+    "cta": {
+      "preprocessing": "Vorverarbeitung öffnen",
+      "trial": "Durchlauf öffnen"
+    }
+  },
+  "share": {
+    "subject": {
+      "granted": "Sie haben jetzt Zugriff auf \"{project}\"",
+      "updated": "Ihr Zugriff auf \"{project}\" hat sich geändert"
+    },
+    "heading": {
+      "granted": "Ein Projekt wurde für Sie freigegeben",
+      "updated": "Ihr Projektzugriff hat sich geändert"
+    },
+    "intro": {
+      "granted": "{actor} hat Ihnen {permission} Zugriff auf das Projekt \"{project}\" gegeben.",
+      "updated": "{actor} hat Ihren Zugriff auf das Projekt \"{project}\" auf {permission} geändert."
+    },
+    "permission": {
+      "read": "lesenden",
+      "write": "vollen"
+    },
+    "permission_label": {
+      "read": "Nur lesen",
+      "write": "Voller Zugriff"
+    },
+    "cta": "Projekt öffnen"
+  },
+  "security": {
+    "subject": {
+      "password_changed": "Ihr Passwort wurde geändert",
+      "password_reset_by_admin": "Ihr Passwort wurde von einem Administrator zurückgesetzt",
+      "account_locked": "Ihr Konto wurde vorübergehend gesperrt",
+      "identity_linked": "Eine neue Anmeldemethode wurde zu Ihrem Konto hinzugefügt",
+      "identity_unlinked": "Eine Anmeldemethode wurde von Ihrem Konto entfernt"
+    },
+    "heading": {
+      "password_changed": "Ihr Passwort wurde geändert",
+      "password_reset_by_admin": "Ihr Passwort wurde zurückgesetzt",
+      "account_locked": "Ihr Konto wurde vorübergehend gesperrt",
+      "identity_linked": "Neue Anmeldemethode hinzugefügt",
+      "identity_unlinked": "Anmeldemethode entfernt"
+    },
+    "intro": {
+      "password_changed": "Das Passwort für Ihr LLMAIx-Web-Konto wurde gerade geändert.",
+      "password_reset_by_admin": "Ein Administrator hat ein neues Passwort für Ihr LLMAIx-Web-Konto festgelegt. Sie benötigen es bei Ihrer nächsten Anmeldung.",
+      "account_locked": "Ihr LLMAIx-Web-Konto wurde nach {attempts} fehlgeschlagenen Anmeldeversuchen für {minutes} Minute(n) gesperrt.",
+      "identity_linked": "Ihr LLMAIx-Web-Konto kann sich jetzt mit {provider} anmelden.",
+      "identity_unlinked": "Mit {provider} ist keine Anmeldung bei Ihrem LLMAIx-Web-Konto mehr möglich."
+    },
+    "note": {
+      "contact_admin": "Falls Sie das nicht veranlasst haben, wenden Sie sich sofort an Ihren Administrator — möglicherweise hat jemand anderes Zugriff auf Ihr Konto.",
+      "locked_hint": "Der Zugriff wird nach Ablauf der Sperre automatisch wiederhergestellt. Falls Sie es nicht waren, ändern Sie Ihr Passwort, sobald Sie sich wieder anmelden können."
+    },
+    "cta": "Konto überprüfen"
+  },
+  "admin": {
+    "subject": {
+      "worker_crash": "LLMAIx Web: Eine Hintergrundaufgabe ist abgestürzt",
+      "stuck_tasks": "LLMAIx Web: Hängende Hintergrundaufgaben wurden zurückgesetzt",
+      "error_spike": "LLMAIx Web: Unbehandelter Serverfehler"
+    },
+    "heading": {
+      "worker_crash": "Eine Hintergrundaufgabe ist abgestürzt",
+      "stuck_tasks": "Hängende Hintergrundaufgaben wurden zurückgesetzt",
+      "error_spike": "Unbehandelter Serverfehler"
+    },
+    "intro": {
+      "worker_crash": "Ein Celery-Worker ist während der Ausführung einer Aufgabe abgestürzt, daher wurde der betroffene Auftrag als fehlgeschlagen markiert. Meist ist dem Worker-Prozess der Speicher ausgegangen oder er wurde beendet.",
+      "stuck_tasks": "Die periodische Bereinigung hat {count} Aufgabe(n) gefunden, die keinen Fortschritt mehr gemeldet haben, und sie als fehlgeschlagen markiert, damit sie die Warteschlange nicht blockieren.",
+      "error_spike": "Der Server hat einen unbehandelten Fehler zurückgegeben. Der vollständige Stacktrace liegt im Fehlerprotokoll unter der unten genannten ID."
+    },
+    "note": {
+      "cooldown": "Weitere Warnungen dieser Art werden für {minutes} Minute(n) unterdrückt, um eine Flut zu vermeiden."
+    },
+    "cta": "Admin-Dashboard öffnen"
+  },
+  "test": {
+    "subject": "LLMAIx Web Test-E-Mail",
+    "heading": "Ihre SMTP-Einstellungen funktionieren",
+    "intro": "Dies ist eine Test-E-Mail aus den LLMAIx-Web-Administratoreinstellungen. Wenn Sie sie erhalten haben, ist der E-Mail-Versand korrekt konfiguriert.",
+    "cta": "LLMAIx Web öffnen"
+  },
+  "reset": {
+    "subject": "Passwort zurücksetzen — LLMAIx Web",
+    "heading": "Passwort zurücksetzen",
+    "intro": "Wir haben eine Anfrage erhalten, Ihr LLMAIx-Web-Passwort zurückzusetzen.",
+    "instruction": "Klicken Sie auf die Schaltfläche unten, um ein neues Passwort festzulegen:",
+    "cta": "Passwort zurücksetzen",
+    "fallback": "Oder kopieren Sie diesen Link in Ihren Browser:",
+    "expiry": "Dieser Link ist 24 Stunden gültig.",
+    "ignore": "Falls Sie das nicht angefragt haben, können Sie diese E-Mail ignorieren."
+  }
+}

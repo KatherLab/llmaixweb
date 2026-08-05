@@ -12,6 +12,7 @@ import type {
   CeleryQueuesResponse,
   CeleryTaskRevokeResponse,
   CeleryWorkersResponse,
+  TestEmailResponse,
 } from '@/types'
 
 export const adminApi = {
@@ -33,6 +34,13 @@ export const adminApi = {
   },
   deleteSetting(key: string) {
     return api.delete(`/admin/settings/${key}`) as Promise<ApiBody<AdminSettingDeleted>>
+  },
+  /**
+   * Send a test email to the calling admin's own address. Synchronous on the
+   * backend, so the response reflects whether SMTP actually accepted it.
+   */
+  sendTestEmail() {
+    return api.post('/admin/settings/test-email') as Promise<ApiBody<TestEmailResponse>>
   },
 
   // Celery monitoring

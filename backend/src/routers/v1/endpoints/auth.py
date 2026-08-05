@@ -22,6 +22,7 @@ from ....dependencies import get_db
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.enums import AuditAction, AuditOutcome
+from ....utils.notifications import notify_security_event
 
 # Use dynamic settings (includes database overrides from admin UI)
 settings = get_settings()
@@ -43,11 +44,25 @@ def _register_failed_login(db: Session, user: models.User) -> None:
     0.5s sleep).
     """
     user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+    just_locked = False
     if user.failed_login_attempts >= settings.LOGIN_MAX_ATTEMPTS:
+        # Only the transition into the locked state notifies. Further failed
+        # attempts against an already-locked account keep extending the lock and
+        # would otherwise let an attacker mail-bomb the account's owner.
+        just_locked = not (user.locked_until and user.locked_until > _now_utc_naive())
         user.locked_until = _now_utc_naive() + timedelta(
             minutes=settings.LOGIN_LOCKOUT_MINUTES
         )
     db.commit()
+
+    if just_locked:
+        notify_security_event(
+            db,
+            user,
+            "account_locked",
+            minutes=settings.LOGIN_LOCKOUT_MINUTES,
+            attempts=user.failed_login_attempts,
+        )
 
 
 @router.get("/settings")
