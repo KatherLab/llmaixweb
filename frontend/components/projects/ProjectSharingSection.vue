@@ -87,17 +87,21 @@
             <p class="text-xs text-content-subtle truncate">{{ share.user.email }}</p>
           </div>
 
-          <select
-            v-if="canManage"
-            :value="share.permission"
-            :class="[selectClass, 'w-32 shrink-0 !py-1 text-xs']"
-            :disabled="busyShareId === share.id"
-            :aria-label="$t('projects.share.permission_label')"
-            @change="changePermission(share, ($event.target as HTMLSelectElement).value)"
-          >
-            <option value="read">{{ $t('projects.share.permission.read') }}</option>
-            <option value="write">{{ $t('projects.share.permission.write') }}</option>
-          </select>
+          <!-- Width lives on the wrapper, not the <select>: `selectClass` starts
+               with `w-full`, so a `w-32` on the element itself loses the Tailwind
+               ordering fight and the select stretches over the remove button. -->
+          <div v-if="canManage" class="w-32 shrink-0">
+            <select
+              :value="share.permission"
+              :class="[selectClass, '!px-2 !py-1 text-xs']"
+              :disabled="busyShareId === share.id"
+              :aria-label="$t('projects.share.permission_label')"
+              @change="changePermission(share, ($event.target as HTMLSelectElement).value)"
+            >
+              <option value="read">{{ $t('projects.share.permission.read') }}</option>
+              <option value="write">{{ $t('projects.share.permission.write') }}</option>
+            </select>
+          </div>
           <span v-else class="text-xs font-medium text-content-muted shrink-0">
             {{ $t(`projects.share.permission.${share.permission}`) }}
           </span>
