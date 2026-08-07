@@ -748,7 +748,9 @@ def preview_groundtruth_document_matches(
             models.Document.document_name,
             models.File.file_name,
         )
-        .join(models.File, models.Document.original_file_id == models.File.id)
+        # Outer join: combined (derived) documents have no original file but
+        # still match by document_name (which carries the case ID).
+        .outerjoin(models.File, models.Document.original_file_id == models.File.id)
         .where(models.Document.project_id == project_id)
     ).all()
 

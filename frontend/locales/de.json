@@ -658,7 +658,8 @@
       "export": "Exportieren",
       "reprocess": "Neu verarbeiten",
       "retry": "Erneut versuchen",
-      "view": "Anzeigen"
+      "view": "Anzeigen",
+      "combine": "Kombinieren"
     },
     "common": {
       "document_number": "Dokument #{id}",
@@ -710,7 +711,9 @@
       "col_configuration": "Konfiguration",
       "col_model": "Modell",
       "col_created": "Erstellt",
-      "ocr_applied": "OCR angewendet"
+      "ocr_applied": "OCR angewendet",
+      "combined_badge": "Kombiniert",
+      "combined_sources": "keine Quelldokumente | ein Quelldokument | {count} Quelldokumente"
     },
     "groups": {
       "search_placeholder": "Gruppen suchen...",
@@ -842,7 +845,8 @@
       "model": "Modell",
       "metadata": "Metadaten",
       "restore_this_version": "Diese Version wiederherstellen",
-      "reprocess_document": "Dokument neu verarbeiten"
+      "reprocess_document": "Dokument neu verarbeiten",
+      "source_documents": "Quelldokumente"
     },
     "version_history": {
       "title": "Versionsverlauf",
@@ -931,6 +935,37 @@
       "delete_group_failed": "Dokumentgruppe konnte nicht gelöscht werden",
       "group_updated": "Dokumentgruppe aktualisiert",
       "save_group_failed": "Dokumentgruppe konnte nicht gespeichert werden"
+    },
+    "combine": {
+      "title": "Dokumente kombinieren",
+      "open_button": "Dokumente kombinieren",
+      "purpose_hint": "Mehrere Dokumente (z. B. alle Dokumente eines Patienten) zu einem kombinierten Dokument zusammenführen, damit ein Extraktionslauf sie gemeinsam als eine Eingabe liest.",
+      "mode_label": "Gruppierung",
+      "mode_case_id": "Nach Fall-ID",
+      "mode_pattern": "Nach Namensmuster",
+      "mode_manual": "Aus Auswahl",
+      "case_id_hint": "Dokumente werden nach der beim zeilenweisen Import erfassten Fall-ID gruppiert. Dokumente ohne Fall-ID werden übersprungen.",
+      "pattern_label": "Namensmuster (regulärer Ausdruck)",
+      "pattern_placeholder": "z. B. ^(.+?)[_-]",
+      "pattern_hint": "Wird auf den Namen jedes Dokuments angewendet; die erste Fanggruppe wird zum Namen des kombinierten Dokuments. Nicht passende Dokumente werden übersprungen.",
+      "pattern_invalid": "Ungültiger regulärer Ausdruck",
+      "group_name_label": "Name des kombinierten Dokuments",
+      "group_name_placeholder": "z. B. Patienten- oder Fall-ID",
+      "manual_empty_hint": "Wählen Sie zuerst Dokumente in der Tabelle aus und öffnen Sie diesen Dialog dann über die Auswahlleiste.",
+      "only_multi_label": "Nur Gruppen mit mindestens zwei Dokumenten erstellen",
+      "preview_label": "Vorschau",
+      "preview_count": "keine Gruppen | eine Gruppe | {count} Gruppen",
+      "loading_documents": "Dokumente werden geladen…",
+      "no_groups": "Keine Gruppen zu erstellen — passen Sie die Gruppierungseinstellungen an.",
+      "group_doc_count": "keine Dokumente | ein Dokument | {count} Dokumente",
+      "skipped_note": "keine Dokumente übersprungen | ein Dokument wird übersprungen (keine Gruppe) | {count} Dokumente werden übersprungen (keine Gruppe)",
+      "create_set_label": "Kombinierte Dokumente einer Dokumentengruppe hinzufügen",
+      "set_name_placeholder": "Gruppenname",
+      "default_set_name": "Kombinierte Dokumente",
+      "submit": "Kombinieren | Ein kombiniertes Dokument erstellen | {count} kombinierte Dokumente erstellen",
+      "success": "Keine kombinierten Dokumente erstellt | Ein kombiniertes Dokument erstellt | {count} kombinierte Dokumente erstellt",
+      "replaced_note": "Ein bestehendes kombiniertes Dokument wurde ersetzt (als frühere Version archiviert) | {count} bestehende kombinierte Dokumente wurden ersetzt (als frühere Versionen archiviert)",
+      "failed": "Dokumente konnten nicht kombiniert werden"
     }
   },
   "evaluation": {
@@ -3194,7 +3229,12 @@
       "trial_not_found_in_project": "Durchlauf in diesem Projekt nicht gefunden",
       "document_set_not_found": "Dokumentgruppe nicht gefunden",
       "set_referenced_by_trials": "Dokumentgruppe kann nicht gelöscht werden: Ein oder mehrere Durchläufe verweisen darauf.",
-      "trial_not_found": "Durchlauf nicht gefunden"
+      "trial_not_found": "Durchlauf nicht gefunden",
+      "combine_empty_name": "Gruppennamen dürfen nicht leer sein",
+      "combine_duplicate_names": "Gruppennamen müssen innerhalb einer Anfrage eindeutig sein",
+      "combine_too_many_documents": "Höchstens {max_documents} Quelldokumente pro Anfrage",
+      "combine_documents_not_found": "Einige Dokumente wurden in diesem Projekt nicht gefunden",
+      "combine_nested": "Kombinierte Dokumente können nicht erneut als Quellen kombiniert werden"
     },
     "evaluations": {
       "project_not_found": "Projekt nicht gefunden",

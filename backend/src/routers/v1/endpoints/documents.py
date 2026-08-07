@@ -18,7 +18,7 @@ from ....core.security import (
     get_current_user,
 )
 from ....dependencies import get_db, get_file, remove_file
-from ....models.project import document_set_association
+from ....models.project import document_set_association, document_source_association
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.deletion import (
@@ -147,8 +147,9 @@ def get_documents(
     joined_for_search = False
     if search:
         pattern = f"%{search}%"
-        # Join original_file for filename search; keep it optional if you only want text search
-        base = base.join(F, F.id == D.original_file_id).where(
+        # Outer join original_file for filename search — combined (derived)
+        # documents have no original file and must still match on name/text.
+        base = base.outerjoin(F, F.id == D.original_file_id).where(
             or_(
                 D.text.ilike(pattern),
                 D.document_name.ilike(pattern),
@@ -397,6 +398,192 @@ def restore_document_version(
         detail={"restored_from_document_id": target.id},
     )
     return schemas.Document.model_validate(restored)
+
+
+# Cap on total source documents per combine request: texts are loaded into
+# memory for concatenation, and multi-MB OCR payloads add up.
+MAX_COMBINE_SOURCE_DOCS = 2000
+
+
+@router.post("/document/combine", response_model=schemas.DocumentCombineResponse)
+def combine_documents(
+    project_id: int,
+    request: schemas.DocumentCombineRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> schemas.DocumentCombineResponse:
+    """Create one combined (derived) document per group by concatenating the
+    source documents' text with labeled section delimiters.
+
+    The group name becomes the document_name (typically the patient/case ID, so
+    ground-truth matching keys on it directly). Combining again under the same
+    name archives the previous combined document as an older version.
+    """
+    check_project_access(project_id, current_user, db, permission="write")
+
+    # Dedupe ids within each group while preserving the given order.
+    group_ids: list[list[int]] = []
+    names: list[str] = []
+    for group in request.groups:
+        seen: set[int] = set()
+        ordered = [i for i in group.document_ids if not (i in seen or seen.add(i))]
+        group_ids.append(ordered)
+        names.append(group.name.strip())
+
+    if any(not name for name in names):
+        raise api_error(
+            "documents.combine_empty_name", 400, "Group names cannot be empty"
+        )
+    if len(set(names)) != len(names):
+        raise api_error(
+            "documents.combine_duplicate_names",
+            400,
+            "Group names must be unique within one request",
+        )
+
+    unique_ids = {i for ids in group_ids for i in ids}
+    if len(unique_ids) > MAX_COMBINE_SOURCE_DOCS:
+        raise api_error(
+            "documents.combine_too_many_documents",
+            400,
+            f"At most {MAX_COMBINE_SOURCE_DOCS} source documents per request",
+            max_documents=MAX_COMBINE_SOURCE_DOCS,
+        )
+
+    docs = (
+        db.execute(
+            select(models.Document)
+            .where(
+                models.Document.project_id == project_id,
+                models.Document.id.in_(unique_ids),
+                models.Document.is_latest.is_(True),
+            )
+            .options(joinedload(models.Document.original_file))
+        )
+        .scalars()
+        .all()
+    )
+    doc_map = {d.id: d for d in docs}
+    missing = unique_ids - doc_map.keys()
+    if missing:
+        raise api_error(
+            "documents.combine_documents_not_found",
+            404,
+            "Some documents were not found in this project",
+            document_ids=sorted(missing)[:20],
+        )
+    nested = sorted(d.id for d in docs if (d.meta_data or {}).get("combined") is True)
+    if nested:
+        raise api_error(
+            "documents.combine_nested",
+            400,
+            "Combined documents cannot be used as sources for another combination",
+            document_ids=nested[:20],
+        )
+
+    created: list[models.Document] = []
+    replaced: list[str] = []
+    for name, ids in zip(names, group_ids):
+        sections: list[str] = []
+        source_names: list[str] = []
+        for doc_id in ids:
+            doc = doc_map[doc_id]
+            display = (
+                doc.document_name
+                or (doc.original_file.file_name if doc.original_file else None)
+                or f"Document {doc.id}"
+            )
+            source_names.append(display)
+            sections.append(
+                f"--- Document: {display} ---\n\n{(doc.text or '').strip()}"
+            )
+
+        # Re-combining under an existing name archives the previous combined
+        # document as an older version (same mechanism as reprocessing).
+        existing = (
+            db.execute(
+                select(models.Document).where(
+                    models.Document.project_id == project_id,
+                    models.Document.document_name == name,
+                    models.Document.original_file_id.is_(None),
+                    models.Document.is_latest.is_(True),
+                )
+            )
+            .scalars()
+            .first()
+        )
+        version_of = None
+        if existing:
+            existing.is_latest = False
+            version_of = existing.version_of or existing.id
+            replaced.append(name)
+
+        new_doc = models.Document(
+            project_id=project_id,
+            original_file_id=None,
+            preprocessing_config_id=None,
+            text="\n\n".join(sections),
+            document_name=name,
+            is_latest=True,
+            version_of=version_of,
+            meta_data={
+                "combined": True,
+                "source_document_ids": ids,
+                "source_document_names": source_names,
+                "source_count": len(ids),
+                "extraction_method": "combined",
+            },
+        )
+        db.add(new_doc)
+        created.append(new_doc)
+
+    db.flush()  # assign ids for the association rows
+
+    # Insert provenance links manually so `position` records the source order
+    # (the relationship's secondary insert would leave position at its default).
+    assoc_rows = [
+        {"derived_document_id": doc.id, "source_document_id": sid, "position": pos}
+        for doc, ids in zip(created, group_ids)
+        for pos, sid in enumerate(ids)
+    ]
+    if assoc_rows:
+        db.execute(document_source_association.insert(), assoc_rows)
+
+    document_set_id = None
+    if request.create_document_set:
+        set_name = (request.document_set_name or "").strip() or "Combined documents"
+        doc_set = models.DocumentSet(
+            project_id=project_id,
+            name=set_name[:100],
+            is_auto_generated=True,
+            tags=["combined"],
+        )
+        doc_set.documents = list(created)
+        db.add(doc_set)
+        db.flush()
+        document_set_id = doc_set.id
+
+    record_audit(
+        AuditAction.CREATE,
+        actor=current_user,
+        resource_type="document",
+        project_id=project_id,
+        detail={
+            "combined_groups": len(created),
+            "source_documents": len(unique_ids),
+            "replaced": len(replaced),
+            "document_set_id": document_set_id,
+        },
+    )
+    db.commit()
+    for doc in created:
+        db.refresh(doc)
+
+    return schemas.DocumentCombineResponse(
+        documents=[schemas.DocumentListItem.model_validate(d) for d in created],
+        document_set_id=document_set_id,
+        replaced=replaced,
+    )
 
 
 def cleanup_empty_preprocessing_tasks(

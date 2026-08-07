@@ -14,6 +14,19 @@ that point forward.
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-document extraction (combined documents).** *Documents → Combine
+  documents* merges several documents of one patient into a single combined
+  document — grouped automatically by case ID or a name pattern, or manually
+  from a selection — so an extraction run reads them together and produces one
+  result per patient. Combined documents carry their sources' provenance, can
+  be collected into a document group for run creation, and evaluation matches
+  ground truth against the combined document's name (typically the case ID).
+  Re-combining under the same name archives the previous combined document as
+  a version. See
+  [Combining documents](https://katherlab.github.io/llmaixweb/user-guide/documents/#combining-documents-multi-document-extraction).
+
 ## [0.9.0] — 2026-08-05
 
 ### Added

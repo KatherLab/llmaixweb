@@ -658,7 +658,8 @@
       "export": "Exporter",
       "reprocess": "Retraiter",
       "retry": "Réessayer",
-      "view": "Afficher"
+      "view": "Afficher",
+      "combine": "Combiner"
     },
     "common": {
       "document_number": "Document n°{id}",
@@ -710,7 +711,9 @@
       "col_configuration": "Configuration",
       "col_model": "Modèle",
       "col_created": "Créé le",
-      "ocr_applied": "OCR appliqué"
+      "ocr_applied": "OCR appliqué",
+      "combined_badge": "Combiné",
+      "combined_sources": "aucun document source | un document source | {count} documents sources"
     },
     "groups": {
       "search_placeholder": "Rechercher des groupes...",
@@ -842,7 +845,8 @@
       "model": "Modèle",
       "metadata": "Métadonnées",
       "restore_this_version": "Restaurer cette version",
-      "reprocess_document": "Retraiter le document"
+      "reprocess_document": "Retraiter le document",
+      "source_documents": "Documents sources"
     },
     "version_history": {
       "title": "Historique des versions",
@@ -931,6 +935,37 @@
       "delete_group_failed": "Échec de la suppression du groupe de documents",
       "group_updated": "Groupe de documents mis à jour",
       "save_group_failed": "Échec de l'enregistrement du groupe de documents"
+    },
+    "combine": {
+      "title": "Combiner des documents",
+      "open_button": "Combiner des documents",
+      "purpose_hint": "Fusionner plusieurs documents (p. ex. tous les documents d'un patient) en un document combiné, afin qu'une exécution d'extraction les lise ensemble comme une seule entrée.",
+      "mode_label": "Regroupement",
+      "mode_case_id": "Par ID de cas",
+      "mode_pattern": "Par motif de nom",
+      "mode_manual": "Depuis la sélection",
+      "case_id_hint": "Les documents sont regroupés selon l'ID de cas enregistré lors de l'import ligne par ligne. Les documents sans ID de cas sont ignorés.",
+      "pattern_label": "Motif de nom (expression régulière)",
+      "pattern_placeholder": "p. ex. ^(.+?)[_-]",
+      "pattern_hint": "Appliqué au nom de chaque document ; le premier groupe de capture devient le nom du document combiné. Les documents sans correspondance sont ignorés.",
+      "pattern_invalid": "Expression régulière invalide",
+      "group_name_label": "Nom du document combiné",
+      "group_name_placeholder": "p. ex. l'ID du patient ou du cas",
+      "manual_empty_hint": "Sélectionnez d'abord des documents dans le tableau, puis ouvrez cette boîte de dialogue depuis la barre de sélection.",
+      "only_multi_label": "Ne créer que des groupes d'au moins deux documents",
+      "preview_label": "Aperçu",
+      "preview_count": "aucun groupe | un groupe | {count} groupes",
+      "loading_documents": "Chargement des documents…",
+      "no_groups": "Aucun groupe à créer — ajustez les paramètres de regroupement.",
+      "group_doc_count": "aucun document | un document | {count} documents",
+      "skipped_note": "aucun document ignoré | un document est ignoré (aucun groupe) | {count} documents sont ignorés (aucun groupe)",
+      "create_set_label": "Ajouter les documents combinés à un groupe de documents",
+      "set_name_placeholder": "Nom du groupe",
+      "default_set_name": "Documents combinés",
+      "submit": "Combiner | Créer un document combiné | Créer {count} documents combinés",
+      "success": "Aucun document combiné créé | Un document combiné créé | {count} documents combinés créés",
+      "replaced_note": "Un document combiné existant a été remplacé (archivé comme version précédente) | {count} documents combinés existants ont été remplacés (archivés comme versions précédentes)",
+      "failed": "Échec de la combinaison des documents"
     }
   },
   "evaluation": {
@@ -3194,7 +3229,12 @@
       "trial_not_found_in_project": "Exécution d'extraction introuvable dans ce projet",
       "document_set_not_found": "Groupe de documents introuvable",
       "set_referenced_by_trials": "Impossible de supprimer le groupe de documents : une ou plusieurs exécutions d'extraction y font référence.",
-      "trial_not_found": "Exécution d'extraction introuvable"
+      "trial_not_found": "Exécution d'extraction introuvable",
+      "combine_empty_name": "Les noms de groupe ne peuvent pas être vides",
+      "combine_duplicate_names": "Les noms de groupe doivent être uniques au sein d'une requête",
+      "combine_too_many_documents": "Au plus {max_documents} documents sources par requête",
+      "combine_documents_not_found": "Certains documents n'ont pas été trouvés dans ce projet",
+      "combine_nested": "Les documents combinés ne peuvent pas servir de sources à une nouvelle combinaison"
     },
     "evaluations": {
       "project_not_found": "Projet introuvable",

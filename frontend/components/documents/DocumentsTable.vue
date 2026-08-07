@@ -31,9 +31,21 @@
               doc.original_file?.file_name ||
               $t('documents.common.document_number', { id: doc.id })
             }}
+            <StatusBadge v-if="doc.meta_data?.combined" color="purple" class="ml-1">
+              {{ $t('documents.table.combined_badge') }}
+            </StatusBadge>
+          </p>
+          <p v-if="doc.meta_data?.combined" class="text-xs text-content-muted truncate max-w-xs">
+            {{
+              $t(
+                'documents.table.combined_sources',
+                { count: doc.meta_data?.source_count ?? 0 },
+                (doc.meta_data?.source_count as number) ?? 0,
+              )
+            }}
           </p>
           <p
-            v-if="
+            v-else-if="
               doc.document_name &&
               doc.original_file?.file_name &&
               doc.document_name !== doc.original_file?.file_name
@@ -51,7 +63,11 @@
 
     <template #cell-configuration="{ row: doc }">
       <div class="text-sm text-content">
-        {{ doc.preprocessing_config?.name || $t('documents.table.custom_config') }}
+        {{
+          doc.meta_data?.combined
+            ? $t('documents.table.combined_badge')
+            : doc.preprocessing_config?.name || $t('documents.table.custom_config')
+        }}
       </div>
       <div v-if="getOcrDisplay(doc as DocumentListItem)" class="text-xs text-content-muted">
         {{ getOcrDisplay(doc as DocumentListItem) }}
@@ -110,6 +126,7 @@ import { Download, Eye, Trash2 } from '@lucide/vue'
 import FileIcon from '@/components/common/FileIcon.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import DataTable from '@/components/common/DataTable.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useProjectAccess } from '@/composables/useProjectAccess'
 import { formatFileSize, formatDate } from '@/utils/formatters'
 import type { DocumentListItem, DocumentMetaData } from '@/types'

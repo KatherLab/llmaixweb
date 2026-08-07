@@ -658,7 +658,8 @@
       "export": "Export",
       "reprocess": "Reprocess",
       "retry": "Retry",
-      "view": "View"
+      "view": "View",
+      "combine": "Combine"
     },
     "common": {
       "document_number": "Document #{id}",
@@ -710,7 +711,9 @@
       "col_configuration": "Configuration",
       "col_model": "Model",
       "col_created": "Created",
-      "ocr_applied": "OCR Applied"
+      "ocr_applied": "OCR Applied",
+      "combined_badge": "Combined",
+      "combined_sources": "no source documents | one source document | {count} source documents"
     },
     "groups": {
       "search_placeholder": "Search groups...",
@@ -842,7 +845,8 @@
       "model": "Model",
       "metadata": "Metadata",
       "restore_this_version": "Restore This Version",
-      "reprocess_document": "Reprocess Document"
+      "reprocess_document": "Reprocess Document",
+      "source_documents": "Source documents"
     },
     "version_history": {
       "title": "Version History",
@@ -931,6 +935,37 @@
       "delete_group_failed": "Failed to delete document group",
       "group_updated": "Document group updated",
       "save_group_failed": "Failed to save document group"
+    },
+    "combine": {
+      "title": "Combine documents",
+      "open_button": "Combine documents",
+      "purpose_hint": "Merge several documents (e.g. all documents of one patient) into one combined document, so an extraction run reads them together as a single input.",
+      "mode_label": "Grouping",
+      "mode_case_id": "By case ID",
+      "mode_pattern": "By name pattern",
+      "mode_manual": "From selection",
+      "case_id_hint": "Documents are grouped by the case ID recorded during row-by-row import. Documents without a case ID are skipped.",
+      "pattern_label": "Name pattern (regular expression)",
+      "pattern_placeholder": "e.g. ^(.+?)[_-]",
+      "pattern_hint": "Applied to each document's name; the first capture group becomes the combined document's name. Documents that don't match are skipped.",
+      "pattern_invalid": "Invalid regular expression",
+      "group_name_label": "Combined document name",
+      "group_name_placeholder": "e.g. the patient or case ID",
+      "manual_empty_hint": "Select documents in the table first, then open this dialog from the selection toolbar.",
+      "only_multi_label": "Only create groups with at least two documents",
+      "preview_label": "Preview",
+      "preview_count": "no groups | one group | {count} groups",
+      "loading_documents": "Loading documents…",
+      "no_groups": "No groups to create — adjust the grouping settings.",
+      "group_doc_count": "no documents | one document | {count} documents",
+      "skipped_note": "no documents skipped | one document is skipped (no group) | {count} documents are skipped (no group)",
+      "create_set_label": "Add the combined documents to a document group",
+      "set_name_placeholder": "Group name",
+      "default_set_name": "Combined documents",
+      "submit": "Combine | Create one combined document | Create {count} combined documents",
+      "success": "No combined documents created | One combined document created | {count} combined documents created",
+      "replaced_note": "One existing combined document was replaced (kept as an archived version) | {count} existing combined documents were replaced (kept as archived versions)",
+      "failed": "Failed to combine documents"
     }
   },
   "evaluation": {
@@ -3194,7 +3229,12 @@
       "trial_not_found_in_project": "Extraction run not found in this project",
       "document_set_not_found": "Document set not found",
       "set_referenced_by_trials": "Cannot delete document group: one or more extraction runs reference it.",
-      "trial_not_found": "Extraction run not found"
+      "trial_not_found": "Extraction run not found",
+      "combine_empty_name": "Group names cannot be empty",
+      "combine_duplicate_names": "Group names must be unique within one request",
+      "combine_too_many_documents": "At most {max_documents} source documents per request",
+      "combine_documents_not_found": "Some documents were not found in this project",
+      "combine_nested": "Combined documents cannot be used as sources for another combination"
     },
     "evaluations": {
       "project_not_found": "Project not found",

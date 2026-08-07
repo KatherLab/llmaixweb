@@ -91,6 +91,50 @@ cannot be dismissed while a delete is in flight).
     say so; deletions are sent to the backend in chunks and a per-item summary of
     any failures is surfaced afterwards.
 
+## Combining documents (multi-document extraction)
+
+Some workflows need one extraction over **several documents of the same
+patient** — e.g. a referral letter, a pathology report, and a discharge summary
+that together answer the schema. **Combine documents** merges each group into a
+single *combined document* whose text is the concatenation of its sources, each
+section prefixed with a `--- Document: <name> ---` delimiter. Combined documents
+then flow through the rest of the pipeline unchanged: an extraction run
+produces **one result per combined document**, and evaluation matches ground
+truth against the combined document's name.
+
+Open the dialog with **Combine documents** above the table (or select rows
+first and use **Combine** in the selection toolbar). Three grouping modes:
+
+- **By case ID** — groups documents by the case ID recorded during
+  [row-by-row import](files.md). Documents without a case ID are skipped.
+- **By name pattern** — a regular expression applied to each document's name
+  (falling back to the original filename); the **first capture group** becomes
+  the combined document's name. For example, `^(.+?)[_-]` groups
+  `P001_visit1.pdf` and `P001_visit2.pdf` under `P001`.
+- **From selection** — merges the documents you selected in the table into one
+  combined document with a name you type.
+
+The dialog previews the resulting groups (name, member count, source names)
+before anything is created. By default only groups with **at least two
+documents** are created, and the combined documents are also collected into a
+[document group](#document-groups) so they can be picked as a set when creating
+an extraction run.
+
+Details worth knowing:
+
+- The combined document's **name is the group key** (typically the patient or
+  case ID) — name your ground-truth rows the same way and evaluation matches
+  per patient automatically.
+- Sources are merged **oldest first**, so the combined text reads
+  chronologically.
+- Combining again under the **same name replaces** the previous combined
+  document (it's kept as an archived version, like reprocessing does).
+- Combined documents have **no backing file**: the viewer shows text only (with
+  the source list in the info sidebar), and they are skipped by reprocessing.
+  If you reprocess or delete a source document, the combined document keeps its
+  existing text — re-combine to refresh it.
+- Combined documents can't be used as sources for another combination.
+
 ## The document viewer
 
 **View** opens a slide-over. Its header shows the document name (with the

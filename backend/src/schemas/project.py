@@ -165,11 +165,12 @@ class DocumentCreate(DocumentBase):
 class Document(DocumentBase):
     id: int
     project_id: int
-    original_file_id: int
+    # None for combined (derived) documents — see meta_data["source_document_ids"]
+    original_file_id: int | None = None
     original_file: File | None = None
     preprocessed_file_id: int | None = None
     preprocessed_file: File | None = None
-    preprocessing_config_id: int
+    preprocessing_config_id: int | None = None
     preprocessing_config: PreprocessingConfiguration | None = None
     is_latest: bool = True
     version_of: int | None = None
@@ -191,11 +192,12 @@ class DocumentListItem(UTCModel):
     project_id: int
     document_name: str | None = None
     meta_data: dict | None = None
-    original_file_id: int
+    # None for combined (derived) documents
+    original_file_id: int | None = None
     original_file: File | None = None
     preprocessed_file_id: int | None = None
     preprocessed_file: File | None = None
-    preprocessing_config_id: int
+    preprocessing_config_id: int | None = None
     preprocessing_config: PreprocessingConfiguration | None = None
     is_latest: bool = True
     version_of: int | None = None
@@ -215,6 +217,30 @@ class PaginatedDocuments(UTCModel):
     today_count: int | None = None  # Documents created today
     week_count: int | None = None  # Documents created in last 7 days
     month_count: int | None = None  # Documents created in last 30 days
+
+
+class DocumentCombineGroup(UTCModel):
+    """One combined document to create: a name (typically the patient/case ID —
+    it becomes the document_name, which is what ground-truth matching keys on)
+    plus the ordered source documents to merge."""
+
+    name: str = Field(min_length=1, max_length=500)
+    document_ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class DocumentCombineRequest(UTCModel):
+    groups: list[DocumentCombineGroup] = Field(min_length=1, max_length=500)
+    # Optionally collect the created documents into a document set so they can
+    # be picked as a group when creating a trial.
+    create_document_set: bool = False
+    document_set_name: str | None = Field(default=None, max_length=100)
+
+
+class DocumentCombineResponse(UTCModel):
+    documents: list[DocumentListItem]
+    document_set_id: int | None = None
+    # Names of groups that replaced (archived) an existing combined document
+    replaced: list[str] = []
 
 
 class DocumentDependencyRequest(UTCModel):

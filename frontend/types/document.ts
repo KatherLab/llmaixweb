@@ -9,6 +9,11 @@ export type DocumentMetaData = Record<string, unknown> & {
   source_columns?: string[]
   ocr_method?: string
   extraction_method?: string
+  // Combined (derived) documents: merged from several source documents.
+  combined?: boolean
+  source_document_ids?: number[]
+  source_document_names?: string[]
+  source_count?: number
 }
 
 /** Full document, including extracted text. Returned by `GET /document/{id}`. */
@@ -18,11 +23,12 @@ export interface Document {
   text: string
   document_name: string | null
   meta_data: DocumentMetaData | null
-  original_file_id: number
+  // null for combined (derived) documents
+  original_file_id: number | null
   original_file: File | null
   preprocessed_file_id: number | null
   preprocessed_file: File | null
-  preprocessing_config_id: number
+  preprocessing_config_id: number | null
   preprocessing_config: PreprocessingConfiguration | null
   is_latest: boolean
   version_of: number | null
@@ -36,11 +42,12 @@ export interface DocumentListItem {
   project_id: number
   document_name: string | null
   meta_data: DocumentMetaData | null
-  original_file_id: number
+  // null for combined (derived) documents
+  original_file_id: number | null
   original_file: File | null
   preprocessed_file_id: number | null
   preprocessed_file: File | null
-  preprocessing_config_id: number
+  preprocessing_config_id: number | null
   preprocessing_config: PreprocessingConfiguration | null
   is_latest: boolean
   version_of: number | null
@@ -99,6 +106,25 @@ export interface DocumentBulkAction {
   document_ids: number[]
   target_set_id?: number | null
   force?: boolean
+}
+
+/** One combined document to create via `POST /document/combine`. */
+export interface DocumentCombineGroup {
+  name: string
+  document_ids: number[]
+}
+
+export interface DocumentCombineRequest {
+  groups: DocumentCombineGroup[]
+  create_document_set?: boolean
+  document_set_name?: string | null
+}
+
+export interface DocumentCombineResponse {
+  documents: DocumentListItem[]
+  document_set_id: number | null
+  /** Names of groups that replaced (archived) an existing combined document. */
+  replaced: string[]
 }
 
 export interface SmartDocumentSelection {

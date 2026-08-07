@@ -61,8 +61,22 @@
           </div>
         </dl>
       </div>
+      <!-- Source documents (combined documents only) -->
+      <div v-if="isCombined">
+        <h4 class="font-medium text-content mb-2">{{ $t('documents.info.source_documents') }}</h4>
+        <ul class="space-y-1 text-sm text-content">
+          <li
+            v-for="(name, index) in sourceNames"
+            :key="index"
+            class="truncate"
+            :title="String(name)"
+          >
+            {{ name }}
+          </li>
+        </ul>
+      </div>
       <!-- Preprocessing Info -->
-      <div>
+      <div v-if="!isCombined">
         <h4 class="font-medium text-content mb-2">
           {{ $t('documents.info.preprocessing_config') }}
         </h4>
@@ -120,7 +134,13 @@
           <RefreshCw class="h-4 w-4" />
           {{ $t('documents.info.restore_this_version') }}
         </BaseButton>
-        <BaseButton variant="primary" class="w-full" @click="$emit('reprocess', document)">
+        <!-- Combined documents have no backing file to reprocess from. -->
+        <BaseButton
+          v-if="!isCombined"
+          variant="primary"
+          class="w-full"
+          @click="$emit('reprocess', document)"
+        >
           <RefreshCw class="h-4 w-4" />
           {{ $t('documents.info.reprocess_document') }}
         </BaseButton>
@@ -130,6 +150,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RefreshCw } from '@lucide/vue'
 import JsonViewer from '@/components/common/JsonViewer.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -144,10 +165,15 @@ interface Props {
   fullText?: string | null
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   selectedVersion: null,
   fullText: null,
 })
+
+const isCombined = computed<boolean>(() => !!props.document.meta_data?.combined)
+const sourceNames = computed<string[]>(
+  () => (props.document.meta_data?.source_document_names as string[] | undefined) ?? [],
+)
 
 defineEmits<{
   'restore-version': [version: DocumentListItem]

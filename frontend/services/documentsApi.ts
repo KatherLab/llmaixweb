@@ -4,7 +4,13 @@
  */
 import { api } from './api'
 import type { ApiBody, DocumentFilter } from '@/types'
-import type { Document, DocumentDependencies, PaginatedDocuments } from '@/types'
+import type {
+  Document,
+  DocumentCombineRequest,
+  DocumentCombineResponse,
+  DocumentDependencies,
+  PaginatedDocuments,
+} from '@/types'
 
 export const documentsApi = {
   list(projectId: number | string, params: DocumentFilter = {}) {
@@ -32,5 +38,12 @@ export const documentsApi = {
     return api.post(`/project/${projectId}/document/dependencies`, {
       document_ids: documentIds,
     }) as Promise<ApiBody<DocumentDependencies>>
+  },
+  // Merge several documents (e.g. all documents of one patient) into combined
+  // documents — one per group — for a single extraction per group.
+  combine(projectId: number | string, payload: DocumentCombineRequest) {
+    return api.post(`/project/${projectId}/document/combine`, payload) as Promise<
+      ApiBody<DocumentCombineResponse>
+    >
   },
 }

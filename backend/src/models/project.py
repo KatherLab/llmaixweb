@@ -268,21 +268,51 @@ document_set_association = Table(
 )
 
 
+# Provenance links for combined (derived) documents: one row per source document
+# that was merged into a derived document. A derived document is a regular
+# Document row with original_file_id/preprocessing_config_id NULL whose text is
+# the concatenation of its sources — everything downstream (trials, results,
+# evaluation) treats it as an ordinary document. Deleting either side removes
+# only the link; the derived document keeps its materialized text.
+document_source_association = Table(
+    "document_source_association",
+    Base.metadata,
+    Column(
+        "derived_document_id",
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "source_document_id",
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    # Order of the sources within the combined text.
+    Column("position", Integer, nullable=False, default=0),
+    # PK leads with derived_document_id; index the reverse direction so
+    # "which combined documents contain this source" doesn't seq-scan.
+    Index("ix_document_source_association_source", "source_document_id"),
+)
+
+
 class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    original_file_id: Mapped[int] = mapped_column(
-        ForeignKey("files.id"), nullable=False
+    # NULL for combined (derived) documents, which have no single backing file —
+    # their provenance lives in document_source_association instead.
+    original_file_id: Mapped[int | None] = mapped_column(
+        ForeignKey("files.id"), nullable=True
     )
     file_preprocessing_task_id: Mapped[int] = mapped_column(
         ForeignKey("file_preprocessing_tasks.id"), nullable=True
     )
 
-    # Configuration snapshot (for tracking what settings were used)
-    preprocessing_config_id: Mapped[int] = mapped_column(
-        ForeignKey("preprocessing_configurations.id"), nullable=False
+    # Configuration snapshot (for tracking what settings were used).
+    # NULL for combined (derived) documents.
+    preprocessing_config_id: Mapped[int | None] = mapped_column(
+        ForeignKey("preprocessing_configurations.id"), nullable=True
     )
     preprocessing_config: Mapped["PreprocessingConfiguration"] = relationship(
         back_populates="documents"
@@ -334,6 +364,20 @@ class Document(Base):
     # Version tracking relationships
     parent_version: Mapped["Document | None"] = relationship(
         foreign_keys=[version_of], remote_side="Document.id", backref="versions"
+    )
+    # Combined-document provenance: the source documents this derived document
+    # was merged from (ordered), and the reverse (derived docs built from this
+    # one, via the backref).
+    source_documents: Mapped[list["Document"]] = relationship(
+        secondary=document_source_association,
+        primaryjoin=lambda: (
+            Document.id == document_source_association.c.derived_document_id
+        ),
+        secondaryjoin=lambda: (
+            Document.id == document_source_association.c.source_document_id
+        ),
+        order_by=document_source_association.c.position,
+        backref="derived_documents",
     )
 
     # Unique constraint to support document versioning.

@@ -38,6 +38,15 @@
         <span class="text-sm text-content-muted">
           {{ $t('documents.management.count', { count: totalCount }, totalCount) }}
         </span>
+        <BaseButton
+          v-if="canEdit && totalCount > 0"
+          variant="secondary"
+          size="sm"
+          @click="openCombineModal()"
+        >
+          <Combine class="w-4 h-4" />
+          {{ $t('documents.combine.open_button') }}
+        </BaseButton>
       </div>
 
       <!-- Documents Grid/List -->
@@ -133,6 +142,15 @@
           v-if="canEdit"
           variant="secondary"
           size="sm"
+          @click="openCombineModal(selectedDocuments)"
+        >
+          <Combine class="w-4 h-4" />
+          {{ $t('documents.actions.combine') }}
+        </BaseButton>
+        <BaseButton
+          v-if="canEdit"
+          variant="secondary"
+          size="sm"
           @click="performBatchAction('reprocess')"
         >
           <RefreshCw class="w-4 h-4" />
@@ -153,6 +171,18 @@
         :selected-document-ids="createGroupWithDocs"
         @close="handleCreateGroupModalClose"
         @save="handleCreateGroupModalSave"
+      />
+
+      <!-- Combine Documents Modal (multi-document extraction) -->
+      <CombineDocumentsModal
+        v-if="showCombineModal"
+        :open="showCombineModal"
+        :project-id="projectId"
+        :documents="documents"
+        :documents-loading="isLoadingAllDocuments"
+        :selected-document-ids="combineWithDocs"
+        @close="closeCombineModal"
+        @combined="handleCombined"
       />
     </div>
 
@@ -199,7 +229,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isAxiosError } from 'axios'
 import { useRoute, useRouter } from 'vue-router'
-import { FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
+import { Combine, FileText, FolderPlus, RefreshCw, Search, Trash2 } from '@lucide/vue'
 import { documentsApi } from '@/services/documentsApi'
 import { documentSetsApi } from '@/services/documentSetsApi'
 import { filesApi } from '@/services/filesApi'
@@ -224,11 +254,13 @@ import DocumentViewer from './DocumentViewer.vue'
 import BatchActionsModal from './BatchActionsModal.vue'
 import DocumentGroups from './DocumentsGroups.vue'
 import CreateDocumentGroupModal from './CreateDocumentGroupModal.vue'
+import CombineDocumentsModal from './CombineDocumentsModal.vue'
 import ViewDocumentGroupModal from './ViewDocumentGroupModal.vue'
 import DocumentsFilters from './DocumentsFilters.vue'
 import DocumentsTable from './DocumentsTable.vue'
 import { extractErrorMessage } from '@/utils/errors'
 import type {
+  DocumentCombineResponse,
   DocumentListItem,
   DocumentSetCreate,
   DocumentSetSummary,
@@ -270,6 +302,9 @@ const currentPage = pagination.currentPage
 const activeTab = ref<string>(route.query.dview === 'groups' ? 'groups' : 'documents')
 const showCreateGroupModal = ref<boolean>(false)
 const createGroupWithDocs = ref<number[]>([]) // Documents to pre-select when creating group
+const showCombineModal = ref<boolean>(false)
+const combineWithDocs = ref<number[]>([]) // Documents to pre-select for manual combining
+const isLoadingAllDocuments = ref<boolean>(false)
 const serverItems = ref<DocumentListItem[]>([]) // current page rows from the server
 const documentGroupsCount = ref<number>(0) // count of document groups
 
@@ -753,6 +788,34 @@ const handleCreateGroupModalClose = (): void => {
   createGroupWithDocs.value = []
 }
 
+// Combine documents (multi-document extraction). Opened from the header button
+// (auto-grouping by case ID / name pattern) or from the batch bar (manual mode
+// with the current selection pre-loaded).
+const openCombineModal = (preselected: number[] = []): void => {
+  combineWithDocs.value = [...preselected]
+  showCombineModal.value = true
+}
+
+const closeCombineModal = (): void => {
+  showCombineModal.value = false
+  combineWithDocs.value = []
+}
+
+const handleCombined = async (response: DocumentCombineResponse): Promise<void> => {
+  closeCombineModal()
+  selectedDocuments.value = []
+  const created = response.documents.length
+  toast.success(t('documents.combine.success', { count: created }, created))
+  if (response.replaced.length) {
+    const replaced = response.replaced.length
+    toast.info(t('documents.combine.replaced_note', { count: replaced }, replaced))
+  }
+  // The cached "all documents" list is stale now (new combined docs exist).
+  allDocumentsLoaded.value = false
+  await fetchDocuments()
+  await fetchDocumentGroupsCount()
+}
+
 const handleCreateGroupModalSave = async (groupData: DocumentSetCreate): Promise<void> => {
   try {
     await documentSetsApi.create(props.projectId, groupData)
@@ -771,6 +834,7 @@ const fetchAllDocuments = async (): Promise<void> => {
   if (allDocumentsLoaded.value) {
     return
   }
+  isLoadingAllDocuments.value = true
   try {
     const PAGE_SIZE = 500
     let offset = 0
@@ -789,6 +853,8 @@ const fetchAllDocuments = async (): Promise<void> => {
   } catch (error) {
     console.error('Failed to fetch all documents:', error)
     documents.value = []
+  } finally {
+    isLoadingAllDocuments.value = false
   }
 }
 
@@ -922,6 +988,16 @@ watch([currentPage, itemsPerPage], fetchDocuments)
 // Watch for create group modal - fetch all documents when opened
 watch(
   () => showCreateGroupModal.value,
+  (isOpen) => {
+    if (isOpen && !allDocumentsLoaded.value) {
+      fetchAllDocuments()
+    }
+  },
+)
+
+// The combine modal needs the full document list for its grouping preview.
+watch(
+  () => showCombineModal.value,
   (isOpen) => {
     if (isOpen && !allDocumentsLoaded.value) {
       fetchAllDocuments()
