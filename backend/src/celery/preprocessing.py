@@ -424,7 +424,7 @@ if celery_app:
                                     finally:
                                         # A fresh pipeline is built per file task in
                                         # the async path; close its OpenAI/docling-serve
-                                        # clients so their httpx pools don't leak across
+                                        # clients so their httpx2 pools don't leak across
                                         # the (potentially long-lived) Celery worker.
                                         # ``pipeline`` may be unbound if the constructor
                                         # itself raised, so guard before closing.

@@ -6,7 +6,7 @@ import logging
 import math
 from typing import Any, List, cast
 
-import httpx
+import httpx2
 import pandas as pd
 from openai import OpenAI
 from sqlalchemy import select
@@ -109,7 +109,7 @@ class PreprocessingPipeline:
                 base_url=validated,
                 # follow_redirects=False: a user-controlled endpoint must not
                 # 3xx-bounce the request to a blocked internal address.
-                http_client=httpx.Client(follow_redirects=False),
+                http_client=httpx2.Client(follow_redirects=False),
             )
             # Store in task metadata for audit
             if not self.task.task_metadata:
@@ -133,7 +133,7 @@ class PreprocessingPipeline:
     def close(self) -> None:
         """Release the pipeline's HTTP clients.
 
-        The OpenAI client (with its httpx connection pool) and the lazily-created
+        The OpenAI client (with its httpx2 connection pool) and the lazily-created
         DoclingServeClient are never closed otherwise; in the Celery path a new
         pipeline is constructed per file task, so leaking them accumulates open
         sockets/file descriptors across a long-running worker. Safe to call when
@@ -2154,7 +2154,7 @@ class PreprocessingPipeline:
         max_image_dim = additional.get("vision_max_image_dim", 2048)
 
         # Pass retry settings and concurrency from config. Use the service as a
-        # context manager so its OpenAI/httpx client is closed after use (this
+        # context manager so its OpenAI/httpx2 client is closed after use (this
         # method runs per file; leaking the client accumulates connection pools).
         file_content = get_file(file.file_uuid)
         is_pdf = file.file_type == models.FileType.APPLICATION_PDF

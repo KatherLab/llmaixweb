@@ -4,7 +4,7 @@ import datetime as dt
 import logging
 from typing import Any, Dict, List
 
-import httpx
+import httpx2
 from openai import AsyncOpenAI
 from sqlalchemy import delete, func, select
 
@@ -132,7 +132,7 @@ if celery_app:
                 api_key=api_key,
                 base_url=base_url,
                 timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
-                http_client=httpx.AsyncClient(
+                http_client=httpx2.AsyncClient(
                     follow_redirects=False,
                     timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
                 ),

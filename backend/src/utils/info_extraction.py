@@ -18,7 +18,7 @@ from types import SimpleNamespace
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 import jsonschema
 import requests
 from openai import (
@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 def _test_client(api_key: str, base_url: str) -> OpenAI:
     """OpenAI client for user-supplied endpoints.
 
-    Uses an httpx client with ``follow_redirects=False`` so a 3xx from a
+    Uses an httpx2 client with ``follow_redirects=False`` so a 3xx from a
     user-controlled endpoint can't bounce the request to a blocked internal
     address (SSRF redirect bypass).
     """
@@ -68,7 +68,7 @@ def _test_client(api_key: str, base_url: str) -> OpenAI:
         base_url=base_url,
         timeout=30.0,
         max_retries=2,
-        http_client=httpx.Client(follow_redirects=False, timeout=30.0),
+        http_client=httpx2.Client(follow_redirects=False, timeout=30.0),
     )
 
 
@@ -1048,7 +1048,7 @@ def extract_info_single_doc(
         # follow_redirects=False: a user-controlled endpoint can't 3xx the
         # request to a blocked internal/metadata address (SSRF). Mirrors
         # _test_client above.
-        http_client=httpx.Client(
+        http_client=httpx2.Client(
             follow_redirects=False, timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS
         ),
     ) as client:

@@ -142,6 +142,9 @@ def setup_logging(
     # Quiet noisy third-party loggers (optional)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # openai 3.x moved to httpx2, so its per-request logging comes from these.
+    logging.getLogger("httpx2").setLevel(logging.WARNING)
+    logging.getLogger("httpcore2").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)

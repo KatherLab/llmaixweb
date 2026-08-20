@@ -36,28 +36,32 @@ classifiers = [
 
 dependencies = [
     "fastapi[standard]==0.141.1",
-    "uvicorn==0.52.1",
+    "uvicorn==0.52.4",
     "pyjwt==2.13.0",
-    "sqlalchemy==2.0.51",
+    "sqlalchemy==2.0.52",
     "psycopg[binary,pool]==3.3.4",
-    "pydantic_settings==2.14.2",
-    "openai==2.53.0",
+    "pydantic_settings==2.15.0",
+    "openai==3.3.1",
     "bcrypt==5.0.0",
-    "boto3==1.43.63",
-    "mistralai==2.8.0",
-    "pypdf==6.14.2",
+    "boto3==1.43.75",
+    "mistralai==2.9.3",
+    "pypdf==6.16.1",
     "redis==8.1.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
     "thefuzz==0.22.1",
     "pandas==3.0.5",
     "xlsxwriter==3.2.9",
-    "alembic==1.18.5",
+    "alembic==1.19.1",
     "slowapi==0.1.10",
     "cryptography==50.0.0",
     "pillow==12.3.0",
-    "pymupdf==1.28.0",
+    "pymupdf==1.28.2",
+    # Two HTTP stacks on purpose: openai 3.x builds on httpx2, so the custom
+    # follow_redirects=False clients we hand it must be httpx2 clients. The
+    # OIDC and docling-serve clients still use httpx directly.
     "httpx==0.28.1",
+    "httpx2==2.12.0",
     "pydantic==2.13.4",
     "requests==2.34.2",
     "websockets==17.0.1",
@@ -72,12 +76,11 @@ Documentation = "https://github.com/KatherLab/llmaixweb#readme"
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.1",
-    "ty==0.0.66",
+    "ruff==0.16.3",
+    "ty==0.0.73",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "httpx2==2.9.1",
-    "boto3-stubs==1.43.63",
+    "boto3-stubs==1.43.75",
     "pandas-stubs==3.0.5.260730",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable).
@@ -86,7 +89,7 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.118.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.121.0",
     "torch==2.13.0",
     "torchvision==0.28.0",
     "scipy==1.18.0",

@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Optional
 
-import httpx
+import httpx2
 from openai import OpenAI
 
 from ..core.config import settings
@@ -73,7 +73,7 @@ class LLMVisionOCRService:
             # is validated upstream (validate_user_endpoint), but that check only
             # blocks metadata IPs at validation time — this closes the
             # redirect/DNS-rebinding bypass at request time.
-            http_client=httpx.Client(
+            http_client=httpx2.Client(
                 follow_redirects=False,
                 timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
             ),
@@ -87,10 +87,10 @@ class LLMVisionOCRService:
         self.retry_backoff = retry_backoff
 
     def close(self) -> None:
-        """Close the underlying OpenAI/httpx client.
+        """Close the underlying OpenAI/httpx2 client.
 
         The service is instantiated per file in the preprocessing pipeline and
-        previously never closed, leaking an httpx connection pool per use. Safe
+        previously never closed, leaking an httpx2 connection pool per use. Safe
         to call when the client was already closed.
         """
         client = self.client
