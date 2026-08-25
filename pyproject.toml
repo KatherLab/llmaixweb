@@ -44,7 +44,7 @@ dependencies = [
     "openai==3.3.1",
     "bcrypt==5.0.0",
     "boto3==1.43.75",
-    "mistralai==2.9.3",
+    "mistralai==2.9.4",
     "pypdf==6.16.1",
     "redis==8.1.0",
     "celery==5.6.3",
