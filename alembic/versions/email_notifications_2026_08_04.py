@@ -19,6 +19,7 @@ Create Date: 2026-08-04 12:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "email_notifications_2026_08_04"

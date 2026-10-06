@@ -13,6 +13,7 @@ Create Date: 2026-08-04 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "project_shares_2026_08_04"
@@ -29,8 +30,9 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column(
             "permission",
-            sa.Enum("READ", "WRITE", name="projectpermission", native_enum=False,
-                    length=10),
+            sa.Enum(
+                "READ", "WRITE", name="projectpermission", native_enum=False, length=10
+            ),
             nullable=False,
         ),
         sa.Column("created_by_id", sa.Integer(), nullable=True),
