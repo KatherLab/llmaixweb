@@ -1,6 +1,6 @@
 [project]
 name = "llmaixweb"
-version = "0.9.2"
+version = "0.9.3"
 description = "LLM Information Extraction Web Application — extract structured JSON from unstructured medical/lab documents with LLMs."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -35,17 +35,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]==0.142.2",
+    "fastapi[standard]==0.151.0",
     "uvicorn==0.54.0",
     "pyjwt==2.15.1",
-    "sqlalchemy==2.0.52",
+    "sqlalchemy==2.1.5",
     "psycopg[binary,pool]==3.3.6",
-    "pydantic_settings==2.15.0",
-    "openai==3.24.0",
+    "pydantic_settings==2.16.0",
+    "openai==3.35.1",
     "bcrypt==5.0.0",
-    "boto3==1.43.108",
-    "mistralai==3.1.0",
-    "pypdf==6.19.0",
+    "boto3==1.43.115",
+    "mistralai==3.2.0",
+    "pypdf==6.21.1",
     "redis==8.1.0",
     "celery==5.6.3",
     "jsonschema==4.26.0",
@@ -61,10 +61,10 @@ dependencies = [
     # follow_redirects=False clients we hand it must be httpx2 clients. The
     # OIDC and docling-serve clients still use httpx directly.
     "httpx==0.28.1",
-    "httpx2==2.13.1",
-    "pydantic==2.13.4",
+    "httpx2==2.15.1",
+    "pydantic==2.14.1",
     "requests==2.34.2",
-    "websockets==17.0.1",
+    "websockets==17.3",
     "openpyxl==3.1.5"
 ]
 
@@ -76,11 +76,11 @@ Documentation = "https://github.com/KatherLab/llmaixweb#readme"
 
 [dependency-groups]
 dev = [
-    "ruff==0.16.10",
-    "ty==0.0.84",
+    "ruff==0.17.1",
+    "ty==0.0.89",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "boto3-stubs==1.43.108",
+    "boto3-stubs==1.43.114",
     "pandas-stubs==3.0.5.260914",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable).
@@ -89,7 +89,7 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.134.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.140.0",
     "torch==2.13.0",
     "torchvision==0.28.0",
     "scipy==1.18.1",

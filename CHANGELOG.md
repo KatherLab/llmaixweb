@@ -14,6 +14,12 @@ that point forward.
 
 ## [Unreleased]
 
+## [0.9.3] — 2026-10-20
+
+### Changed
+
+- Bump dependencies.
+
 ## [0.9.2] — 2026-08-20
 
 ### Changed
@@ -188,7 +194,8 @@ that point forward.
 See the [GitHub Releases page](https://github.com/KatherLab/llmaixweb/releases)
 and the git commit history for details.
 
-[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/KatherLab/llmaixweb/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/KatherLab/llmaixweb/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/KatherLab/llmaixweb/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/KatherLab/llmaixweb/compare/v0.8.0...v0.9.0
