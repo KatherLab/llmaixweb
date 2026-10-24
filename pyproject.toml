@@ -55,7 +55,7 @@ dependencies = [
     "alembic==1.20.0",
     "slowapi==0.1.10",
     "cryptography==50.0.2",
-    "pillow==12.3.0",
+    "pillow==13.0.0",
     "pymupdf==1.28.2",
     # Two HTTP stacks on purpose: openai 3.x builds on httpx2, so the custom
     # follow_redirects=False clients we hand it must be httpx2 clients. The
