@@ -318,12 +318,12 @@ class LLMVisionOCRService:
         Applies EXIF rotation and max dimension resizing if configured.
         """
         try:
-            import fitz  # PyMuPDF
+            import pymupdf
         except ImportError:
-            raise LLMVisionOCRError("PyMuPDF (fitz) is required for PDF processing")
+            raise LLMVisionOCRError("PyMuPDF is required for PDF processing")
 
         images: list[bytes] = []
-        doc = fitz.open(stream=file_content, filetype="pdf")
+        doc = pymupdf.open(stream=file_content, filetype="pdf")
         try:
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
@@ -331,7 +331,7 @@ class LLMVisionOCRService:
                 rect = page.rect
                 max_side = max(rect.width, rect.height)
                 zoom = min(self.max_image_dim / max_side, 4.0) if max_side > 0 else 1.0
-                mat = fitz.Matrix(zoom, zoom)
+                mat = pymupdf.Matrix(zoom, zoom)
                 pix = page.get_pixmap(matrix=mat)
                 img_bytes = pix.tobytes("png")
 
@@ -341,7 +341,7 @@ class LLMVisionOCRService:
                 images.append(img_bytes)
         finally:
             # Always close the document — without this, a corrupt page or a
-            # get_pixmap / _apply_exif_rotation failure leaks the fitz.Document
+            # get_pixmap / _apply_exif_rotation failure leaks the pymupdf.Document
             # (memory + underlying handles) for the lifetime of the process.
             doc.close()
         return images

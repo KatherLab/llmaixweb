@@ -1,6 +1,6 @@
 [project]
 name = "llmaixweb"
-version = "0.9.3"
+version = "0.10.0"
 description = "LLM Information Extraction Web Application — extract structured JSON from unstructured medical/lab documents with LLMs."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -35,36 +35,36 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi[standard]==0.151.0",
+    "fastapi[standard]==0.162.0",
     "uvicorn==0.54.0",
     "pyjwt==2.15.1",
-    "sqlalchemy==2.1.5",
-    "psycopg[binary,pool]==3.3.6",
-    "pydantic_settings==2.16.0",
-    "openai==3.35.1",
+    "sqlalchemy==2.1.8",
+    "psycopg[binary,pool]==3.3.8",
+    "pydantic_settings==2.16.2",
+    "openai==3.46.0",
     "bcrypt==5.0.0",
-    "boto3==1.43.115",
-    "mistralai==3.2.0",
-    "pypdf==6.21.1",
+    "boto3==1.43.124",
+    "mistralai==3.7.0",
+    "pypdf==6.21.4",
     "redis==8.1.0",
-    "celery==5.6.3",
+    "celery==5.7.0",
     "jsonschema==4.26.0",
     "thefuzz==0.22.1",
-    "pandas==3.0.6",
-    "xlsxwriter==3.2.9",
-    "alembic==1.20.0",
+    "pandas==3.1.1",
+    "xlsxwriter==3.3.1",
+    "alembic==1.20.1",
     "slowapi==0.1.10",
     "cryptography==50.0.2",
-    "pillow==12.3.0",
-    "pymupdf==1.28.2",
+    "pillow==13.0.0",
+    "pymupdf==2.1",
     # Two HTTP stacks on purpose: openai 3.x builds on httpx2, so the custom
     # follow_redirects=False clients we hand it must be httpx2 clients. The
     # OIDC and docling-serve clients still use httpx directly.
     "httpx==0.28.1",
-    "httpx2==2.15.1",
-    "pydantic==2.14.1",
+    "httpx2==2.16.0",
+    "pydantic==2.14.3",
     "requests==2.34.2",
-    "websockets==17.3",
+    "websockets==17.4",
     "openpyxl==3.1.5"
 ]
 
@@ -76,12 +76,12 @@ Documentation = "https://github.com/KatherLab/llmaixweb#readme"
 
 [dependency-groups]
 dev = [
-    "ruff==0.17.1",
-    "ty==0.0.89",
-    "pytest==9.1.1",
+    "ruff==0.17.3",
+    "ty==0.0.97",
+    "pytest==9.2.0",
     "pytest-cov==7.1.0",
-    "boto3-stubs==1.43.114",
-    "pandas-stubs==3.0.5.260914",
+    "boto3-stubs==1.43.124",
+    "pandas-stubs==3.1.0.261029",
     "celery-types==0.26.0",
     # Docling for local fallback during tests (when docling-serve unavailable).
     # The heavy ML runtime deps below are docling's transitive requirements and
@@ -89,15 +89,15 @@ dev = [
     # docling so the production image (`uv sync --no-dev`) doesn't ship ~1GB of
     # unused torch/opencv/scipy. torch/torchvision are declared explicitly so the
     # CPU-index pin in [tool.uv.sources] applies (avoids the huge CUDA build).
-    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.140.0",
-    "torch==2.13.0",
-    "torchvision==0.28.0",
+    "docling-slim[format-pdf,format-office,format-web,format-latex,models-local,cli,format-email]==2.147.0",
+    "torch==2.15.0",
+    "torchvision==0.29.2",
     "scipy==1.18.1",
     "opencv-python-headless==5.0.0.93",
     "rtree==1.4.1",
 ]
 docs = [
-    "mkdocs-material==9.7.7",
+    "mkdocs-material==9.8.0",
     "mkdocs-include-markdown-plugin==7.3.0",
 ]
 

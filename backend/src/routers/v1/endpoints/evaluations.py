@@ -4,6 +4,7 @@
 import csv
 import io
 import logging
+from typing import Literal
 
 import pandas as pd
 from fastapi import APIRouter, Body, Depends, Query
@@ -547,7 +548,7 @@ def download_evaluations_report(
     db: Session = Depends(get_db),
     project_id: int,
     evaluation_ids: list[str] = Query(...),
-    format: str = Query("csv", enum=["csv", "xlsx", "zip"]),
+    format: Literal["csv", "xlsx", "zip"] = Query("csv"),
     include_details: bool = Query(True),
     include_field_details: bool = Query(False),
     include_errors: bool = Query(False),

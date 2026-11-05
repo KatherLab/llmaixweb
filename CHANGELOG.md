@@ -14,6 +14,8 @@ that point forward.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-05
+
 ### Added
 
 - SSO: map IdP groups to access and roles per provider (admin group, user group,
@@ -29,11 +31,14 @@ that point forward.
 
 - The first-admin setup page stays closed while an enabled SSO provider maps an
   admin group, so such a deployment needs no local admin.
+- Bump dependencies, including PyMuPDF 2 and Pillow 13.
 
 ### Fixed
 
 - SSO: reject callbacks for a disabled provider and userinfo responses whose
   subject differs from the id_token.
+- Report downloads now reject an unknown `format` with a 422 instead of silently
+  returning another format.
 
 ## [0.9.3] — 2026-10-20
 
@@ -215,7 +220,8 @@ that point forward.
 See the [GitHub Releases page](https://github.com/KatherLab/llmaixweb/releases)
 and the git commit history for details.
 
-[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/KatherLab/llmaixweb/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/KatherLab/llmaixweb/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/KatherLab/llmaixweb/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/KatherLab/llmaixweb/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/KatherLab/llmaixweb/compare/v0.9.0...v0.9.1

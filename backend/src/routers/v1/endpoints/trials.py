@@ -6,7 +6,7 @@ import datetime
 import io
 import json
 import logging
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import Response, StreamingResponse
@@ -1130,7 +1130,7 @@ def download_trial_results(
     db: Session = Depends(get_db),
     project_id: int,
     trial_id: int,
-    format: str = Query("json", enum=["json", "csv"]),
+    format: Literal["json", "csv"] = Query("json"),
     include_content: bool = Query(True),
     include_reasoning: bool = Query(False),
     include_usage: bool = Query(False),
