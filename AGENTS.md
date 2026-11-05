@@ -265,7 +265,8 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 | `utils/presence.py` | Short-TTL Redis marker per connected user, so a Celery worker can ask "does this user have the app open?" |
 | `celery/notifications.py` | `send_notification_email_task` — the blocking SMTP send, off the request/OCR path, with retry |
 | `services/oidc_service.py` | OIDC discovery, authorize URL (PKCE + signed state), code exchange, userinfo |
-| `routers/v1/endpoints/sso.py` | OIDC SSO login/callback flow + JIT user provisioning |
+| `routers/v1/endpoints/sso.py` | OIDC SSO login/callback flow + JIT user provisioning + group → role mapping |
+| `services/sso_env_provider.py` | Upserts the provider declared via `SSO_OIDC_*` on startup (`managed_by_env`, read-only in the admin API) |
 | `routers/v1/endpoints/admin_sso.py` | Admin CRUD for OIDC identity providers |
 | `utils/enums.py` | All shared enums (FileType, PreprocessingStrategy, `AuditAction`, `AuditOutcome`, etc.) |
 | `utils/url_safety.py` | SSRF guardrails for user-supplied custom API endpoints (blocks cloud-metadata, restricts schemes, disables redirect-following) |
@@ -274,6 +275,7 @@ All endpoints are under `/api/v1/`. The main router (`main.py:78-83`) includes:
 - **`Settings` class** (`core/config.py`): Uses Pydantic `BaseSettings`. Reads from `.env` file (path in `ENV_PATH` env var, defaults to `backend/.env`) or environment variables. Validates OpenAI API connection and storage on init.
 - **Runtime overrides**: Admin panel changes are stored in `app_settings` DB table and loaded via `dynamic_settings.py` with LRU cache. Only non-readonly settings can be overridden.
 - **Skip runtime checks**: Set `SKIP_RUNTIME_CHECKS=true` for Alembic migrations (bypasses OpenAI/S3 validation).
+- **SSO-only mode** (`SSO_ONLY`): every route that uses or sets a local password carries `Depends(require_password_auth)` (`core/security.py`). A new one must too.
 - **Security / ops env vars** (documented in `.env.example`, worth knowing): account lockout (`LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_MINUTES`), egress allowlists for PHI destinations (`ALLOWED_LLM_ENDPOINTS`, `ALLOWED_OCR_ENDPOINTS`), admin cross-project visibility (`ADMIN_ALL_PROJECT_ACCESS`), structured logging (`LOG_FORMAT`), rate limiting (`DISABLE_RATE_LIMIT`), short access tokens + refresh (`ACCESS_TOKEN_EXPIRE_MINUTES` now 60, `REFRESH_TOKEN_EXPIRE_DAYS`), password policy (`PASSWORD_POLICY_*`), SSO (`SSO_*`), site banner (`BANNER_ENABLED`/`BANNER_TEXT`/`BANNER_COLOR`), `MAX_UPLOAD_SIZE_BYTES`.
 
 ### Database

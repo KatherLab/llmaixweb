@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .... import schemas
+from ....core.config import settings
 from ....core.security import get_admin_user
 from ....dependencies import get_db
 from ....models import User
@@ -33,7 +34,40 @@ def _to_response(provider: IdentityProvider) -> schemas.IdentityProviderResponse
         created_at=provider.created_at,
         updated_at=provider.updated_at,
         has_secret=bool(provider.client_secret_encrypted),
+        groups_claim=provider.groups_claim,
+        user_groups=provider.user_groups,
+        admin_groups=provider.admin_groups,
+        managed_by_env=provider.managed_by_env,
     )
+
+
+def _refuse_if_managed(provider: IdentityProvider) -> None:
+    if provider.managed_by_env:
+        raise api_error(
+            "sso.provider_managed_by_env",
+            status.HTTP_409_CONFLICT,
+            "This provider is configured via SSO_OIDC_* environment variables. "
+            "Change it there and restart the backend.",
+        )
+
+
+def _refuse_if_last_provider_under_sso_only(
+    db: Session, provider: IdentityProvider
+) -> None:
+    """With SSO_ONLY, the last enabled provider is the only way into the app."""
+    if not settings.SSO_ONLY or not provider.enabled:
+        return
+    other_enabled = db.scalar(
+        select(IdentityProvider.id)
+        .where(IdentityProvider.enabled.is_(True), IdentityProvider.id != provider.id)
+        .limit(1)
+    )
+    if not other_enabled:
+        raise api_error(
+            "sso.sso_only_last_provider",
+            status.HTTP_409_CONFLICT,
+            "The last enabled provider cannot be removed while SSO_ONLY is set.",
+        )
 
 
 @router.get("/providers", response_model=list[schemas.IdentityProviderResponse])
@@ -57,7 +91,7 @@ def create_provider(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ) -> schemas.IdentityProviderResponse:
-    slug = _slugify(payload.name)
+    slug = oidc_service.slugify_provider_name(payload.name)
     if db.execute(
         select(IdentityProvider).where(
             (IdentityProvider.slug == slug) | (IdentityProvider.name == payload.name)
@@ -79,6 +113,9 @@ def create_provider(
         client_secret_encrypted=encrypt(payload.client_secret),
         scopes=payload.scopes,
         enabled=payload.enabled,
+        groups_claim=payload.groups_claim.strip(),
+        user_groups=oidc_service.normalize_group_setting(payload.user_groups),
+        admin_groups=oidc_service.normalize_group_setting(payload.admin_groups),
     )
     db.add(provider)
     db.commit()
@@ -109,9 +146,10 @@ def update_provider(
             status.HTTP_404_NOT_FOUND,
             "Provider not found.",
         )
+    _refuse_if_managed(provider)
 
     if payload.name is not None and payload.name != provider.name:
-        new_slug = _slugify(payload.name)
+        new_slug = oidc_service.slugify_provider_name(payload.name)
         if db.execute(
             select(IdentityProvider).where(
                 (IdentityProvider.slug == new_slug)
@@ -133,8 +171,18 @@ def update_provider(
         provider.client_id = payload.client_id
     if payload.scopes is not None:
         provider.scopes = payload.scopes
+    if payload.enabled is False:
+        _refuse_if_last_provider_under_sso_only(db, provider)
     if payload.enabled is not None:
         provider.enabled = payload.enabled
+    if payload.groups_claim is not None:
+        provider.groups_claim = payload.groups_claim.strip()
+    if payload.user_groups is not None:
+        provider.user_groups = oidc_service.normalize_group_setting(payload.user_groups)
+    if payload.admin_groups is not None:
+        provider.admin_groups = oidc_service.normalize_group_setting(
+            payload.admin_groups
+        )
     if payload.client_secret:
         provider.client_secret_encrypted = encrypt(payload.client_secret)
 
@@ -167,6 +215,8 @@ def delete_provider(
             status.HTTP_404_NOT_FOUND,
             "Provider not found.",
         )
+    _refuse_if_managed(provider)
+    _refuse_if_last_provider_under_sso_only(db, provider)
     slug = provider.slug
     db.delete(provider)
     db.commit()
@@ -178,16 +228,3 @@ def delete_provider(
         detail={"operation": "delete", "slug": slug},
     )
     return None
-
-
-def _slugify(name: str) -> str:
-    import re
-
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    if not slug:
-        raise api_error(
-            "sso.slug_no_alphanumeric",
-            status.HTTP_400_BAD_REQUEST,
-            "Provider name must contain alphanumeric characters.",
-        )
-    return slug[:100]

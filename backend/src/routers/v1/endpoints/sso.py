@@ -17,7 +17,6 @@ Admin (auth + admin):
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, timezone
 
 from fastapi import (
@@ -35,7 +34,11 @@ from sqlalchemy.orm import Session
 
 from ....core.config import settings
 from ....core.rate_limit import limiter
-from ....core.security import create_access_token
+from ....core.security import (
+    create_access_token,
+    create_refresh_token,
+    revoke_all_refresh_tokens,
+)
 from ....dependencies import get_db
 from ....models import User, UserIdentity
 from ....models.sso import IdentityProvider
@@ -43,7 +46,7 @@ from ....services import oidc_service
 from ....utils.api_errors import api_error
 from ....utils.audit import record_audit
 from ....utils.crypto import decrypt
-from ....utils.enums import AuditAction, UserRole
+from ....utils.enums import AuditAction, AuditOutcome, UserRole
 from ....utils.notifications import notify_security_event
 
 logger = logging.getLogger(__name__)
@@ -54,17 +57,6 @@ router = APIRouter()
 # sent on the IdP's top-level redirect back to the callback.
 _STATE_COOKIE = "sso_state"
 _STATE_MAX_AGE = 600  # 10 minutes (matches the state JWT exp)
-
-
-def _slugify(name: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    if not slug:
-        raise api_error(
-            "sso.slug_no_alphanumeric",
-            status.HTTP_400_BAD_REQUEST,
-            "Provider name must contain alphanumeric characters.",
-        )
-    return slug[:100]
 
 
 def _get_provider_by_slug(db: Session, slug: str) -> IdentityProvider:
@@ -123,6 +115,95 @@ def _frontend_token_redirect(
             f"&redirect={target}"
         ),
         status_code=status.HTTP_302_FOUND,
+    )
+
+
+def _login_error_redirect(code: str) -> RedirectResponse:
+    """Send the browser to the login page with a known error code, for refusals
+    the user can act on (a raw JSON body is a dead end after a top-level redirect)."""
+    resp = RedirectResponse(
+        url=f"{settings.APP_URL.rstrip('/')}/login?sso_error={code}",
+        status_code=status.HTTP_302_FOUND,
+    )
+    resp.delete_cookie(_STATE_COOKIE)
+    return resp
+
+
+class _NotInAllowedGroupError(Exception):
+    """The user authenticated, but no configured group admits them."""
+
+
+def _role_from_groups(
+    provider: IdentityProvider, verified_claims: dict, userinfo: dict
+) -> UserRole | None:
+    """Derive the role from the IdP's groups claim.
+
+    Returns ``None`` when the provider has no group mapping (roles stay locally
+    managed). Raises :class:`_NotInAllowedGroupError` when the user is admitted by no
+    group. A missing claim counts as "no groups", which can only ever yield less
+    access, never more.
+    """
+    user_groups = oidc_service.parse_group_list(provider.user_groups)
+    admin_groups = oidc_service.parse_group_list(provider.admin_groups)
+    if not user_groups and not admin_groups:
+        return None
+
+    claim = provider.groups_claim
+    source = verified_claims if claim in verified_claims else userinfo
+    if claim not in source:
+        # The usual cause of "everyone is refused" is a missing IdP-side mapper.
+        logger.warning(
+            "SSO provider %s: no '%s' claim in id_token or userinfo. Check the "
+            "groups mapper at the IdP. Id_token claims present: %s",
+            provider.slug,
+            claim,
+            sorted(verified_claims),
+        )
+    groups = oidc_service.extract_groups(source.get(claim))
+
+    if groups & admin_groups:
+        return UserRole.admin
+    if groups & user_groups or not user_groups:
+        return UserRole.user
+    raise _NotInAllowedGroupError
+
+
+def _revoke_sessions_of_identity(
+    db: Session, provider: IdentityProvider, subject: str
+) -> None:
+    """End the sessions of a known identity that just lost access at the IdP."""
+    identity = db.execute(
+        select(UserIdentity).where(
+            UserIdentity.provider_id == provider.id,
+            UserIdentity.external_subject == subject,
+        )
+    ).scalar_one_or_none()
+    if identity:
+        identity.user.token_version += 1
+        revoke_all_refresh_tokens(db, identity.user)  # commits
+
+
+def _apply_mapped_role(
+    db: Session, user: User, role: UserRole, provider: IdentityProvider
+) -> None:
+    if user.role == role:
+        return
+    previous = user.role
+    user.role = role
+    user.token_version += 1
+    db.commit()
+    db.refresh(user)
+    record_audit(
+        AuditAction.USER_ROLE_CHANGE,
+        actor=user,
+        resource_type="user",
+        resource_id=user.id,
+        detail={
+            "new_role": role.value,
+            "previous_role": getattr(previous, "value", str(previous)),
+            "source": "sso_groups",
+            "provider": provider.slug,
+        },
     )
 
 
@@ -226,6 +307,12 @@ def sso_callback(
         )
 
     provider = _get_provider_by_slug(db, slug)
+    if not provider.enabled:
+        raise api_error(
+            "sso.provider_disabled",
+            status.HTTP_403_FORBIDDEN,
+            "This SSO provider is disabled.",
+        )
     client_secret = decrypt(provider.client_secret_encrypted)
     if not client_secret:
         raise HTTPException(
@@ -263,6 +350,19 @@ def sso_callback(
     if not userinfo:
         userinfo = verified_claims
 
+    # OIDC Core 5.3.2: userinfo must describe the same subject as the id_token,
+    # since its email and groups claims decide account linking and the role.
+    if (
+        verified_claims.get("sub")
+        and userinfo.get("sub")
+        and verified_claims["sub"] != userinfo["sub"]
+    ):
+        raise api_error(
+            "sso.subject_mismatch",
+            status.HTTP_400_BAD_REQUEST,
+            "OIDC userinfo subject does not match the id_token.",
+        )
+
     subject = userinfo.get("sub") or verified_claims.get("sub")
     email = userinfo.get("email") or verified_claims.get("email")
     if not subject:
@@ -281,9 +381,24 @@ def sso_callback(
         verified_claims.get("email_verified")
     )
 
+    # Checked before provisioning so a refused user never gets an account.
+    try:
+        mapped_role = _role_from_groups(provider, verified_claims, userinfo)
+    except _NotInAllowedGroupError:
+        _revoke_sessions_of_identity(db, provider, subject)
+        record_audit(
+            AuditAction.SSO_LOGIN,
+            actor_email=email,
+            outcome=AuditOutcome.DENIED,
+            detail={"provider": slug, "reason": "not_in_allowed_group"},
+        )
+        return _login_error_redirect("not_in_allowed_group")
+
     user = _resolve_or_provision_user(
-        db, provider, subject, email, userinfo, email_verified
+        db, provider, subject, email, userinfo, email_verified, mapped_role
     )
+    if mapped_role:
+        _apply_mapped_role(db, user, mapped_role, provider)
 
     record_audit(
         AuditAction.SSO_LOGIN,
@@ -294,8 +409,6 @@ def sso_callback(
     )
 
     access_token = create_access_token(user.id, token_version=user.token_version)
-    from ....core.security import create_refresh_token
-
     refresh_token = create_refresh_token(db, user)
 
     resp = _frontend_token_redirect(
@@ -312,6 +425,7 @@ def _resolve_or_provision_user(
     email: str | None,
     userinfo: dict,
     email_verified: bool,
+    mapped_role: UserRole | None = None,
 ) -> User:
     """Find an existing user by identity or email, else JIT-create one.
 
@@ -387,14 +501,14 @@ def _resolve_or_provision_user(
         # No password — JIT users authenticate via SSO only. An empty
         # hashed_password is the "no password" sentinel: verify_password
         # treats it as invalid, so the account can't be password-logged-in.
-        # The account-settings UI lets them set one later if desired.
+        # The account-settings UI lets them set one later, unless SSO_ONLY is set.
         target = User(
             email=email,
             hashed_password="",
             full_name=userinfo.get("name")
             or userinfo.get("preferred_username")
             or email.split("@")[0],
-            role=UserRole(settings.SSO_JIT_DEFAULT_ROLE),
+            role=mapped_role or UserRole(settings.SSO_JIT_DEFAULT_ROLE),
             is_active=True,
         )
         db.add(target)

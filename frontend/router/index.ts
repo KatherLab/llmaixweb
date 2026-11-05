@@ -31,6 +31,7 @@ const FirstAdminSetup = () => import('@/views/FirstAdminSetup.vue')
 
 import { useAuthStore } from '@/stores/auth'
 import { useFirstAdminStore } from '@/stores/firstAdmin'
+import { usePublicSettingsStore } from '@/stores/publicSettings'
 
 const routes: RouteRecordRaw[] = [
   // Landing page — its own clean, navbar-less layout (full-bleed marketing).
@@ -163,6 +164,19 @@ router.beforeEach(async (to) => {
     }
     if (to.matched.some((record) => record.meta.adminOnly) && !authStore.isAdmin) {
       return '/'
+    }
+  }
+  // These pages all end in setting a password, which SSO_ONLY disables.
+  if (
+    to.path === '/register' ||
+    to.path.startsWith('/invitation') ||
+    to.path === '/forgot-password' ||
+    to.path.startsWith('/reset-password/')
+  ) {
+    const publicSettings = usePublicSettingsStore()
+    await publicSettings.fetch()
+    if (publicSettings.ssoOnly) {
+      return authStore.isAuthenticated ? '/projects' : '/login'
     }
   }
   // Prevent logged-in users from seeing login/register pages

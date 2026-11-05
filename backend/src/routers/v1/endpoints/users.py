@@ -24,6 +24,7 @@ from ....core.security import (
     get_admin_user,
     get_current_user,
     get_password_hash,
+    require_password_auth,
     verify_password,
 )
 from ....dependencies import get_db, remove_file
@@ -67,12 +68,9 @@ def _invitation_expired(invitation: models.Invitation) -> bool:
 @router.get("/first-admin-check")
 def first_admin_check(db: Session = Depends(get_db)):
     """Returns True if no admin exists and first-admin setup is allowed."""
-    from ....core.security import any_admin_exists
+    from ....core.security import first_admin_setup_allowed
 
-    return {
-        "allow_first_admin_setup": settings.ALLOW_FIRST_ADMIN_SETUP
-        and not any_admin_exists(db)
-    }
+    return {"allow_first_admin_setup": first_admin_setup_allowed(db)}
 
 
 @router.post("/first-admin", response_model=schemas.UserResponse)
@@ -82,11 +80,10 @@ def create_first_admin(
     user_in: schemas.UserCreate,
     db: Session = Depends(get_db),
 ):
-    from ....core.security import any_admin_exists
+    from ....core.security import first_admin_setup_allowed
     from ....utils.enums import UserRole
 
-    # Only allow if config enabled and NO admin exists
-    if not settings.ALLOW_FIRST_ADMIN_SETUP or any_admin_exists(db):
+    if not first_admin_setup_allowed(db):
         raise api_error(
             "users.first_admin_not_allowed",
             403,
@@ -132,7 +129,11 @@ def create_first_admin(
     return schemas.UserResponse.model_validate(new_user)
 
 
-@router.post("/change-password", response_model=schemas.UserResponse)
+@router.post(
+    "/change-password",
+    response_model=schemas.UserResponse,
+    dependencies=[Depends(require_password_auth)],
+)
 def change_password(
     password_data: schemas.PasswordChange,
     current_user: models.User = Depends(get_current_user),
@@ -169,7 +170,11 @@ def change_password(
     return schemas.UserResponse.model_validate(current_user)
 
 
-@router.post("/{user_id}/set-password", response_model=schemas.UserResponse)
+@router.post(
+    "/{user_id}/set-password",
+    response_model=schemas.UserResponse,
+    dependencies=[Depends(require_password_auth)],
+)
 def admin_set_user_password(
     user_id: int = Path(...),
     password_data: PasswordSet = Body(...),
@@ -207,7 +212,11 @@ def admin_set_user_password(
     return schemas.UserResponse.model_validate(user)
 
 
-@router.post("", response_model=schemas.UserResponse)
+@router.post(
+    "",
+    response_model=schemas.UserResponse,
+    dependencies=[Depends(require_password_auth)],
+)
 @limiter.limit("5/minute" if not settings.DISABLE_RATE_LIMIT else "1000/minute")
 def create_user(
     request: Request,
@@ -461,6 +470,12 @@ def delete_my_identity(
         .filter(models.UserIdentity.user_id == current_user.id)
         .all()
     )
+    if len(remaining) <= 1 and settings.SSO_ONLY:
+        raise api_error(
+            "users.sso_only_last_identity",
+            status.HTTP_400_BAD_REQUEST,
+            "Cannot disconnect your only sign-in method.",
+        )
     if len(remaining) <= 1 and not current_user.hashed_password:
         raise api_error(
             "users.cannot_disconnect_last_identity",
@@ -695,7 +710,11 @@ def toggle_user_status(
     return schemas.UserResponse.model_validate(user)
 
 
-@router.post("/invite", response_model=schemas.InvitationResponse)
+@router.post(
+    "/invite",
+    response_model=schemas.InvitationResponse,
+    dependencies=[Depends(require_password_auth)],
+)
 def invite(
     email: str = Form(...),
     send_email: bool = Form(False),
@@ -834,7 +853,7 @@ def validate_invitation(
 # ---------- Password Reset (public endpoints) ----------
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(require_password_auth)])
 @limiter.limit("5/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def forgot_password(
     request: Request,
@@ -925,7 +944,7 @@ def validate_reset_token(
     return schemas.PasswordResetValidate(valid=True)
 
 
-@router.post("/reset-password/{token}")
+@router.post("/reset-password/{token}", dependencies=[Depends(require_password_auth)])
 @limiter.limit("10/hour" if not settings.DISABLE_RATE_LIMIT else "1000/hour")
 def reset_password(
     request: Request,

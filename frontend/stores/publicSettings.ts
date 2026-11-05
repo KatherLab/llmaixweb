@@ -1,6 +1,6 @@
 // src/stores/publicSettings.ts
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { authApi } from '@/services/authApi'
 import type { PublicAuthSettings } from '@/types'
 
@@ -12,6 +12,7 @@ import type { PublicAuthSettings } from '@/types'
 export const usePublicSettingsStore = defineStore('publicSettings', () => {
   const settings = ref<PublicAuthSettings | null>(null)
   const loaded = ref(false)
+  const ssoOnly = computed(() => settings.value?.sso_only === true)
 
   async function fetch(force = false) {
     if (loaded.value && !force) return settings.value
@@ -27,5 +28,5 @@ export const usePublicSettingsStore = defineStore('publicSettings', () => {
     return settings.value
   }
 
-  return { settings, loaded, fetch }
+  return { settings, loaded, ssoOnly, fetch }
 })

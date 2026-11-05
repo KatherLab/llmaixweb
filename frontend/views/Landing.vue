@@ -76,7 +76,9 @@ const isAuthenticated = computed(() => authReady.value && authStore.isAuthentica
 // Default deployments are invitation-only — only advertise "Get started"
 // (→ /register) once the backend confirms open registration; otherwise the
 // CTAs point to sign-in so visitors never dead-end on a closed register page.
-const registrationOpen = computed(() => publicSettingsStore.settings?.require_invitation === false)
+const registrationOpen = computed(
+  () => publicSettingsStore.settings?.require_invitation === false && !publicSettingsStore.ssoOnly,
+)
 </script>
 
 <style scoped>

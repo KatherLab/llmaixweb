@@ -8,7 +8,7 @@
       <template #icon>
         <Users class="w-5 h-5" aria-hidden="true" />
       </template>
-      <template #actions>
+      <template v-if="!publicSettings.ssoOnly" #actions>
         <BaseButton variant="primary" size="sm" @click="showInviteModal = true">
           + {{ $t('admin.user_management.invite_user') }}
         </BaseButton>
@@ -56,7 +56,7 @@
         </GlassCard>
 
         <!-- Invitations Section -->
-        <GlassCard>
+        <GlassCard v-if="!publicSettings.ssoOnly">
           <div class="h-full flex flex-col min-h-0">
             <div class="flex items-center justify-between mb-3 pb-3 border-b border-default">
               <h2 class="text-base font-semibold text-content">
@@ -151,6 +151,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/composables/useToast'
+import { usePublicSettingsStore } from '@/stores/publicSettings'
 import { Users } from '@lucide/vue'
 import UserGrid from '@/components/admin/UserGrid.vue'
 import InvitationGrid from '@/components/admin/InvitationGrid.vue'
@@ -177,6 +178,7 @@ const loading = ref<boolean>(true)
 const loadUsersError = ref<string | null>(null)
 const userSearch = ref<string>('')
 
+const publicSettings = usePublicSettingsStore()
 const invitations = ref<InvitationResponse[]>([])
 const loadingInvitations = ref<boolean>(true)
 const loadInvitationsError = ref<string | null>(null)
@@ -228,6 +230,7 @@ const deleteInvitationMessage = computed<string>(() => {
 })
 
 onMounted(async () => {
+  void publicSettings.fetch()
   try {
     const me = await usersApi.me()
     currentUserId.value = me.data.id

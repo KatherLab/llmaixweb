@@ -348,7 +348,11 @@
         "client_secret_keep": "Leave blank to keep current",
         "client_secret_placeholder": "Provider client secret",
         "scopes": "Scopes",
-        "enabled": "Enabled"
+        "enabled": "Enabled",
+        "admin_groups": "Admin groups",
+        "user_groups": "User groups",
+        "groups_claim": "Groups claim",
+        "groups_help": "Comma-separated, as sent by the IdP (a leading slash is ignored). If either is set, roles follow the groups on every login; if user groups are set, members of neither list are refused. Leave both empty to manage access and roles locally."
       },
       "toast": {
         "updated": "Provider updated",
@@ -360,7 +364,8 @@
         "load": "Failed to load providers.",
         "save": "Failed to save provider.",
         "delete": "Failed to delete provider."
-      }
+      },
+      "managed_by_env": "Managed via .env"
     },
     "celery": {
       "title": "Celery Workers & Queues",
@@ -567,7 +572,8 @@
       "too_many_requests": "Too many requests. Please try again later.",
       "unexpected": "An unexpected error occurred. Please try again.",
       "no_token": "No invitation token provided",
-      "invitation_expired": "This invitation link is invalid or has expired"
+      "invitation_expired": "This invitation link is invalid or has expired",
+      "sso_not_in_allowed_group": "Your account is not in a group that may use this application. Please contact your administrator."
     },
     "session_expired": "Session expired. Please sign in again."
   },
@@ -3198,7 +3204,8 @@
       "account_locked": "Account temporarily locked due to too many failed login attempts. Try again later.",
       "invalid_credentials": "Incorrect email or password",
       "inactive_user": "Inactive user",
-      "invalid_refresh_token": "Invalid or expired refresh token."
+      "invalid_refresh_token": "Invalid or expired refresh token.",
+      "password_auth_disabled": "Password sign-in is disabled. Please sign in through your identity provider."
     },
     "core": {
       "upload_too_large": "Uploaded file exceeds the maximum allowed size of {limit} bytes.",
@@ -3213,7 +3220,8 @@
       "project_not_found": "Project not found",
       "not_authorized": "Not authorized",
       "prompt_required": "At least one of system_prompt or user_prompt must be provided",
-      "password_policy": "Password must {rules}."
+      "password_policy": "Password must {rules}.",
+      "sso_only_requires_sso": "SSO cannot be turned off while SSO_ONLY is set."
     },
     "documents": {
       "project_not_found": "Project not found",
@@ -3370,7 +3378,10 @@
       "userinfo_issuer_mismatch": "OIDC userinfo issuer mismatch.",
       "no_jwks_uri": "OIDC discovery document has no jwks_uri; cannot verify id_token.",
       "id_token_verification_failed": "OIDC id_token verification failed.",
-      "id_token_nonce_mismatch": "OIDC id_token nonce mismatch."
+      "id_token_nonce_mismatch": "OIDC id_token nonce mismatch.",
+      "provider_managed_by_env": "This provider is configured via environment variables and cannot be changed here.",
+      "subject_mismatch": "The identity provider returned inconsistent user data.",
+      "sso_only_last_provider": "The last enabled provider cannot be disabled or deleted while SSO_ONLY is set."
     },
     "trials": {
       "required_without_property": "This schema lists required field(s) that are not defined in properties, so every document would fail validation: {details}",
@@ -3426,7 +3437,8 @@
       "invitation_not_found": "Invitation not found",
       "invitation_invalid_or_expired": "Invalid or expired invitation token",
       "reset_token_invalid": "Invalid or expired reset token",
-      "token_mismatch": "Token mismatch"
+      "token_mismatch": "Token mismatch",
+      "sso_only_last_identity": "Cannot disconnect your only sign-in method."
     }
   },
   "not_found": {

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..core.config import settings
 from ..dependencies import get_db
+from ..models.sso import IdentityProvider
 from ..models.user import RefreshToken, User
 from ..utils.api_errors import api_error
 from ..utils.audit import record_denial
@@ -24,6 +25,36 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
 
 def any_admin_exists(db: Session) -> bool:
     return db.query(User).filter(User.role == UserRole.admin).count() > 0
+
+
+def require_password_auth() -> None:
+    """Route dependency: refuse anything that uses or sets a local password."""
+    if settings.SSO_ONLY:
+        raise api_error(
+            "auth.password_auth_disabled",
+            status.HTTP_403_FORBIDDEN,
+            "Password sign-in is disabled. Sign in through your identity provider.",
+        )
+
+
+def first_admin_setup_allowed(db: Session) -> bool:
+    """Whether the public /first-admin bootstrap is open.
+
+    Stays closed while an active provider maps an admin group: admins then come
+    from the IdP, and the (public) form would otherwise let the first visitor
+    claim admin on a fresh install, or after the IdP demoted the last admin.
+    """
+    if settings.SSO_ONLY:
+        return False
+    if not settings.ALLOW_FIRST_ADMIN_SETUP or any_admin_exists(db):
+        return False
+    if not settings.SSO_ENABLED:
+        return True
+    return not db.scalar(
+        select(IdentityProvider.id)
+        .where(IdentityProvider.enabled.is_(True), IdentityProvider.admin_groups != "")
+        .limit(1)
+    )
 
 
 def admin_has_global_project_access(user: User) -> bool:

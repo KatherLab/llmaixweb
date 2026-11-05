@@ -14,6 +14,10 @@ class IdentityProviderBase(BaseModel):
     client_id: str = Field(..., min_length=1, max_length=256)
     scopes: str = Field(default="openid email profile", max_length=256)
     enabled: bool = True
+    groups_claim: str = Field(default="groups", min_length=1, max_length=100)
+    # Comma-separated. Both empty = no group-based access control or role mapping.
+    user_groups: str = Field(default="", max_length=1024)
+    admin_groups: str = Field(default="", max_length=1024)
 
 
 class IdentityProviderCreate(IdentityProviderBase):
@@ -29,6 +33,9 @@ class IdentityProviderUpdate(BaseModel):
     client_secret: str | None = Field(default=None, min_length=1, max_length=1024)
     scopes: str | None = Field(default=None, max_length=256)
     enabled: bool | None = None
+    groups_claim: str | None = Field(default=None, min_length=1, max_length=100)
+    user_groups: str | None = Field(default=None, max_length=1024)
+    admin_groups: str | None = Field(default=None, max_length=1024)
 
 
 class IdentityProviderResponse(IdentityProviderBase):
@@ -38,6 +45,8 @@ class IdentityProviderResponse(IdentityProviderBase):
     updated_at: datetime | None = None
     # Whether a stored secret is present (never the secret itself).
     has_secret: bool = True
+    # Declared via SSO_OIDC_* — read-only in the admin API.
+    managed_by_env: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

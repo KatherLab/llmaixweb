@@ -84,6 +84,23 @@ class Settings(BaseSettings):
     # self-asserted/unverified emails would let an attacker register
     # victim@clinic.com upstream and get merged into the victim's local account.
     SSO_REQUIRE_VERIFIED_EMAIL: bool = True
+    # Identity provider only: no password sign-in, registration, password changes
+    # or invitations (core.security.require_password_auth). The backend refuses
+    # to start without a usable provider, as nobody could sign in otherwise.
+    SSO_ONLY: bool = False
+    # Optional: declare one OIDC provider in the environment instead of the admin
+    # panel. Setting ISSUER_URL + CLIENT_ID + CLIENT_SECRET makes the backend
+    # upsert a read-only provider on every startup (services/sso_env_provider.py).
+    SSO_OIDC_NAME: str = "SSO"
+    SSO_OIDC_ISSUER_URL: str = ""
+    SSO_OIDC_CLIENT_ID: str = ""
+    SSO_OIDC_CLIENT_SECRET: str = ""
+    SSO_OIDC_SCOPES: str = "openid email profile"
+    # Group → role mapping for that provider (comma-separated). See
+    # IdentityProvider.user_groups / admin_groups for the semantics.
+    SSO_OIDC_GROUPS_CLAIM: str = "groups"
+    SSO_OIDC_USER_GROUPS: str = ""
+    SSO_OIDC_ADMIN_GROUPS: str = ""
 
     # ─────────────────────────────────────────────────────────────
     # Refresh tokens
@@ -893,6 +910,70 @@ SETTINGS_META = {
         "category": "SSO",
         "label": "SSO Require Verified Email",
         "help": "When True, the IdP must assert email_verified before an SSO identity is linked to or provisions an account by email. Prevents account takeover via unverified emails. Keep enabled unless every configured IdP verifies emails.",
+    },
+    "SSO_ONLY": {
+        "type": "bool",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "SSO Only",
+        "help": "Disables password sign-in, registration, password changes and invitations. Set in the environment so that it cannot lock everyone out from here.",
+    },
+    "SSO_OIDC_NAME": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Name",
+    },
+    "SSO_OIDC_ISSUER_URL": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Issuer URL",
+    },
+    "SSO_OIDC_CLIENT_ID": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Client ID",
+    },
+    "SSO_OIDC_CLIENT_SECRET": {
+        "type": "str",
+        "secret": True,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Client Secret",
+    },
+    "SSO_OIDC_SCOPES": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Scopes",
+    },
+    "SSO_OIDC_GROUPS_CLAIM": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Groups Claim",
+    },
+    "SSO_OIDC_USER_GROUPS": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: User Groups",
+    },
+    "SSO_OIDC_ADMIN_GROUPS": {
+        "type": "str",
+        "secret": False,
+        "readonly": True,
+        "category": "SSO",
+        "label": "Env Provider: Admin Groups",
     },
     "REFRESH_TOKEN_EXPIRE_DAYS": {
         "type": "int",

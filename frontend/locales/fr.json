@@ -348,7 +348,11 @@
         "client_secret_keep": "Laisser vide pour conserver l'actuel",
         "client_secret_placeholder": "Secret client du fournisseur",
         "scopes": "Portées",
-        "enabled": "Activé"
+        "enabled": "Activé",
+        "admin_groups": "Groupes administrateurs",
+        "user_groups": "Groupes utilisateurs",
+        "groups_claim": "Claim des groupes",
+        "groups_help": "Séparés par des virgules, tels qu'envoyés par l'IdP (une barre oblique initiale est ignorée). Si l'un est défini, les rôles suivent les groupes à chaque connexion ; si des groupes utilisateurs sont définis, les membres d'aucune des deux listes sont refusés. Laissez les deux vides pour gérer l'accès et les rôles localement."
       },
       "toast": {
         "updated": "Fournisseur mis à jour",
@@ -360,7 +364,8 @@
         "load": "Échec du chargement des fournisseurs.",
         "save": "Échec de l'enregistrement du fournisseur.",
         "delete": "Échec de la suppression du fournisseur."
-      }
+      },
+      "managed_by_env": "Géré via .env"
     },
     "celery": {
       "title": "Workers et files d'attente Celery",
@@ -567,7 +572,8 @@
       "too_many_requests": "Trop de requêtes. Veuillez réessayer plus tard.",
       "unexpected": "Une erreur inattendue s'est produite. Veuillez réessayer.",
       "no_token": "Aucun jeton d'invitation fourni",
-      "invitation_expired": "Ce lien d'invitation est invalide ou a expiré"
+      "invitation_expired": "Ce lien d'invitation est invalide ou a expiré",
+      "sso_not_in_allowed_group": "Votre compte n'appartient à aucun groupe autorisé à utiliser cette application. Veuillez contacter votre administrateur."
     },
     "session_expired": "Session expirée. Veuillez vous reconnecter."
   },
@@ -3198,7 +3204,8 @@
       "account_locked": "Compte temporairement verrouillé en raison d'un trop grand nombre de tentatives de connexion échouées. Réessayez plus tard.",
       "invalid_credentials": "E-mail ou mot de passe incorrect",
       "inactive_user": "Utilisateur inactif",
-      "invalid_refresh_token": "Jeton d'actualisation invalide ou expiré."
+      "invalid_refresh_token": "Jeton d'actualisation invalide ou expiré.",
+      "password_auth_disabled": "La connexion par mot de passe est désactivée. Veuillez vous connecter via votre fournisseur d'identité."
     },
     "core": {
       "upload_too_large": "Le fichier téléchargé dépasse la taille maximale autorisée de {limit} octets.",
@@ -3213,7 +3220,8 @@
       "project_not_found": "Projet introuvable.",
       "not_authorized": "Non autorisé.",
       "prompt_required": "Au moins l'un des deux champs, l'invite système ou l'invite utilisateur, doit être fourni.",
-      "password_policy": "Le mot de passe doit {rules}."
+      "password_policy": "Le mot de passe doit {rules}.",
+      "sso_only_requires_sso": "Le SSO ne peut pas être désactivé tant que SSO_ONLY est défini."
     },
     "documents": {
       "project_not_found": "Projet introuvable",
@@ -3370,7 +3378,10 @@
       "userinfo_issuer_mismatch": "Incohérence de l'émetteur dans les données userinfo OIDC.",
       "no_jwks_uri": "Le document de découverte OIDC ne contient pas de jwks_uri ; impossible de vérifier l'id_token.",
       "id_token_verification_failed": "La vérification de l'id_token OIDC a échoué.",
-      "id_token_nonce_mismatch": "Incohérence du nonce dans l'id_token OIDC."
+      "id_token_nonce_mismatch": "Incohérence du nonce dans l'id_token OIDC.",
+      "provider_managed_by_env": "Ce fournisseur est configuré par des variables d'environnement et ne peut pas être modifié ici.",
+      "subject_mismatch": "Le fournisseur d'identité a renvoyé des données utilisateur incohérentes.",
+      "sso_only_last_provider": "Le dernier fournisseur actif ne peut pas être désactivé ni supprimé tant que SSO_ONLY est défini."
     },
     "trials": {
       "required_without_property": "Ce schéma déclare des champs obligatoires qui ne sont pas définis dans « properties » ; chaque document échouerait à la validation : {details}",
@@ -3426,7 +3437,8 @@
       "invitation_not_found": "Invitation introuvable",
       "invitation_invalid_or_expired": "Jeton d'invitation invalide ou expiré",
       "reset_token_invalid": "Jeton de réinitialisation invalide ou expiré",
-      "token_mismatch": "Le jeton ne correspond pas"
+      "token_mismatch": "Le jeton ne correspond pas",
+      "sso_only_last_identity": "Impossible de déconnecter votre unique méthode de connexion."
     }
   },
   "not_found": {

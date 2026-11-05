@@ -25,7 +25,7 @@ from .celery.celery_config import celery_app
 from .core.dynamic_settings import get_settings
 from .core.rate_limit import limiter
 from .core.security import admin_has_global_project_access
-from .db.session import init_db
+from .db.session import db_session, init_db
 from .middleware.error_handlers import register_exception_handlers
 from .middleware.request_context import RequestContextMiddleware
 from .middleware.security_headers import SecurityHeadersMiddleware
@@ -296,6 +296,14 @@ async def lifespan(app):
         reload_settings_cache(broadcast=False)
     except Exception as e:
         logger.warning("Failed to reload DB settings overrides on startup: %s", e)
+
+    # After the settings reload, so a DB-level SSO_ENABLED override is honored.
+    # Deliberately not caught: a half-configured provider must stop the startup.
+    from .services.sso_env_provider import sync_env_provider, verify_sso_only
+
+    with db_session() as db:
+        sync_env_provider(db)
+        verify_sso_only(db)
 
     workers: list[mp.Process] = []
     if celery_app is not None and settings.INITIALIZE_CELERY:

@@ -348,7 +348,11 @@
         "client_secret_keep": "Deje en blanco para conservar el actual",
         "client_secret_placeholder": "Secreto de cliente del proveedor",
         "scopes": "Ámbitos",
-        "enabled": "Habilitado"
+        "enabled": "Habilitado",
+        "admin_groups": "Grupos de administradores",
+        "user_groups": "Grupos de usuarios",
+        "groups_claim": "Claim de grupos",
+        "groups_help": "Separados por comas, tal como los envía el IdP (se ignora una barra inicial). Si se define alguno, los roles siguen a los grupos en cada inicio de sesión; si se definen grupos de usuarios, se rechaza a quienes no estén en ninguna lista. Deje ambos vacíos para gestionar el acceso y los roles localmente."
       },
       "toast": {
         "updated": "Proveedor actualizado",
@@ -360,7 +364,8 @@
         "load": "No se pudieron cargar los proveedores.",
         "save": "No se pudo guardar el proveedor.",
         "delete": "No se pudo eliminar el proveedor."
-      }
+      },
+      "managed_by_env": "Gestionado mediante .env"
     },
     "celery": {
       "title": "Workers y colas de Celery",
@@ -567,7 +572,8 @@
       "too_many_requests": "Demasiadas solicitudes. Inténtelo de nuevo más tarde.",
       "unexpected": "Se produjo un error inesperado. Inténtelo de nuevo.",
       "no_token": "No se proporcionó ningún token de invitación",
-      "invitation_expired": "Este enlace de invitación es inválido o ha caducado"
+      "invitation_expired": "Este enlace de invitación es inválido o ha caducado",
+      "sso_not_in_allowed_group": "Su cuenta no pertenece a ningún grupo autorizado para usar esta aplicación. Póngase en contacto con su administrador."
     },
     "session_expired": "La sesión ha expirado. Inicie sesión de nuevo."
   },
@@ -3198,7 +3204,8 @@
       "account_locked": "Cuenta bloqueada temporalmente debido a demasiados intentos de inicio de sesión fallidos. Inténtelo de nuevo más tarde.",
       "invalid_credentials": "Correo electrónico o contraseña incorrectos",
       "inactive_user": "Usuario inactivo",
-      "invalid_refresh_token": "Token de actualización no válido o caducado."
+      "invalid_refresh_token": "Token de actualización no válido o caducado.",
+      "password_auth_disabled": "El inicio de sesión con contraseña está desactivado. Inicie sesión a través de su proveedor de identidad."
     },
     "core": {
       "upload_too_large": "El archivo subido supera el tamaño máximo permitido de {limit} bytes.",
@@ -3213,7 +3220,8 @@
       "project_not_found": "Proyecto no encontrado.",
       "not_authorized": "No autorizado.",
       "prompt_required": "Se debe proporcionar al menos uno de los dos campos: la instrucción del sistema o la del usuario.",
-      "password_policy": "La contraseña debe {rules}."
+      "password_policy": "La contraseña debe {rules}.",
+      "sso_only_requires_sso": "El SSO no se puede desactivar mientras SSO_ONLY esté definido."
     },
     "documents": {
       "project_not_found": "Proyecto no encontrado",
@@ -3370,7 +3378,10 @@
       "userinfo_issuer_mismatch": "Discrepancia del emisor en los datos userinfo de OIDC.",
       "no_jwks_uri": "El documento de descubrimiento de OIDC no tiene jwks_uri; no se puede verificar el id_token.",
       "id_token_verification_failed": "La verificación del id_token de OIDC falló.",
-      "id_token_nonce_mismatch": "Discrepancia del nonce en el id_token de OIDC."
+      "id_token_nonce_mismatch": "Discrepancia del nonce en el id_token de OIDC.",
+      "provider_managed_by_env": "Este proveedor se configura mediante variables de entorno y no se puede cambiar aquí.",
+      "subject_mismatch": "El proveedor de identidad devolvió datos de usuario incoherentes.",
+      "sso_only_last_provider": "El último proveedor activo no se puede desactivar ni eliminar mientras SSO_ONLY esté definido."
     },
     "trials": {
       "required_without_property": "Este esquema indica campos obligatorios que no están definidos en «properties», por lo que todos los documentos fallarían la validación: {details}",
@@ -3426,7 +3437,8 @@
       "invitation_not_found": "Invitación no encontrada",
       "invitation_invalid_or_expired": "Token de invitación no válido o caducado",
       "reset_token_invalid": "Token de restablecimiento no válido o caducado",
-      "token_mismatch": "El token no coincide"
+      "token_mismatch": "El token no coincide",
+      "sso_only_last_identity": "No se puede desconectar su único método de inicio de sesión."
     }
   },
   "not_found": {

@@ -51,7 +51,7 @@ At minimum, configure your LLM provider and a secret key.
 | `APP_URL` | Public app URL (used for email links) | `http://localhost:5173` |
 | `BACKEND_CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173` |
 | `REQUIRE_INVITATION` | Require an invitation to sign up | `false` (compose); code default `true` |
-| `ALLOW_FIRST_ADMIN_SETUP` | Let the first user become admin | `true` |
+| `ALLOW_FIRST_ADMIN_SETUP` | Let the first user become admin (stays closed while an active SSO provider maps an admin group) | `true` |
 | `PASSWORD_POLICY_*` | Password complexity (length, upper/lower/digit/symbol) | min 8; upper/lower/digit |
 | `LOGIN_MAX_ATTEMPTS` | Failed logins before lockout | `5` |
 | `LOGIN_LOCKOUT_MINUTES` | Lockout duration | `15` |
@@ -65,6 +65,16 @@ At minimum, configure your LLM provider and a secret key.
 | `SSO_ENABLED` | Enable OpenID Connect single sign-on | `false` |
 | `SSO_JIT_DEFAULT_ROLE` | Role for auto-provisioned SSO users | `user` |
 | `SSO_BYPASS_INVITATION` | SSO login bypasses `REQUIRE_INVITATION` | `true` |
+| `SSO_REQUIRE_VERIFIED_EMAIL` | IdP must assert `email_verified` before an account is created or linked by email | `true` |
+| `SSO_ONLY` | Identity provider only: disables password sign-in, registration, password changes and invitations | `false` |
+| `SSO_OIDC_NAME` | Env-declared provider: label on the login button, also determines the callback URL | `SSO` |
+| `SSO_OIDC_ISSUER_URL` | Env-declared provider: issuer URL | — |
+| `SSO_OIDC_CLIENT_ID` | Env-declared provider: client ID | — |
+| `SSO_OIDC_CLIENT_SECRET` | Env-declared provider: client secret | — |
+| `SSO_OIDC_SCOPES` | Env-declared provider: scopes | `openid email profile` |
+| `SSO_OIDC_GROUPS_CLAIM` | Env-declared provider: claim listing the user's groups | `groups` |
+| `SSO_OIDC_USER_GROUPS` | Env-declared provider: comma-separated groups that may sign in as user | — |
+| `SSO_OIDC_ADMIN_GROUPS` | Env-declared provider: comma-separated groups that sign in as admin | — |
 
 See [SSO administration](../admin/sso.md) for the provider setup.
 

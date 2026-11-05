@@ -118,7 +118,7 @@
       <hr class="border-default" />
 
       <!-- === Set Password === -->
-      <div>
+      <div v-if="!publicSettings.ssoOnly">
         <h4 class="text-xs font-bold text-content-subtle uppercase tracking-wider mb-3">
           {{ $t('admin.edit_modal.set_password') }}
         </h4>
@@ -198,6 +198,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import Callout from '@/components/common/Callout.vue'
 import ConfirmationDialog from '@/components/common/ConfirmationDialog.vue'
 import { usersApi } from '@/services/usersApi'
+import { usePublicSettingsStore } from '@/stores/publicSettings'
 import { extractErrorMessage } from '@/utils/errors'
 import { inputClass, selectClass, labelClass } from '@/utils/formStyles'
 
@@ -219,6 +220,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const publicSettings = usePublicSettingsStore()
 const { t } = useI18n({ useScope: 'global' })
 
 interface EditForm {

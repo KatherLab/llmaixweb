@@ -24,54 +24,57 @@
           <LogIn class="h-4 w-4" aria-hidden="true" />
           {{ $t('auth.login.continue_with', { name: provider.name }) }}
         </a>
-        <div class="flex items-center gap-3 my-1">
+        <div v-if="showPasswordForm" class="flex items-center gap-3 my-1">
           <div class="h-px flex-1 bg-default-border" />
           <span class="text-xs text-content-subtle">{{ $t('auth.login.or') }}</span>
           <div class="h-px flex-1 bg-default-border" />
         </div>
       </div>
 
-      <FormField
-        v-model="email"
-        :label="$t('auth.form.email')"
-        type="email"
-        required
-        maxlength="254"
-        :placeholder="$t('auth.form.email_placeholder')"
-        autocomplete="email"
-        :spellcheck="false"
-        data-testid="login-email"
-      />
-      <FormField
-        v-model="password"
-        :label="$t('auth.form.password')"
-        type="password"
-        required
-        :placeholder="$t('auth.form.password_placeholder')"
-        autocomplete="current-password"
-        data-testid="login-password"
-      >
-        <template #trailing>
-          <router-link to="/forgot-password" class="text-xs text-primary hover:underline">
-            {{ $t('auth.login.forgot_password') }}
-          </router-link>
-        </template>
-      </FormField>
-      <BaseButton
-        type="submit"
-        size="lg"
-        :loading="isLoading"
-        :disabled="isLoading"
-        data-testid="login-submit"
-        class="w-full py-2.5"
-      >
-        <Lock v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />
-        <span>{{ isLoading ? $t('auth.login.signing_in') : $t('auth.login.sign_in') }}</span>
-      </BaseButton>
+      <template v-if="showPasswordForm">
+        <FormField
+          v-model="email"
+          :label="$t('auth.form.email')"
+          type="email"
+          required
+          maxlength="254"
+          :placeholder="$t('auth.form.email_placeholder')"
+          autocomplete="email"
+          :spellcheck="false"
+          data-testid="login-email"
+        />
+        <FormField
+          v-model="password"
+          :label="$t('auth.form.password')"
+          type="password"
+          required
+          :placeholder="$t('auth.form.password_placeholder')"
+          autocomplete="current-password"
+          data-testid="login-password"
+        >
+          <template #trailing>
+            <router-link to="/forgot-password" class="text-xs text-primary hover:underline">
+              {{ $t('auth.login.forgot_password') }}
+            </router-link>
+          </template>
+        </FormField>
+        <BaseButton
+          type="submit"
+          size="lg"
+          :loading="isLoading"
+          :disabled="isLoading"
+          data-testid="login-submit"
+          class="w-full py-2.5"
+        >
+          <Lock v-if="!isLoading" class="h-5 w-5" aria-hidden="true" />
+          <span>{{ isLoading ? $t('auth.login.signing_in') : $t('auth.login.sign_in') }}</span>
+        </BaseButton>
+      </template>
       <transition name="fade">
         <ErrorBanner v-if="error" :message="error" class="text-center" />
       </transition>
       <router-link
+        v-if="showPasswordForm"
         to="/register"
         class="block mt-3 text-center text-primary hover:underline text-sm transition"
       >
@@ -84,7 +87,7 @@
 
 <script setup lang="ts">
 import AppBrand from '@/components/common/AppBrand.vue'
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { Lock, LogIn } from '@lucide/vue'
@@ -112,6 +115,11 @@ const isLoading = ref<boolean>(false)
 const error = ref<string | null>(null)
 const ssoProviders = ref<SsoProviderPublic[]>([])
 const redirectTarget = ref<string>('/projects')
+// Hidden until the settings answer so SSO_ONLY deployments never flash the form.
+// A failed request shows it: the backend still enforces SSO_ONLY either way.
+const ssoOnly = ref<boolean>(false)
+const settingsLoaded = ref<boolean>(false)
+const showPasswordForm = computed<boolean>(() => settingsLoaded.value && !ssoOnly.value)
 
 onMounted(async () => {
   // If first-admin flow is needed, redirect to it (extra safe)
@@ -122,6 +130,11 @@ onMounted(async () => {
     router.replace('/first-admin')
     return
   }
+  // Set by the SSO callback when the IdP authenticated the user but no configured
+  // group admits them. Compared to a known value, so the URL can't inject text.
+  if (route.query.sso_error === 'not_in_allowed_group') {
+    error.value = t('auth.errors.sso_not_in_allowed_group')
+  }
   // Preserve the intended destination for post-login redirect (and SSO).
   if (route.query.redirect) {
     redirectTarget.value = String(route.query.redirect)
@@ -130,8 +143,11 @@ onMounted(async () => {
   try {
     const res = await authApi.getSettings()
     ssoProviders.value = res.data.sso_providers || []
+    ssoOnly.value = !!res.data.sso_only
   } catch {
     ssoProviders.value = []
+  } finally {
+    settingsLoaded.value = true
   }
 })
 

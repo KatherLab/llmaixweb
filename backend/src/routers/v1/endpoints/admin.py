@@ -70,12 +70,28 @@ def read_settings(current_user=Depends(get_admin_user), db: Session = Depends(ge
     return result
 
 
+def _refuse_sso_lockout() -> None:
+    """With SSO_ONLY, switching SSO off would leave nobody able to sign in."""
+    if settings.SSO_ONLY:
+        raise api_error(
+            "core.sso_only_requires_sso",
+            409,
+            "SSO cannot be turned off while SSO_ONLY is set.",
+        )
+
+
 @router.put("/settings")
 def update_settings(
     updates: dict = Body(...),
     current_user=Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
+    if "SSO_ENABLED" in updates and str(updates["SSO_ENABLED"]).lower() not in (
+        "true",
+        "1",
+        "yes",
+    ):
+        _refuse_sso_lockout()
     for key, value in updates.items():
         meta = SETTINGS_META.get(key)
         if not meta or meta.get("readonly", False):
@@ -164,6 +180,9 @@ def delete_setting(
         raise api_error(
             "core.cannot_delete_setting", 400, f"Cannot delete setting: {key}", key=key
         )
+    if key == "SSO_ENABLED":
+        # Removing the override falls back to the env value, which may be false.
+        _refuse_sso_lockout()
     row = db.get(AppSetting, key)
     if not row:
         raise api_error("core.setting_not_found", 404, "Setting not found")

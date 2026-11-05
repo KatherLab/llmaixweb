@@ -11,7 +11,14 @@ and issues the same JWT the password flow uses.
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    false,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -37,6 +44,24 @@ class IdentityProvider(Base):
     client_secret_encrypted: Mapped[str] = mapped_column(String(1024))
     scopes: Mapped[str] = mapped_column(String(256), default="openid email profile")
     enabled: Mapped[bool] = mapped_column(default=True)
+    # Name of the claim listing the user's groups (Keycloak: a "Group Membership"
+    # mapper on the client, conventionally named "groups").
+    groups_claim: Mapped[str] = mapped_column(
+        String(100), default="groups", server_default="groups"
+    )
+    # Comma-separated group names. Both empty → no group logic: anyone the IdP
+    # authenticates may sign in and roles stay locally managed. Otherwise the IdP
+    # is authoritative and the role is re-derived on every login:
+    #   in admin_groups → admin; in user_groups → user; in neither → refused,
+    #   unless user_groups is empty, in which case they are a plain user.
+    user_groups: Mapped[str] = mapped_column(
+        String(1024), default="", server_default=""
+    )
+    admin_groups: Mapped[str] = mapped_column(
+        String(1024), default="", server_default=""
+    )
+    # Declared via SSO_OIDC_* and re-synced on startup; read-only in the admin API.
+    managed_by_env: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(), server_default=func.now(), onupdate=func.now()

@@ -348,7 +348,11 @@
         "client_secret_keep": "Leer lassen, um das aktuelle beizubehalten",
         "client_secret_placeholder": "Client-Geheimnis des Anbieters",
         "scopes": "Scopes",
-        "enabled": "Aktiviert"
+        "enabled": "Aktiviert",
+        "admin_groups": "Admin-Gruppen",
+        "user_groups": "Benutzer-Gruppen",
+        "groups_claim": "Gruppen-Claim",
+        "groups_help": "Kommagetrennt, wie vom IdP gesendet (ein führender Schrägstrich wird ignoriert). Ist eines gesetzt, folgen die Rollen bei jeder Anmeldung den Gruppen; sind Benutzer-Gruppen gesetzt, werden Mitglieder keiner der beiden Listen abgewiesen. Beide leer lassen, um Zugriff und Rollen lokal zu verwalten."
       },
       "toast": {
         "updated": "Anbieter aktualisiert",
@@ -360,7 +364,8 @@
         "load": "Anbieter konnten nicht geladen werden.",
         "save": "Anbieter konnte nicht gespeichert werden.",
         "delete": "Anbieter konnte nicht gelöscht werden."
-      }
+      },
+      "managed_by_env": "Über .env verwaltet"
     },
     "celery": {
       "title": "Celery-Worker & Warteschlangen",
@@ -567,7 +572,8 @@
       "too_many_requests": "Zu viele Anfragen. Bitte versuchen Sie es später erneut.",
       "unexpected": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
       "no_token": "Kein Einladungstoken angegeben",
-      "invitation_expired": "Dieser Einladungslink ist ungültig oder abgelaufen"
+      "invitation_expired": "Dieser Einladungslink ist ungültig oder abgelaufen",
+      "sso_not_in_allowed_group": "Ihr Konto gehört keiner Gruppe an, die diese Anwendung nutzen darf. Bitte wenden Sie sich an Ihre Administration."
     },
     "session_expired": "Sitzung abgelaufen. Bitte melden Sie sich erneut an."
   },
@@ -3198,7 +3204,8 @@
       "account_locked": "Konto vorübergehend gesperrt wegen zu vieler fehlgeschlagener Anmeldeversuche. Bitte versuchen Sie es später erneut.",
       "invalid_credentials": "Falsche E-Mail-Adresse oder falsches Passwort",
       "inactive_user": "Inaktiver Benutzer",
-      "invalid_refresh_token": "Ungültiger oder abgelaufener Refresh-Token."
+      "invalid_refresh_token": "Ungültiger oder abgelaufener Refresh-Token.",
+      "password_auth_disabled": "Die Anmeldung per Passwort ist deaktiviert. Bitte melden Sie sich über Ihren Identitätsanbieter an."
     },
     "core": {
       "upload_too_large": "Die hochgeladene Datei überschreitet die maximal zulässige Größe von {limit} Bytes.",
@@ -3213,7 +3220,8 @@
       "project_not_found": "Projekt nicht gefunden.",
       "not_authorized": "Nicht autorisiert.",
       "prompt_required": "Mindestens einer der beiden Werte – System-Prompt oder Benutzer-Prompt – muss angegeben werden.",
-      "password_policy": "Das Passwort muss {rules}."
+      "password_policy": "Das Passwort muss {rules}.",
+      "sso_only_requires_sso": "SSO kann nicht deaktiviert werden, solange SSO_ONLY gesetzt ist."
     },
     "documents": {
       "project_not_found": "Projekt nicht gefunden",
@@ -3370,7 +3378,10 @@
       "userinfo_issuer_mismatch": "Abweichung des Ausstellers in den OIDC-Userinfo-Daten.",
       "no_jwks_uri": "Das OIDC-Discovery-Dokument enthält keine jwks_uri; das id_token kann nicht verifiziert werden.",
       "id_token_verification_failed": "Die Verifizierung des OIDC-id_token ist fehlgeschlagen.",
-      "id_token_nonce_mismatch": "Abweichung des Nonce-Werts im OIDC-id_token."
+      "id_token_nonce_mismatch": "Abweichung des Nonce-Werts im OIDC-id_token.",
+      "provider_managed_by_env": "Dieser Anbieter wird über Umgebungsvariablen konfiguriert und kann hier nicht geändert werden.",
+      "subject_mismatch": "Der Identitätsanbieter hat widersprüchliche Benutzerdaten geliefert.",
+      "sso_only_last_provider": "Der letzte aktive Anbieter kann nicht deaktiviert oder gelöscht werden, solange SSO_ONLY gesetzt ist."
     },
     "trials": {
       "required_without_property": "Dieses Schema führt Pflichtfelder auf, die nicht in „properties“ definiert sind. Dadurch würde jedes Dokument die Validierung nicht bestehen: {details}",
@@ -3426,7 +3437,8 @@
       "invitation_not_found": "Einladung nicht gefunden",
       "invitation_invalid_or_expired": "Ungültiges oder abgelaufenes Einladungstoken",
       "reset_token_invalid": "Ungültiges oder abgelaufenes Zurücksetzungstoken",
-      "token_mismatch": "Token stimmt nicht überein"
+      "token_mismatch": "Token stimmt nicht überein",
+      "sso_only_last_identity": "Ihre einzige Anmeldemethode kann nicht getrennt werden."
     }
   },
   "not_found": {

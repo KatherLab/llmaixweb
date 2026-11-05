@@ -13,6 +13,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import logging
+import re
 import secrets
 
 import httpx
@@ -32,6 +33,47 @@ _DISCOVERY_CACHE: dict[str, dict] = {}
 _DISCOVERY_TIMEOUT = 10.0
 _TOKEN_TIMEOUT = 15.0
 _USERINFO_TIMEOUT = 15.0
+
+
+def slugify_provider_name(name: str) -> str:
+    """URL-safe provider identifier used in /auth/sso/{slug}/... routes."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not slug:
+        raise api_error(
+            "sso.slug_no_alphanumeric",
+            status.HTTP_400_BAD_REQUEST,
+            "Provider name must contain alphanumeric characters.",
+        )
+    return slug[:100]
+
+
+def _normalize_group(group: str) -> str:
+    # Keycloak emits "/admins" or "admins" depending on the mapper's "Full group
+    # path" toggle. Only the outer slashes are dropped: "/org/admins" stays
+    # distinct from "admins", so a same-named subgroup elsewhere in the tree
+    # can't grant the role.
+    return group.strip().strip("/")
+
+
+def parse_group_list(raw: str | None) -> set[str]:
+    """Parse a comma-separated group setting into normalized names."""
+    return {g for g in map(_normalize_group, (raw or "").split(",")) if g}
+
+
+def normalize_group_setting(raw: str | None) -> str:
+    """Canonical stored form of a comma-separated group setting."""
+    return ",".join(sorted(parse_group_list(raw)))
+
+
+def extract_groups(claim_value: object) -> set[str]:
+    """Normalize a groups claim. IdPs send a list, or a bare string for one group."""
+    if isinstance(claim_value, str):
+        claim_value = [claim_value]
+    if not isinstance(claim_value, list):
+        return set()
+    return {
+        g for g in (_normalize_group(v) for v in claim_value if isinstance(v, str)) if g
+    }
 
 
 def _now() -> datetime.datetime:

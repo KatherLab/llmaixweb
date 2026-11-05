@@ -48,6 +48,11 @@
               :color="p.enabled ? 'green' : 'gray'"
               :label="p.enabled ? $t('admin.sso.enabled') : $t('admin.sso.disabled')"
             />
+            <StatusBadge
+              v-if="p.managed_by_env"
+              color="blue"
+              :label="$t('admin.sso.managed_by_env')"
+            />
             <span v-if="!p.has_secret" class="text-xs text-amber-600 dark:text-amber-400">
               {{ $t('admin.sso.no_secret_set') }}
             </span>
@@ -55,8 +60,12 @@
           <p class="text-xs text-content-subtle mt-1">
             {{ p.issuer_url }} · client_id: {{ p.client_id }} · scopes: {{ p.scopes }}
           </p>
+          <p v-if="p.user_groups || p.admin_groups" class="text-xs text-content-subtle mt-1">
+            {{ $t('admin.sso.form.admin_groups') }}: {{ p.admin_groups || '–' }} ·
+            {{ $t('admin.sso.form.user_groups') }}: {{ p.user_groups || '–' }}
+          </p>
         </div>
-        <div class="flex gap-2">
+        <div v-if="!p.managed_by_env" class="flex gap-2">
           <BaseButton variant="secondary" size="sm" @click="openEdit(p)">{{
             $t('admin.sso.edit')
           }}</BaseButton>
@@ -142,6 +151,40 @@
           }}</label>
           <input id="sso-provider-scopes" v-model="form.scopes" type="text" :class="inputClass" />
         </div>
+        <div>
+          <label :class="labelClass" for="sso-provider-admin-groups">{{
+            $t('admin.sso.form.admin_groups')
+          }}</label>
+          <input
+            id="sso-provider-admin-groups"
+            v-model="form.admin_groups"
+            type="text"
+            :class="inputClass"
+          />
+        </div>
+        <div>
+          <label :class="labelClass" for="sso-provider-user-groups">{{
+            $t('admin.sso.form.user_groups')
+          }}</label>
+          <input
+            id="sso-provider-user-groups"
+            v-model="form.user_groups"
+            type="text"
+            :class="inputClass"
+          />
+          <p class="mt-1 text-xs text-content-subtle">{{ $t('admin.sso.form.groups_help') }}</p>
+        </div>
+        <div>
+          <label :class="labelClass" for="sso-provider-groups-claim">{{
+            $t('admin.sso.form.groups_claim')
+          }}</label>
+          <input
+            id="sso-provider-groups-claim"
+            v-model="form.groups_claim"
+            type="text"
+            :class="inputClass"
+          />
+        </div>
         <label class="flex items-center gap-2 text-sm text-content-muted">
           <input v-model="form.enabled" type="checkbox" class="rounded" />
           {{ $t('admin.sso.form.enabled') }}
@@ -210,6 +253,9 @@ const form = reactive<{
   client_secret: string
   scopes: string
   enabled: boolean
+  groups_claim: string
+  user_groups: string
+  admin_groups: string
 }>({
   name: '',
   issuer_url: '',
@@ -217,6 +263,9 @@ const form = reactive<{
   client_secret: '',
   scopes: 'openid email profile',
   enabled: true,
+  groups_claim: 'groups',
+  user_groups: '',
+  admin_groups: '',
 })
 
 const toDelete = ref<IdentityProviderResponse | null>(null)
@@ -256,6 +305,9 @@ function resetForm(): void {
   form.client_secret = ''
   form.scopes = 'openid email profile'
   form.enabled = true
+  form.groups_claim = 'groups'
+  form.user_groups = ''
+  form.admin_groups = ''
   formError.value = ''
 }
 
@@ -273,6 +325,9 @@ function openEdit(p: IdentityProviderResponse): void {
   form.client_secret = ''
   form.scopes = p.scopes
   form.enabled = p.enabled
+  form.groups_claim = p.groups_claim
+  form.user_groups = p.user_groups
+  form.admin_groups = p.admin_groups
   formError.value = ''
   showModal.value = true
 }
@@ -291,6 +346,9 @@ async function saveProvider(): Promise<void> {
       client_id: string
       scopes: string
       enabled: boolean
+      groups_claim: string
+      user_groups: string
+      admin_groups: string
       client_secret?: string
     } = {
       name: form.name,
@@ -298,6 +356,9 @@ async function saveProvider(): Promise<void> {
       client_id: form.client_id,
       scopes: form.scopes,
       enabled: form.enabled,
+      groups_claim: form.groups_claim,
+      user_groups: form.user_groups,
+      admin_groups: form.admin_groups,
     }
     if (form.client_secret) payload.client_secret = form.client_secret
     if (editing.value) {

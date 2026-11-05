@@ -10,6 +10,10 @@ export interface IdentityProviderResponse {
   scopes: string
   enabled: boolean
   has_secret: boolean
+  groups_claim: string
+  user_groups: string
+  admin_groups: string
+  managed_by_env: boolean
   created_at: ISODateString | null
   updated_at: ISODateString | null
 }
@@ -21,6 +25,9 @@ export interface IdentityProviderCreate {
   client_secret: string
   scopes: string
   enabled: boolean
+  groups_claim: string
+  user_groups: string
+  admin_groups: string
 }
 
 export interface IdentityProviderUpdate {
@@ -30,6 +37,9 @@ export interface IdentityProviderUpdate {
   client_secret?: string
   scopes?: string
   enabled?: boolean
+  groups_claim?: string
+  user_groups?: string
+  admin_groups?: string
 }
 
 /** A connected SSO identity for the current user (`GET /users/me/identities`). */

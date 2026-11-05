@@ -8,6 +8,8 @@ export interface PublicAuthSettings {
   banner_color: string
   require_invitation: boolean
   sso_enabled: boolean
+  /** Password sign-in, registration and invitations are disabled. */
+  sso_only: boolean
   sso_providers: SsoProviderPublic[]
   mistral_ocr_enabled: boolean
   vision_ocr_enabled: boolean

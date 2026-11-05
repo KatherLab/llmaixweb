@@ -13,6 +13,7 @@ from ....core.security import (
     create_access_token,
     create_refresh_token,
     get_current_user,
+    require_password_auth,
     revoke_all_refresh_tokens,
     revoke_refresh_token,
     rotate_refresh_token,
@@ -100,6 +101,7 @@ def get_settings(db: Session = Depends(get_db)):
         "banner_color": settings.BANNER_COLOR,
         "require_invitation": settings.REQUIRE_INVITATION,
         "sso_enabled": settings.SSO_ENABLED,
+        "sso_only": settings.SSO_ONLY,
         "sso_providers": sso_providers,
         "mistral_ocr_enabled": settings.MISTRAL_OCR_ENABLED,
         "vision_ocr_enabled": settings.VISION_OCR_ENABLED,
@@ -115,8 +117,16 @@ def get_settings(db: Session = Depends(get_db)):
     }
 
 
-@router.post("/login", response_model=schemas.Token)
-@router.post("/api/v1/login", response_model=schemas.Token)
+@router.post(
+    "/login",
+    response_model=schemas.Token,
+    dependencies=[Depends(require_password_auth)],
+)
+@router.post(
+    "/api/v1/login",
+    response_model=schemas.Token,
+    dependencies=[Depends(require_password_auth)],
+)
 @limiter.limit(None if settings.DISABLE_RATE_LIMIT else "10/minute")
 def login(
     request: Request,
@@ -226,7 +236,9 @@ def refresh_token(
     (theft signal) and forces re-authentication.
     """
     user = rotate_refresh_token(body.refresh_token, db)
-    if not user:
+    # A password session from before SSO_ONLY was switched on must not be able to
+    # renew itself indefinitely: the account has no way in through the IdP.
+    if not user or (settings.SSO_ONLY and not user.identities):
         raise api_error(
             "auth.invalid_refresh_token",
             status.HTTP_401_UNAUTHORIZED,

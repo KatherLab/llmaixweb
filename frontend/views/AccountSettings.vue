@@ -52,7 +52,7 @@
       </GlassCard>
 
       <!-- Change password -->
-      <GlassCard>
+      <GlassCard v-if="!ssoOnly">
         <div class="p-6">
           <h2 class="text-base font-semibold text-content mb-1">
             {{ $t('common.change_password') }}
@@ -149,6 +149,7 @@
                 </p>
               </div>
               <BaseButton
+                v-if="!ssoOnly || identities.length > 1"
                 variant="secondary"
                 size="sm"
                 tone="red"
@@ -215,6 +216,7 @@ import { ref, computed, onMounted, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { usePublicSettingsStore } from '@/stores/publicSettings'
 import { useToast } from '@/composables/useToast'
 import { authApi } from '@/services/authApi'
 import { usersApi } from '@/services/usersApi'
@@ -233,6 +235,8 @@ import type { UserIdentityResponse } from '@/types'
 const { t } = useI18n({ useScope: 'global' })
 const router = useRouter()
 const authStore = useAuthStore()
+const publicSettings = usePublicSettingsStore()
+const ssoOnly = computed<boolean>(() => publicSettings.ssoOnly)
 const toast = useToast()
 
 // ── Profile ──
@@ -273,6 +277,7 @@ const identityToDisconnect = ref<UserIdentityResponse | null>(null)
 const signingOut = ref<boolean>(false)
 
 onMounted(async () => {
+  void publicSettings.fetch()
   if (authStore.user) {
     profileForm.full_name = authStore.user.full_name
   }

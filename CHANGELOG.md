@@ -14,6 +14,27 @@ that point forward.
 
 ## [Unreleased]
 
+### Added
+
+- SSO: map IdP groups to access and roles per provider (admin group, user group,
+  groups claim). Roles follow the groups on every login; users in no allowed group
+  are refused.
+- SSO: declare a provider through `SSO_OIDC_*` environment variables. It is synced
+  on startup and read-only in the admin panel. See the Keycloak guide in
+  [the SSO docs](docs/admin/sso.md).
+- SSO: `SSO_ONLY=true` disables password sign-in, registration, password changes
+  and invitations, leaving the identity provider as the only way in.
+
+### Changed
+
+- The first-admin setup page stays closed while an enabled SSO provider maps an
+  admin group, so such a deployment needs no local admin.
+
+### Fixed
+
+- SSO: reject callbacks for a disabled provider and userinfo responses whose
+  subject differs from the id_token.
+
 ## [0.9.3] — 2026-10-20
 
 ### Changed
